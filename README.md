@@ -11,8 +11,11 @@
 ## Updates
 
 ## What we have
-Features & Examples
-Models
+### Features
+1. Continuous pretraining.
+1. Domain-specific finetuning: human action, cartoon, robotics, autonomous driving, etc.
+1. Concept-specific finetuning: character, style, etc.
+1. Human preference alignment post-training: DPO.
 
 ### Models
 
