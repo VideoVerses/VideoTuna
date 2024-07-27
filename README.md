@@ -13,9 +13,10 @@
 ## What we have
 ### Features
 1. Continuous pretraining.
-1. Domain-specific finetuning: human action, cartoon, robotics, autonomous driving, etc.
+1. Domain-specific finetuning: human, cartoon, robotics, autonomous driving, etc.
 1. Concept-specific finetuning: character, style, etc.
-1. Human preference alignment post-training: DPO.
+1. Human preference alignment post-training: RLFH, DPO.
+1. Post-processing: enhancement.
 
 ### Models
 
