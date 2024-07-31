@@ -77,7 +77,7 @@ model:
       params:
         freeze: true
         layer: penultimate
-    cond_img_config:
+    img_cond_stage_config:
       target: lvdm.modules.encoders.condition.FrozenOpenCLIPImageEmbedderV2
       params:
         freeze: true

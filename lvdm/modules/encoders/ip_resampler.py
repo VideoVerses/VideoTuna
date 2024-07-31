@@ -101,13 +101,18 @@ class Resampler(nn.Module):
         embedding_dim=768,
         output_dim=1024,
         ff_mult=4,
+        video_length=None, # using frame-wise version or not
     ):
         super().__init__()
-        
-        self.latents = nn.Parameter(torch.randn(1, num_queries, dim) / dim**0.5)
-        
-        self.proj_in = nn.Linear(embedding_dim, dim)
+        ## queries for a single frame / image
+        self.num_queries = num_queries 
+        self.video_length = video_length
+        ## <num_queries> queries for each frame
+        if video_length is not None: 
+            num_queries = num_queries * video_length
 
+        self.latents = nn.Parameter(torch.randn(1, num_queries, dim) / dim**0.5)
+        self.proj_in = nn.Linear(embedding_dim, dim)
         self.proj_out = nn.Linear(dim, output_dim)
         self.norm_out = nn.LayerNorm(output_dim)
         
@@ -123,9 +128,7 @@ class Resampler(nn.Module):
             )
 
     def forward(self, x):
-        
         latents = self.latents.repeat(x.size(0), 1, 1)
-        
         x = self.proj_in(x)
         
         for attn, ff in self.layers:

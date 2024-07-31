@@ -1,90 +1,24 @@
-import os, sys, glob
-import numpy as np
-from collections import OrderedDict
-from decord import VideoReader, cpu
+import os
+import sys
 import cv2
+import glob
+import numpy as np
+from PIL import Image
+from decord import VideoReader, cpu
+from collections import OrderedDict
+from einops import rearrange, repeat
 
 import torch
 import torchvision
-
-sys.path.insert(1, os.path.join(sys.path[0], '..', '..'))
-from lvdm.samplers.ddim import DDIMSampler
+import torchvision.transforms as transforms
 
 
-def batch_ddim_sampling(model, cond, noise_shape, n_samples=1, ddim_steps=50, ddim_eta=1.0,\
-                        cfg_scale=1.0, temporal_cfg_scale=None, **kwargs):
-    ddim_sampler = DDIMSampler(model)
-    uncond_type = model.uncond_type
-    batch_size = noise_shape[0]
-
-    ## construct unconditional guidance
-    if cfg_scale != 1.0:
-        if uncond_type == "empty_seq":
-            prompts = batch_size * [""]
-            #prompts = N * T * [""]  ## if is_imgbatch=True
-            uc_emb = model.get_learned_conditioning(prompts)
-        elif uncond_type == "zero_embed":
-            c_emb = cond["c_crossattn"][0] if isinstance(cond, dict) else cond
-            uc_emb = torch.zeros_like(c_emb)
-                
-        ## process image embedding token
-        if hasattr(model, 'embedder'):
-            uc_img = torch.zeros(noise_shape[0],3,224,224).to(model.device)
-            ## img: b c h w >> b l c
-            uc_img = model.get_image_embeds(uc_img)
-            uc_emb = torch.cat([uc_emb, uc_img], dim=1)
-        
-        if isinstance(cond, dict):
-            uc = {key:cond[key] for key in cond.keys()}
-            uc.update({'c_crossattn': [uc_emb]})
-        else:
-            uc = uc_emb
-    else:
-        uc = None
-    
-    x_T = None
-    batch_variants = []
-    #batch_variants1, batch_variants2 = [], []
-    for _ in range(n_samples):
-        if ddim_sampler is not None:
-            kwargs.update({"clean_cond": True})
-            samples, _ = ddim_sampler.sample(S=ddim_steps,
-                                            conditioning=cond,
-                                            batch_size=noise_shape[0],
-                                            shape=noise_shape[1:],
-                                            verbose=False,
-                                            unconditional_guidance_scale=cfg_scale,
-                                            unconditional_conditioning=uc,
-                                            eta=ddim_eta,
-                                            temporal_length=noise_shape[2],
-                                            conditional_guidance_scale_temporal=temporal_cfg_scale,
-                                            x_T=x_T,
-                                            **kwargs
-                                            )
-        ## reconstruct from latent to pixel space
-        batch_images = model.decode_first_stage(samples)
-        batch_variants.append(batch_images)
-    ## batch, <samples>, c, t, h, w
-    batch_variants = torch.stack(batch_variants, dim=1)
-    return batch_variants
-
-
-def get_filelist(data_dir, ext='*'):
-    file_list = glob.glob(os.path.join(data_dir, '*.%s'%ext))
-    file_list.sort()
+def get_target_filelist(data_dir, ext='*'):
+    """
+    Generate a sorted filepath list with target extensions.
+    """
+    file_list = sorted(glob.glob(os.path.join(data_dir, f'*.{ext}')))
     return file_list
-
-def get_dirlist(path):
-    list = []
-    if (os.path.exists(path)):
-        files = os.listdir(path)
-        for file in files:
-            m = os.path.join(path,file)
-            if (os.path.isdir(m)):
-                list.append(m)
-    list.sort()
-    return list
-
 
 def load_model_checkpoint(model, ckpt):
     def load_checkpoint(model, ckpt, full_strict):
@@ -101,20 +35,60 @@ def load_model_checkpoint(model, ckpt):
             model.load_state_dict(state_dict, strict=full_strict)
         return model
     load_checkpoint(model, ckpt, full_strict=True)
-    print('>>> model checkpoint loaded.')
+    print('[INFO] model checkpoint loaded.')
     return model
 
-
 def load_prompts(prompt_file):
-    f = open(prompt_file, 'r')
+    """
+    Load a list of prompts from a text file.
+    """
     prompt_list = []
-    for idx, line in enumerate(f.readlines()):
-        l = line.strip()
-        if len(l) != 0:
-            prompt_list.append(l)
-        f.close()
+    with open(prompt_file, 'r') as f:
+        prompt_list = [line.strip() for line in f if line.strip() != '']
     return prompt_list
 
+def load_inputs_i2v(input_dir, video_size=(256,256), video_frames=16):
+    """
+    Load prompt list and conditional images for i2v from input_dir.
+    """
+    # load prompt files
+    prompt_files = get_target_filelist(input_dir, ext='txt')
+    if len(prompt_files) > 1:
+        # only use the first one (sorted by name) if multiple exist
+        print(f"Warning: multiple prompt files exist. The one {os.path.split(prompt_files[0])[1]} is used.")
+        prompt_file = prompt_files[0]
+    elif len(prompt_files) == 1:
+        prompt_file = prompt_files[0]
+    elif len(prompt_files) == 0:
+        print(prompt_files)
+        raise ValueError(f"Error: found NO prompt file in {input_dir}")
+    prompt_list = load_prompts(prompt_file)
+    n_samples = len(prompt_list)
+    
+    ## load images
+    # img_list = get_target_filelist(input_dir, ['webp', 'jpg', 'png', 'jpeg', 'JPEG', 'PNG'])
+    img_list = get_target_filelist(input_dir, ext='[mpj][pn][4gj]')
+
+    # image transforms
+    transform = transforms.Compose([
+        transforms.Resize(min(video_size)),
+        transforms.CenterCrop(video_size),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))])
+    
+    image_list = []
+    filename_list = []
+    for idx in range(n_samples):
+        # load, transform, repeat 4D T~ to 5D
+        image = Image.open(img_list[idx]).convert('RGB')
+        image_tensor = transform(image).unsqueeze(1) # [c,1,h,w]
+        frame_tensor = repeat(image_tensor, 'c t h w -> c (repeat t) h w', repeat=video_frames)
+        image_list.append(frame_tensor)
+        
+        _, filename = os.path.split(img_list[idx])
+        filename_list.append(filename.split(".")[0])
+        
+    return filename_list, image_list, prompt_list
 
 def load_video_batch(filepath_list, frame_stride, video_size=(256,256), video_frames=16):
     '''
@@ -154,7 +128,6 @@ def load_video_batch(filepath_list, frame_stride, video_size=(256,256), video_fr
     
     return torch.stack(batch_tensor, dim=0)
 
-from PIL import Image
 def load_image_batch(filepath_list, image_size=(256,256)):
     batch_tensor = []
     for filepath in filepath_list:
@@ -178,6 +151,144 @@ def load_image_batch(filepath_list, image_size=(256,256)):
         batch_tensor.append(img_tensor)
     return torch.stack(batch_tensor, dim=0)
 
+def get_latent_z(model, videos):
+    b, c, t, h, w = videos.shape
+    x = rearrange(videos, 'b c t h w -> (b t) c h w')
+    z = model.encode_first_stage(x)
+    z = rearrange(z, '(b t) c h w -> b c t h w', b=b, t=t)
+    return z
+
+def sample_batch_t2v(model, sampler, prompts, noise_shape, fps,
+                     n_samples_prompt=1, ddim_steps=50, ddim_eta=1.0,
+                     cfg_scale=1.0, temporal_cfg_scale=None, 
+                     uncond_prompt="",
+                     **kwargs):
+    # ----------------------------------------------------------------------------------
+    # make cond & uncond for t2v
+    batch_size = noise_shape[0]
+    text_emb = model.get_learned_conditioning(prompts)
+    fps = torch.tensor([fps] * batch_size).to(model.device).long()
+    cond = {"c_crossattn": [text_emb], "fps": fps}
+
+    if cfg_scale != 1.0: # unconditional guidance
+        uc_text_emb = model.get_learned_conditioning(batch_size * [uncond_prompt])
+        uncond = {k:v for k, v in cond.items()}
+        uncond.update({'c_crossattn': [uc_text_emb]})
+    else:
+        uncond = None
+    
+    # ----------------------------------------------------------------------------------
+    # sampling
+    batch_samples = []
+    for _ in range(n_samples_prompt): # iter over batch of prompts
+        samples, _ = sampler.sample(S=ddim_steps,
+                                        conditioning=cond,
+                                        batch_size=batch_size,
+                                        shape=noise_shape[1:],
+                                        verbose=False,
+                                        unconditional_guidance_scale=cfg_scale,
+                                        unconditional_conditioning=uncond,
+                                        eta=ddim_eta,
+                                        temporal_length=noise_shape[2],
+                                        conditional_guidance_scale_temporal=temporal_cfg_scale,
+                                        **kwargs
+                                        )
+        res = model.decode_first_stage(samples)
+        batch_samples.append(res)
+    batch_samples = torch.stack(batch_samples, dim=1)
+    return batch_samples
+
+def sample_batch_i2v(model, sampler, prompts, images, noise_shape, 
+                           n_samples_prompt=1, ddim_steps=50, ddim_eta=1.,
+                           unconditional_guidance_scale=1.0, cfg_img=None, 
+                           fs=None, uncond_prompt="", multiple_cond_cfg=False, 
+                           loop=False, gfi=False, timestep_spacing='uniform', 
+                           guidance_rescale=0.0, 
+                           **kwargs):
+    batch_size = noise_shape[0]
+    
+    # ----------------------------------------------------------------------------------
+    # prepare cond for i2v
+    fs = torch.tensor([fs] * batch_size, dtype=torch.long, device=model.device)
+
+    # cond: txt emb, img emb
+    img = images[:,:,0] #bchw
+    img_emb = model.embedder(img) ## blc
+    img_emb = model.image_proj_model(img_emb)
+    text_emb = model.get_learned_conditioning(prompts)
+    cond = {"c_crossattn": [torch.cat([text_emb, img_emb], dim=1)]}
+    # concat cond imgs
+    if model.model.conditioning_key == 'hybrid':
+        z = get_latent_z(model, images) # b c t h w
+        if loop or gfi:
+            img_cat_cond = torch.zeros_like(z)
+            img_cat_cond[:,:,0,:,:] = z[:,:,0,:,:]
+            img_cat_cond[:,:,-1,:,:] = z[:,:,-1,:,:]
+        else:
+            img_cat_cond = z[:,:,:1,:,:]
+            img_cat_cond = repeat(img_cat_cond, 'b c t h w -> b c (repeat t) h w', repeat=z.shape[2])
+        cond["c_concat"] = [img_cat_cond] # b c 1 h w
+    
+    # uncond
+    if unconditional_guidance_scale != 1.0:
+        if model.uncond_type == "empty_seq":
+            uc_text_emb = model.get_learned_conditioning([uncond_prompt] * batch_size)
+        elif model.uncond_type == "zero_embed":
+            uc_text_emb = torch.zeros_like(text_emb)
+        uc_img_emb = model.embedder(torch.zeros_like(img)) ## b l c
+        uc_img_emb = model.image_proj_model(uc_img_emb)
+        uncond = {"c_crossattn": [torch.cat([uc_text_emb, uc_img_emb],dim=1)]}
+        if model.model.conditioning_key == 'hybrid':
+            uncond["c_concat"] = [img_cat_cond]
+    else:
+        uncond = None
+
+    ## uncond2: we need one more unconditioning image=yes, text=""
+    if multiple_cond_cfg and cfg_img != 1.0:
+        uncond2 = {"c_crossattn": [torch.cat([uc_text_emb, img_emb],dim=1)]}
+        if model.model.conditioning_key == 'hybrid':
+            uncond2["c_concat"] = [img_cat_cond]
+        kwargs.update({"unconditional_conditioning_img_nonetext": uncond2})
+    else:
+        kwargs.update({"unconditional_conditioning_img_nonetext": None})
+
+    # ----------------------------------------------------------------------------------
+    # sampling
+    z0 = None
+    cond_mask = None
+
+    batch_samples = []
+    for _ in range(n_samples_prompt):
+
+        if z0 is not None:
+            cond_z0 = z0.clone()
+            kwargs.update({"clean_cond": True})
+        else:
+            cond_z0 = None
+
+        samples, _ = sampler.sample(S=ddim_steps,
+                                    conditioning=cond,
+                                    batch_size=batch_size,
+                                    shape=noise_shape[1:],
+                                    verbose=False,
+                                    unconditional_guidance_scale=unconditional_guidance_scale,
+                                    unconditional_conditioning=uncond,
+                                    eta=ddim_eta,
+                                    cfg_img=cfg_img, 
+                                    mask=cond_mask,
+                                    x0=cond_z0,
+                                    fs=fs,
+                                    timestep_spacing=timestep_spacing,
+                                    guidance_rescale=guidance_rescale,
+                                    **kwargs
+                                    )
+        res = model.decode_first_stage(samples)
+        batch_samples.append(res)
+    ## variants, batch, c, t, h, w
+    batch_samples = torch.stack(batch_samples)
+    return batch_samples.permute(1, 0, 2, 3, 4, 5)
+
+
 
 def save_videos(batch_tensors, savedir, filenames, fps=10):
     # b,samples,c,t,h,w
@@ -192,4 +303,5 @@ def save_videos(batch_tensors, savedir, filenames, fps=10):
         grid = (grid * 255).to(torch.uint8).permute(0, 2, 3, 1)
         savepath = os.path.join(savedir, f"{filenames[idx]}.mp4")
         torchvision.io.write_video(savepath, grid, fps=fps, video_codec='h264', options={'crf': '10'})
+
 

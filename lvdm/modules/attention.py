@@ -1,20 +1,20 @@
 from functools import partial
+from einops import rearrange, repeat
+
 import torch
 from torch import nn, einsum
 import torch.nn.functional as F
-from einops import rearrange, repeat
 try:
     import xformers
     import xformers.ops
     XFORMERS_IS_AVAILBLE = True
 except:
     XFORMERS_IS_AVAILBLE = False
+
 from lvdm.modules.utils import (
     checkpoint,
     exists,
     default,
-)
-from lvdm.modules.utils import (
     zero_module,
 )
 
@@ -42,8 +42,13 @@ class RelativePosition(nn.Module):
 
 class CrossAttention(nn.Module):
 
-    def __init__(self, query_dim, context_dim=None, heads=8, dim_head=64, dropout=0., 
-                 relative_position=False, temporal_length=None, img_cross_attention=False):
+    def __init__(self, query_dim, 
+                 context_dim=None, heads=8, dim_head=64, dropout=0., 
+                 relative_position=False, temporal_length=None, video_length=None,
+                 img_cross_attention=False, img_cross_attention_scale=1.0, 
+                 img_cross_attention_scale_learnable=False, 
+                 text_context_len=77,
+                 ):
         super().__init__()
         inner_dim = dim_head * heads
         context_dim = default(context_dim, query_dim)
@@ -56,12 +61,16 @@ class CrossAttention(nn.Module):
         self.to_v = nn.Linear(context_dim, inner_dim, bias=False)
         self.to_out = nn.Sequential(nn.Linear(inner_dim, query_dim), nn.Dropout(dropout))
 
-        self.image_cross_attention_scale = 1.0
-        self.text_context_len = 77
         self.img_cross_attention = img_cross_attention
+        self.img_cross_attention_scale = img_cross_attention_scale
+        self.img_cross_attention_scale_learnable = img_cross_attention_scale_learnable
+        self.text_context_len = text_context_len
+
         if self.img_cross_attention:
             self.to_k_ip = nn.Linear(context_dim, inner_dim, bias=False)
             self.to_v_ip = nn.Linear(context_dim, inner_dim, bias=False)
+            if img_cross_attention_scale_learnable:
+                self.register_parameter('alpha', nn.Parameter(torch.tensor(0.)) )
         
         self.relative_position = relative_position
         if self.relative_position:
@@ -74,22 +83,29 @@ class CrossAttention(nn.Module):
                 self.forward = self.efficient_forward
 
     def forward(self, x, context=None, mask=None):
+        is_self_attn = (context is None)
+        k_ip, v_ip, out_ip = None, None, None
+
         h = self.heads
 
         q = self.to_q(x)
         context = default(context, x)
-        ## considering image token additionally
-        if context is not None and self.img_cross_attention:
+
+        if self.img_cross_attention and not is_self_attn:
             context, context_img = context[:,:self.text_context_len,:], context[:,self.text_context_len:,:]
             k = self.to_k(context)
             v = self.to_v(context)
             k_ip = self.to_k_ip(context_img)
             v_ip = self.to_v_ip(context_img)
         else:
+            if not is_self_attn:
+                context = context[:,:self.text_context_len,:]
+
             k = self.to_k(context)
             v = self.to_v(context)
 
         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> (b h) n d', h=h), (q, k, v))
+
         sim = torch.einsum('b i d, b j d -> b i j', q, k) * self.scale
         if self.relative_position:
             len_q, len_k, len_v = q.shape[1], k.shape[1], v.shape[1]
@@ -113,31 +129,40 @@ class CrossAttention(nn.Module):
             out += out2
         out = rearrange(out, '(b h) n d -> b n (h d)', h=h)
 
-        ## considering image token additionally
-        if context is not None and self.img_cross_attention:
+        ## for image cross-attention
+        if k_ip is not None:
             k_ip, v_ip = map(lambda t: rearrange(t, 'b n (h d) -> (b h) n d', h=h), (k_ip, v_ip))
             sim_ip =  torch.einsum('b i d, b j d -> b i j', q, k_ip) * self.scale
             del k_ip
             sim_ip = sim_ip.softmax(dim=-1)
             out_ip = torch.einsum('b i j, b j d -> b i d', sim_ip, v_ip)
             out_ip = rearrange(out_ip, '(b h) n d -> b n (h d)', h=h)
-            out = out + self.image_cross_attention_scale * out_ip
-        del q
-
+        
+        if out_ip is not None:
+            if self.img_cross_attention_scale_learnable:
+                out = out + self.img_cross_attention_scale * out_ip * (torch.tanh(self.alpha)+1)
+            else:
+                out = out + self.img_cross_attention_scale * out_ip
+            
         return self.to_out(out)
     
     def efficient_forward(self, x, context=None, mask=None):
+        is_self_attn = (context is None)
+        k_ip, v_ip, out_ip = None, None, None
+        
         q = self.to_q(x)
         context = default(context, x)
 
         ## considering image token additionally
-        if context is not None and self.img_cross_attention:
+        if self.img_cross_attention and not is_self_attn:
             context, context_img = context[:,:self.text_context_len,:], context[:,self.text_context_len:,:]
             k = self.to_k(context)
             v = self.to_v(context)
             k_ip = self.to_k_ip(context_img)
             v_ip = self.to_v_ip(context_img)
         else:
+            if not is_self_attn:
+                context = context[:,:self.text_context_len,:]
             k = self.to_k(context)
             v = self.to_v(context)
 
@@ -153,8 +178,8 @@ class CrossAttention(nn.Module):
         # actually compute the attention, what we cannot get enough of
         out = xformers.ops.memory_efficient_attention(q, k, v, attn_bias=None, op=None)
 
-        ## considering image token additionally
-        if context is not None and self.img_cross_attention:
+        # for image cross-attention
+        if k_ip is not None:
             k_ip, v_ip = map(
                 lambda t: t.unsqueeze(3)
                 .reshape(b, t.shape[1], self.heads, self.dim_head)
@@ -179,29 +204,37 @@ class CrossAttention(nn.Module):
             .permute(0, 2, 1, 3)
             .reshape(b, out.shape[1], self.heads * self.dim_head)
         )
-        if context is not None and self.img_cross_attention:
-            out = out + self.image_cross_attention_scale * out_ip
+        if out_ip is not None:
+            if self.img_cross_attention_scale_learnable:
+                out = out + self.img_cross_attention_scale * out_ip * (torch.tanh(self.alpha)+1)
+            else:
+                out = out + self.img_cross_attention_scale * out_ip
         return self.to_out(out)
 
 
 class BasicTransformerBlock(nn.Module):
-
-    def __init__(self, dim, n_heads, d_head, dropout=0., context_dim=None, gated_ff=True, checkpoint=True,
-                disable_self_attn=False, attention_cls=None, img_cross_attention=False):
+    def __init__(self, dim, n_heads, d_head, dropout=0., 
+                context_dim=None, gated_ff=True, checkpoint=True,
+                disable_self_attn=False, attention_cls=None, 
+                **kwargs,
+                ):
         super().__init__()
         attn_cls = CrossAttention if attention_cls is None else attention_cls
         self.disable_self_attn = disable_self_attn
-        self.attn1 = attn_cls(query_dim=dim, heads=n_heads, dim_head=d_head, dropout=dropout,
-            context_dim=context_dim if self.disable_self_attn else None)
+        self.attn1 = attn_cls(query_dim=dim, heads=n_heads, 
+                              dim_head=d_head, dropout=dropout,
+                              context_dim=context_dim if self.disable_self_attn else None)
         self.ff = FeedForward(dim, dropout=dropout, glu=gated_ff)
-        self.attn2 = attn_cls(query_dim=dim, context_dim=context_dim, heads=n_heads, dim_head=d_head, dropout=dropout,
-            img_cross_attention=img_cross_attention)
+        self.attn2 = attn_cls(query_dim=dim, heads=n_heads, 
+                              dim_head=d_head, dropout=dropout,
+                              context_dim=context_dim, 
+                              **kwargs)
         self.norm1 = nn.LayerNorm(dim)
         self.norm2 = nn.LayerNorm(dim)
         self.norm3 = nn.LayerNorm(dim)
         self.checkpoint = checkpoint
 
-    def forward(self, x, context=None, mask=None):
+    def forward(self, x, context=None, mask=None, **kwargs):
         ## implementation tricks: because checkpointing doesn't support non-tensor (e.g. None or scalar) arguments
         input_tuple = (x,)      ## should not be (x), otherwise *input_tuple will decouple x into multiple arguments
         if context is not None:
@@ -231,7 +264,8 @@ class SpatialTransformer(nn.Module):
     """
 
     def __init__(self, in_channels, n_heads, d_head, depth=1, dropout=0., context_dim=None,
-                 use_checkpoint=True, disable_self_attn=False, use_linear=False, img_cross_attention=False):
+                 use_checkpoint=True, disable_self_attn=False, use_linear=False, 
+                 img_cross_attention=False, img_cross_attention_scale_learnable=False):
         super().__init__()
         self.in_channels = in_channels
         inner_dim = n_heads * d_head
@@ -241,6 +275,7 @@ class SpatialTransformer(nn.Module):
         else:
             self.proj_in = nn.Linear(in_channels, inner_dim)
 
+        attention_cls = None
         self.transformer_blocks = nn.ModuleList([
             BasicTransformerBlock(
                 inner_dim,
@@ -248,9 +283,12 @@ class SpatialTransformer(nn.Module):
                 d_head,
                 dropout=dropout,
                 context_dim=context_dim,
-                img_cross_attention=img_cross_attention,
                 disable_self_attn=disable_self_attn,
-                checkpoint=use_checkpoint) for d in range(depth)
+                checkpoint=use_checkpoint,
+                attention_cls=attention_cls,
+                img_cross_attention=img_cross_attention,
+                img_cross_attention_scale_learnable=img_cross_attention_scale_learnable,
+                ) for d in range(depth)
         ])
         if not use_linear:
             self.proj_out = zero_module(nn.Conv2d(inner_dim, in_channels, kernel_size=1, stride=1, padding=0))
@@ -286,12 +324,13 @@ class TemporalTransformer(nn.Module):
     Finally, reshape to image
     """
     def __init__(self, in_channels, n_heads, d_head, depth=1, dropout=0., context_dim=None,
-                 use_checkpoint=True, use_linear=False, only_self_att=True, causal_attention=False,
+                 use_checkpoint=True, use_linear=False, only_self_att=True, causal_attention=False, causal_block_size=1,
                  relative_position=False, temporal_length=None):
         super().__init__()
         self.only_self_att = only_self_att
         self.relative_position = relative_position
         self.causal_attention = causal_attention
+        self.causal_block_size = causal_block_size
         self.in_channels = in_channels
         inner_dim = n_heads * d_head
         self.norm = torch.nn.GroupNorm(num_groups=32, num_channels=in_channels, eps=1e-6, affine=True)
@@ -305,7 +344,8 @@ class TemporalTransformer(nn.Module):
             assert(temporal_length is not None)
             attention_cls = partial(CrossAttention, relative_position=True, temporal_length=temporal_length)
         else:
-            attention_cls = None
+            attention_cls = partial(CrossAttention, temporal_length=temporal_length)
+
         if self.causal_attention:
             assert(temporal_length is not None)
             self.mask = torch.tril(torch.ones([1, temporal_length, temporal_length]))
@@ -340,13 +380,15 @@ class TemporalTransformer(nn.Module):
             x = self.proj_in(x)
 
         if self.causal_attention:
+            mask = self.mask[:, :t, :t]
+
             mask = self.mask.to(x.device)
             mask = repeat(mask, 'l i j -> (l bhw) i j', bhw=b*h*w)
         else:
             mask = None
 
         if self.only_self_att:
-            ## note: if no context is given, cross-attention defaults to self-attention
+            # if no context is given, cross-attention defaults to self-attention
             for i, block in enumerate(self.transformer_blocks):
                 x = block(x, mask=mask)
             x = rearrange(x, '(b hw) t c -> b hw t c', b=b).contiguous()
