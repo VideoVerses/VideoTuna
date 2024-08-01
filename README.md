@@ -4,9 +4,12 @@
 [] Slogan
 
 ## TODOs
-[] inference vc2
-[] finetune vc2
-[] train vc2
+[x] inference vc, dc  
+[ ] finetune & train vc2  
+[ ] finetune & train dc
+[ ] inference dc interp & loop
+[ ] opensora-train, inference  
+
 
 ## Updates
 
@@ -17,7 +20,11 @@
 1. Concept-specific finetuning: character, style, etc.
 1. Human preference alignment post-training: RLFH, DPO.
 1. Post-processing: enhancement.
-
+- diffusion
+    - eps prediction
+    - x0 prediction
+    - v prediction
+    - [ ] flow models
 ### Models
 
 |T2V-Models|Resolution|Checkpoints|
@@ -34,9 +41,9 @@
 
 |I2V-Models|Resolution|Checkpoints|
 |:---------|:---------|:--------|
-|DynamiCrafter|TODO|[Hugging Face](TODO)
-|VideoCrafter1|640x1024|[Hugging Face](https://huggingface.co/Doubiiu/DynamiCrafter_1024/blob/main/model.ckpt)
-|VideoCrafter1|320x512|[Hugging Face](https://huggingface.co/VideoCrafter/Image2Video-512/blob/main/model.ckpt)
+|DynamiCrafter|576x1024|[Hugging Face](https://huggingface.co/Doubiiu/DynamiCrafter_1024/blob/main/model.ckpt)|
+|VideoCrafter1|640x1024|[Hugging Face](https://huggingface.co/Doubiiu/DynamiCrafter_1024/blob/main/model.ckpt)|
+|VideoCrafter1|320x512|[Hugging Face](https://huggingface.co/VideoCrafter/Image2Video-512/blob/main/model.ckpt)|xG
 
 
 
@@ -51,9 +58,11 @@ conda activate videocrafter
 
 ### Prepare checkpoints
 ```
-wget https://huggingface.co/VideoCrafter/VideoCrafter2/resolve/main/model.ckpt   # videocrafter2-512
-wget https://huggingface.co/VideoCrafter/Text2Video-1024/resolve/main/model.ckpt # videocrafter1-1024
-wget https://huggingface.co/Doubiiu/DynamiCrafter_1024/resolve/main/model.ckpt   # dynamicrafter-1024
+wget https://huggingface.co/VideoCrafter/VideoCrafter2/resolve/main/model.ckpt   # videocrafter2-t2v-512
+wget https://huggingface.co/VideoCrafter/Text2Video-1024/resolve/main/model.ckpt # videocrafter1-t2v-1024
+wget https://huggingface.co/VideoCrafter/Image2Video-512/resolve/main/model.ckpt # videocrafter1-i2v-512
+wget https://huggingface.co/Doubiiu/DynamiCrafter_1024/resolve/main/model.ckpt   # dynamicrafter-i2v-1024
+
 ```
 
 ### New a video
