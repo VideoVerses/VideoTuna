@@ -29,8 +29,7 @@ from lvdm.modules.utils import disabled_train, default, exists, extract_into_ten
 from lvdm.distributions import DiagonalGaussianDistribution, normal_kl
 from lvdm.ema import LitEma
 from lvdm.samplers.ddim import DDIMSampler
-from lvdm.modules.encoders.ip_resampler import ImageProjModel, Resampler
-from lvdm.models.utils_diffusion import make_beta_schedule, rescale_zero_terminal_snr
+from lvdm.models.utils_diffusion import make_beta_schedule
 from utils.common_utils import instantiate_from_config
 
 __conditioning_keys__ = {'concat': 'c_concat',
@@ -67,10 +66,9 @@ class DDPM(pl.LightningModule):
                  use_positional_encodings=False,
                  learn_logvar=False,
                  logvar_init=0.,
-                 rescale_betas_zero_snr=False,
                  ):
         super().__init__()
-        assert parameterization in ["eps", "x0", "v"], 'currently only supporting "eps" and "x0" and "v"'
+        assert parameterization in ["eps", "x0"], 'currently only supporting "eps" and "x0"'
         self.parameterization = parameterization
         mainlogger.info(f"{self.__class__.__name__}: Running in {self.parameterization}-prediction mode")
         self.cond_stage_model = None
@@ -78,7 +76,8 @@ class DDPM(pl.LightningModule):
         self.log_every_t = log_every_t
         self.first_stage_key = first_stage_key
         self.channels = channels
-        self.temporal_length = unet_config.params.temporal_length
+        # self.temporal_length = unet_config.params.temporal_length
+        self.temporal_length = unet_config.params.get('temporal_length', 16)
         self.image_size = image_size  # try conv?
         if isinstance(self.image_size, int):
             self.image_size = [self.image_size, self.image_size]
@@ -86,7 +85,6 @@ class DDPM(pl.LightningModule):
         self.model = DiffusionWrapper(unet_config, conditioning_key)
         #count_params(self.model, verbose=True)
         self.use_ema = use_ema
-        self.rescale_betas_zero_snr = rescale_betas_zero_snr
         if self.use_ema:
             self.model_ema = LitEma(self.model)
             mainlogger.info(f"Keeping EMAs of {len(list(self.model_ema.buffers()))}.")
@@ -114,6 +112,7 @@ class DDPM(pl.LightningModule):
         if self.learn_logvar:
             self.logvar = nn.Parameter(self.logvar, requires_grad=True)
 
+
     def register_schedule(self, given_betas=None, beta_schedule="linear", timesteps=1000,
                           linear_start=1e-4, linear_end=2e-2, cosine_s=8e-3):
         if exists(given_betas):
@@ -121,9 +120,6 @@ class DDPM(pl.LightningModule):
         else:
             betas = make_beta_schedule(beta_schedule, timesteps, linear_start=linear_start, linear_end=linear_end,
                                        cosine_s=cosine_s)
-        if self.rescale_betas_zero_snr:
-            betas = rescale_zero_terminal_snr(betas)
-        
         alphas = 1. - betas
         alphas_cumprod = np.cumprod(alphas, axis=0)
         alphas_cumprod_prev = np.append(1., alphas_cumprod[:-1])
@@ -144,12 +140,8 @@ class DDPM(pl.LightningModule):
         self.register_buffer('sqrt_alphas_cumprod', to_torch(np.sqrt(alphas_cumprod)))
         self.register_buffer('sqrt_one_minus_alphas_cumprod', to_torch(np.sqrt(1. - alphas_cumprod)))
         self.register_buffer('log_one_minus_alphas_cumprod', to_torch(np.log(1. - alphas_cumprod)))
-        if self.parameterization == "v":
-            self.register_buffer('sqrt_recip_alphas_cumprod', torch.zeros_like(to_torch(alphas_cumprod)))
-            self.register_buffer('sqrt_recipm1_alphas_cumprod', torch.zeros_like(to_torch(alphas_cumprod)))
-        else:
-            self.register_buffer('sqrt_recip_alphas_cumprod', to_torch(np.sqrt(1. / alphas_cumprod)))
-            self.register_buffer('sqrt_recipm1_alphas_cumprod', to_torch(np.sqrt(1. / alphas_cumprod - 1)))
+        self.register_buffer('sqrt_recip_alphas_cumprod', to_torch(np.sqrt(1. / alphas_cumprod)))
+        self.register_buffer('sqrt_recipm1_alphas_cumprod', to_torch(np.sqrt(1. / alphas_cumprod - 1)))
 
         # calculations for posterior q(x_{t-1} | x_t, x_0)
         posterior_variance = (1 - self.v_posterior) * betas * (1. - alphas_cumprod_prev) / (
@@ -168,9 +160,6 @@ class DDPM(pl.LightningModule):
                         2 * self.posterior_variance * to_torch(alphas) * (1 - self.alphas_cumprod))
         elif self.parameterization == "x0":
             lvlb_weights = 0.5 * np.sqrt(torch.Tensor(alphas_cumprod)) / (2. * 1 - torch.Tensor(alphas_cumprod))
-        elif self.parameterization == "v":
-            lvlb_weights = torch.ones_like(self.betas ** 2 / (
-                    2 * self.posterior_variance * to_torch(alphas) * (1 - self.alphas_cumprod)))
         else:
             raise NotImplementedError("mu not supported")
         # TODO how to choose this term
@@ -227,20 +216,6 @@ class DDPM(pl.LightningModule):
         return (
                 extract_into_tensor(self.sqrt_recip_alphas_cumprod, t, x_t.shape) * x_t -
                 extract_into_tensor(self.sqrt_recipm1_alphas_cumprod, t, x_t.shape) * noise
-        )
-
-    def predict_start_from_z_and_v(self, x_t, t, v):
-        # self.register_buffer('sqrt_alphas_cumprod', to_torch(np.sqrt(alphas_cumprod)))
-        # self.register_buffer('sqrt_one_minus_alphas_cumprod', to_torch(np.sqrt(1. - alphas_cumprod)))
-        return (
-                extract_into_tensor(self.sqrt_alphas_cumprod, t, x_t.shape) * x_t -
-                extract_into_tensor(self.sqrt_one_minus_alphas_cumprod, t, x_t.shape) * v
-        )
-
-    def predict_eps_from_z_and_v(self, x_t, t, v):
-        return (
-                extract_into_tensor(self.sqrt_alphas_cumprod, t, x_t.shape) * v +
-                extract_into_tensor(self.sqrt_one_minus_alphas_cumprod, t, x_t.shape) * x_t
         )
 
     def q_posterior(self, x_start, x_t, t):
@@ -300,15 +275,12 @@ class DDPM(pl.LightningModule):
         return (extract_into_tensor(self.sqrt_alphas_cumprod, t, x_start.shape) * x_start +
                 extract_into_tensor(self.sqrt_one_minus_alphas_cumprod, t, x_start.shape) * noise)
 
-    def get_v(self, x, noise, t):
-        return (
-                extract_into_tensor(self.sqrt_alphas_cumprod, t, x.shape) * noise -
-                extract_into_tensor(self.sqrt_one_minus_alphas_cumprod, t, x.shape) * x
-        )
-
     def get_loss(self, pred, target, mean=True):
         if self.loss_type == 'l1':
-            loss = (target - pred).abs()
+            # print('loss shape: ', target.shape, pred.shape)
+            # loss = (target - pred).abs()
+            # TODO 
+            loss = (target - pred[:,:4,...]).abs()
             if mean:
                 loss = loss.mean()
         elif self.loss_type == 'l2':
@@ -467,12 +439,11 @@ class LatentDiffusion(DDPM):
                  uncond_type="empty_seq",
                  scale_factor=1.0,
                  scale_by_std=False,
-                 fps_condition_type='fs',
                  # added for LVDM
                  encoder_type="2d",
                  frame_cond=None,
                  only_model=False,
-                 use_scale=False, # dynamic rescaling
+                 use_scale=False,
                  scale_a=1,
                  scale_b=0.3,
                  mid_step=400,
@@ -492,7 +463,6 @@ class LatentDiffusion(DDPM):
         self.cond_stage_trainable = cond_stage_trainable
         self.cond_stage_key = cond_stage_key
         self.empty_params_only = empty_params_only
-        self.fps_condition_type = fps_condition_type
 
         # scale factor
         self.use_scale=use_scale
@@ -721,8 +691,7 @@ class LatentDiffusion(DDPM):
             t = kwargs.pop('t')
         else:
             t = torch.randint(0, self.num_timesteps, (x.shape[0],), device=self.device).long()
-        if self.use_dynamic_rescale:
-            x = x * extract_into_tensor(self.scale_arr, t, x.shape)
+        # print('c in forward: ', type(c), c['y'].shape)
         return self.p_losses(x, c, t, **kwargs)
 
     def shared_step(self, batch, random_uncond, **kwargs):
@@ -738,20 +707,32 @@ class LatentDiffusion(DDPM):
             pass
 
         x, c = self.get_batch_input(batch, random_uncond=random_uncond, is_imgbatch=is_imgbatch)
+        # print('check in shared_step: ', type(x), type(c), c['y'].shape) # [1, 1, 120, 4096]
+        # if isinstance(c, dict):
+
+        print('check in shared_step: ', type(x), type(c)) # [1, 1, 120, 4096]
         loss, loss_dict = self(x, c, is_imgbatch=is_imgbatch, **kwargs)
         return loss, loss_dict
 
     def apply_model(self, x_noisy, t, cond, **kwargs):
-        if isinstance(cond, dict):
-            # hybrid case, cond is exptected to be a dict
-            pass
+        if self.model.conditioning_key == 'crossattn_stdit':
+            key = 'c_crossattn_stdit'
+            cond = {key: [cond['y']]} # TODO how should we deal with mask?
         else:
-            if not isinstance(cond, list):
-                cond = [cond]
-            key = 'c_concat' if self.model.conditioning_key == 'concat' else 'c_crossattn'
-            cond = {key: cond}
+            if isinstance(cond, dict):
+                # hybrid case, cond is exptected to be a dict
+                pass
+            else:
+                if not isinstance(cond, list):
+                    cond = [cond]
+                key = 'c_concat' if self.model.conditioning_key == 'concat' else 'c_crossattn'
+                cond = {key: cond}
 
+        print('cond in apply model: ', cond.keys())
+        # print('cond in apply model: ', cond['y'].shape)
+        # TODO T5 might be different from clip here 
         x_recon = self.model(x_noisy, t, **cond, **kwargs)
+        print('x_recon shape in apply model: ', x_recon.shape)
 
         if isinstance(x_recon, tuple):
             return x_recon[0]
@@ -759,6 +740,7 @@ class LatentDiffusion(DDPM):
             return x_recon
 
     def p_losses(self, x_start, cond, t, noise=None, **kwargs):
+        print('cond shape in p_losses: ', type(cond))
         noise = default(noise, lambda: torch.randn_like(x_start))
         x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
         if self.frame_cond:
@@ -766,6 +748,7 @@ class LatentDiffusion(DDPM):
                 self.cond_mask = self.cond_mask.to(self.device)
             ## condition on fist few frames
             x_noisy = x_start * self.cond_mask + (1.-self.cond_mask) * x_noisy
+        
         model_output = self.apply_model(x_noisy, t, cond, **kwargs)
 
         loss_dict = {}
@@ -817,6 +800,7 @@ class LatentDiffusion(DDPM):
 
     def training_step(self, batch, batch_idx):
         loss, loss_dict = self.shared_step(batch, random_uncond=self.classifier_free_guidance)
+        ## sync_dist | rank_zero_only 
         self.log_dict(loss_dict, prog_bar=True, logger=True, on_step=True, on_epoch=True, sync_dist=False)
         #self.log("epoch/global_step", self.global_step.float(), prog_bar=True, logger=True, on_step=True, on_epoch=False)
         '''
@@ -839,8 +823,7 @@ class LatentDiffusion(DDPM):
         
         if denoise_row.dim() == 5:
             # img, num_imgs= n_log_timesteps * bs, grid_size=[bs,n_log_timesteps]
-            # batch:col, different samples, 
-            # n:rows, different steps for one sample
+            # 先batch再n，grid时候一行是一个sample的不同steps，batch是列，行是n
             denoise_grid = rearrange(denoise_row, 'n b c h w -> b n c h w')
             denoise_grid = rearrange(denoise_grid, 'b n c h w -> (b n) c h w')
             denoise_grid = make_grid(denoise_grid, nrow=n_log_timesteps)
@@ -867,18 +850,30 @@ class LatentDiffusion(DDPM):
                                                 return_first_stage_outputs=True,
                                                 return_original_cond=True)
         N, _, T, H, W = x.shape
-        log["inputs"] = x
+        log["inputs"] = x#.to(torch.bfloat16)
         log["reconst"] = xrec
         log["condition"] = xc
+
+        # z = z.to(torch.bfloat16)
         
         if sample:
             # get uncond embedding for classifier-free guidance sampling
             if unconditional_guidance_scale != 1.0:
+                # if isinstance(c, dict):
+                #     c_cat, c_emb = c["c_concat"][0], c["c_crossattn"][0]
+                #     #log["condition_cat"] = c_cat
+                # else:
+                    # c_emb = c
                 if isinstance(c, dict):
-                    c_cat, c_emb = c["c_concat"][0], c["c_crossattn"][0]
+                    c_emb = c["y"]
                     #log["condition_cat"] = c_cat
+                    # c = c["y"]
                 else:
                     c_emb = c
+                
+                z = z.to(torch.bfloat16)
+                c_emb = c_emb.to(torch.bfloat16)
+
 
                 if self.uncond_type == "empty_seq":
                     prompts = N * [""]
@@ -886,9 +881,9 @@ class LatentDiffusion(DDPM):
                 elif self.uncond_type == "zero_embed":
                     uc = torch.zeros_like(c_emb)
                 ## hybrid case
-                if isinstance(c, dict):
-                    uc_hybrid = {"c_concat": [c_cat], "c_crossattn": [uc]}
-                    uc = uc_hybrid
+                # if isinstance(c, dict):
+                #     uc_hybrid = {"c_concat": [c_cat], "c_crossattn": [uc]}
+                #     uc = uc_hybrid
             else:
                 uc = None
 
@@ -1089,22 +1084,15 @@ class LatentDiffusion(DDPM):
         return lr_scheduler
 
 class LatentVisualDiffusion(LatentDiffusion):
-    def __init__(self, 
-                 img_cond_stage_config,
-                 finegrained=False,             # vc1-i2v
-                 image_proj_stage_config=None,  # dc 
-                 freeze_embedder=True,          # dc
-                 *args, **kwargs):
+    def __init__(self, cond_img_config, finegrained=False, random_cond=False, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._init_embedder(img_cond_stage_config, freeze_embedder)
-        if image_proj_stage_config is not None:
-            self.image_proj_model = instantiate_from_config(image_proj_stage_config)
-        else:
-            num_tokens = 16 if finegrained else 4
-            self.image_proj_model = self.init_projector(use_finegrained=finegrained, num_tokens=num_tokens, input_dim=1024,\
+        self.random_cond = random_cond
+        self.instantiate_img_embedder(cond_img_config, freeze=True)
+        num_tokens = 16 if finegrained else 4
+        self.image_proj_model = self.init_projector(use_finegrained=finegrained, num_tokens=num_tokens, input_dim=1024,\
                                             cross_attention_dim=1024, dim=1280)    
 
-    def _init_embedder(self, config, freeze=True):
+    def instantiate_img_embedder(self, config, freeze=True):
         embedder = instantiate_from_config(config)
         if freeze:
             self.embedder = embedder.eval()
@@ -1130,13 +1118,15 @@ class LatentVisualDiffusion(LatentDiffusion):
         img_emb = self.image_proj_model(img_token)
         return img_emb
 
+
 class DiffusionWrapper(pl.LightningModule):
     def __init__(self, diff_model_config, conditioning_key):
         super().__init__()
+        # instantiate the diffusion model 
         self.diffusion_model = instantiate_from_config(diff_model_config)
         self.conditioning_key = conditioning_key
 
-    def forward(self, x, t, c_concat: list = None, c_crossattn: list = None,
+    def forward(self, x, t, c_concat: list = None, c_crossattn: list = None, c_crossattn_stdit: list = None,
                 c_adm=None, s=None, mask=None, **kwargs):
         # temporal_context = fps is foNone
         if self.conditioning_key is None:
@@ -1145,8 +1135,28 @@ class DiffusionWrapper(pl.LightningModule):
             xc = torch.cat([x] + c_concat, dim=1)
             out = self.diffusion_model(xc, t, **kwargs)
         elif self.conditioning_key == 'crossattn':
+            print('c_crossattn in wrapper: ', type(c_crossattn), len(c_crossattn))
+            print('c_crossattn in wrapper: ', c_crossattn[0].shape)
             cc = torch.cat(c_crossattn, 1)
             out = self.diffusion_model(x, t, context=cc, **kwargs)
+        elif self.conditioning_key == 'crossattn_stdit':
+            # print('condition shape: ', len(c_crossattn))
+            # print('condition shape: ', len(c_crossattn), len(c_crossattn[0]), c_crossattn[0][0].shape)
+
+            cc = torch.cat(c_crossattn_stdit, 1) # [b, 77, 1024] 
+            # print('condition shape: ', len(c_crossattn), len(c_crossattn[0]), c_crossattn[0][0].shape)
+            # print('condition shape: ', len(c_crossattn), cc.shape)
+            # if cc.dtype != 
+            cc = cc.to(torch.bfloat16)
+            self.diffusion_model = self.diffusion_model.to(torch.bfloat16)
+            print('dtype in diffusion wrapper: ', x.dtype, cc.dtype) # cc is bf16 in training, bf32 in inference. 
+            # torch.Size([1, 4, 16, 40, 64]) [1, 1, 120, 4096]
+            print('shape in wrapper: ', x.shape, cc.shape)
+
+            # TODO add mask
+            out = self.diffusion_model(x, t, y=cc) 
+            # def forward(self, x, timestep, y, mask=None, x_mask=None, fps=None, height=None, width=None, **kwargs):
+
         elif self.conditioning_key == 'hybrid':
             ## it is just right [b,c,t,h,w]: concatenate in channel dim
             xc = torch.cat([x] + c_concat, dim=1)
@@ -1170,10 +1180,12 @@ class DiffusionWrapper(pl.LightningModule):
             out = self.diffusion_model(xc, t, context=cc, s=s)
         elif self.conditioning_key == 'concat-time-mask':
             # assert s is not None
+            # mainlogger.info('x & mask:',x.shape,c_concat[0].shape)
             xc = torch.cat([x] + c_concat, dim=1)
             out = self.diffusion_model(xc, t, context=None, s=s, mask=mask)
         elif self.conditioning_key == 'concat-adm-mask':
             # assert s is not None
+            # mainlogger.info('x & mask:',x.shape,c_concat[0].shape)
             if c_concat is not None:
                 xc = torch.cat([x] + c_concat, dim=1)
             else:
@@ -1192,10 +1204,6 @@ class DiffusionWrapper(pl.LightningModule):
             xc = torch.cat([x] + c_concat, dim=1)
             cc = torch.cat(c_crossattn, 1)
             out = self.diffusion_model(xc, t, context=cc, s=s, y=c_adm)
-        elif self.conditioning_key == 'crossattn-adm':
-            assert c_adm is not None
-            cc = torch.cat(c_crossattn, 1)
-            out = self.diffusion_model(x, t, context=cc, y=c_adm)
         else:
             raise NotImplementedError()
 
