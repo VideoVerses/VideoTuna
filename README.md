@@ -1,7 +1,7 @@
 [] logo
 
-# NewVid
-[] Slogan
+# VideoTuna
+Let's finetune video generation models!
 
 ## TODOs
 [x] inference vc, dc  
