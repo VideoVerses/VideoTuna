@@ -4,18 +4,22 @@
 Let's finetune video generation models!
 
 ## TODOs
-[x] inference vc, dc  
-[ ] finetune & train vc2  
-[ ] finetune & train dc
-[ ] inference dc interp & loop
-[ ] opensora-train, inference  
-
+[x] inference vc, dc   
+[x] finetune & train vc2，dc   
+[x] opensora-train, inference  
+[ ] dpo, lora  
+[ ] flux inference, fine-tune  
+[ ] cogvideo inference, fine-tune  
+[ ] vae  
+next:  
+[ ] inference dc interp & loop  
 
 ## Updates
 
 ## What we have
 ### Features
-1. Continuous pretraining.
+1. Inference state-of-the-art models.
+2. Pretraining.
 1. Domain-specific finetuning: human, cartoon, robotics, autonomous driving, etc.
 1. Concept-specific finetuning: character, style, etc.
 1. Human preference alignment post-training: RLFH, DPO.
