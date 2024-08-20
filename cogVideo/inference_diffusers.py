@@ -19,7 +19,7 @@ import PIL
 import imageio
 import numpy as np
 import torch
-from diffusers import CogVideoXPipeline, CogVideoXDDIMScheduler
+from inference_diffusers import CogVideoXPipeline, CogVideoXDDIMScheduler
 
 def export_to_video_imageio(
         video_frames: Union[List[np.ndarray], List[PIL.Image.Image]], output_video_path: str = None, fps: int = 8
