@@ -6,6 +6,8 @@
 |--------------|------------|---------------------------------------------------------------------|
 | CogVideoX-2b | 720x480    | [Hugging Face](https://huggingface.co/THUDM/CogVideoX-2b/tree/main) |
 
+## Get started
+
 ## Set up environment
 
 ### For CUDA 12.x
@@ -13,6 +15,7 @@
 conda create -n cogvideo python=3.10
 conda activate cogvideo
 ```
+
 
 ### Install dependencies
 ```
@@ -57,6 +60,6 @@ Parameters:
 
 ### Example
 ```
-python diffusers.py --prompt "A video of a cat playing with a ball" --model_path /path/to/CogVideoX-2b --output_path output.mp4
+python inference_diffusers.py --prompt "A video of a cat playing with a ball" --model_path /path/to/CogVideoX-2b --output_path output.mp4
 ```
 It will generate a video of a cat playing with a ball and save it to the file /cogVideo/output.mp4.
