@@ -1,7 +1,7 @@
 import os
 import sys
 # sys.path.append(f'/home/zraoac/HKSora')
-sys.path.append(f'/project/llmsvgen/yazhou/check-base/LVDM-UST-VideoCrafterft')
+sys.path.append(f'./models')
 
 
 import torch

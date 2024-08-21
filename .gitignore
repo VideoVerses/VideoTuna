@@ -8,3 +8,5 @@ __pycache__/
 
 results
 checkpoints
+pretrained_models/
+samples/

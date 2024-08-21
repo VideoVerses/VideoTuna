@@ -1,5 +1,5 @@
 model:
-  target: lvdm.models.ddpm3d.LatentDiffusion
+  target: src.lvdm.models.ddpm3d.LatentDiffusion
   params:
     linear_start: 0.00085
     linear_end: 0.012
@@ -20,7 +20,7 @@ model:
     use_scale: true
     scale_b: 0.7
     unet_config:
-      target: lvdm.modules.networks.openaimodel3d.UNetModel
+      target: src.lvdm.modules.networks.openaimodel3d.UNetModel
       params:
         in_channels: 4
         out_channels: 4
@@ -49,7 +49,7 @@ model:
         addition_attention: true
         fps_cond: true
     first_stage_config:
-      target: lvdm.models.autoencoder.AutoencoderKL
+      target: src.lvdm.models.autoencoder.AutoencoderKL
       params:
         embed_dim: 4
         monitor: val/rec_loss
@@ -71,7 +71,7 @@ model:
         lossconfig:
           target: torch.nn.Identity
     cond_stage_config:
-      target: lvdm.modules.encoders.condition.FrozenOpenCLIPEmbedder
+      target: src.lvdm.modules.encoders.condition.FrozenOpenCLIPEmbedder
       params:
         freeze: true
         layer: penultimate
