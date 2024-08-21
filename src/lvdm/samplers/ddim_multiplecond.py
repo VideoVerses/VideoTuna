@@ -27,7 +27,7 @@ class DDIMSampler(object):
         assert alphas_cumprod.shape[0] == self.ddpm_num_timesteps, 'alphas have to be defined for each timestep'
         to_torch = lambda x: x.clone().detach().to(torch.float32).to(self.model.device)
 
-        if self.model.use_dynamic_rescale:
+        if self.model.use_scale:
             self.ddim_scale_arr = self.model.scale_arr[self.ddim_timesteps]
             self.ddim_scale_arr_prev = torch.cat([self.ddim_scale_arr[0:1], self.ddim_scale_arr[:-1]])
 
@@ -264,7 +264,7 @@ class DDIMSampler(object):
         else:
             pred_x0 = self.model.predict_start_from_z_and_v(x, t, model_output)
         
-        if self.model.use_dynamic_rescale:
+        if self.model.use_scale:
             scale_t = torch.full(size, self.ddim_scale_arr[index], device=device)
             prev_scale_t = torch.full(size, self.ddim_scale_arr_prev[index], device=device)
             rescale = (prev_scale_t / scale_t)

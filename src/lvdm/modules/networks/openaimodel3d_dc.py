@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from lvdm.modules.utils import (
+from src.lvdm.modules.utils import (
     checkpoint,
     zero_module,
     conv_nd,
@@ -14,8 +14,8 @@ from lvdm.modules.utils import (
     avg_pool_nd,
     normalization
 )
-from lvdm.models.utils_diffusion import timestep_embedding
-from lvdm.modules.attention import SpatialTransformer, TemporalTransformer
+from src.lvdm.models.utils_diffusion import timestep_embedding
+from src.lvdm.modules.attention import SpatialTransformer, TemporalTransformer
 
 
 class TimestepBlock(nn.Module):

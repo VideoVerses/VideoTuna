@@ -31,6 +31,8 @@ def get_parser(**parser_kwargs):
     parser.add_argument("--auto_resume", action='store_true', default=False, help="resume from full-info checkpoint")
     parser.add_argument("--debug", "-d", action='store_true', default=False, help="enable post-mortem debugging")
 
+    parser.add_argument("--sdckpt", type=str, default=None, help="pretrained stable diffusion checkpoint")
+    parser.add_argument("--ckpt", type=str, default=None, help="pretrained current model checkpoint")
     return parser
     
 def get_nondefault_trainer_args(args):
@@ -62,6 +64,12 @@ if __name__ == "__main__":
     configs = [OmegaConf.load(cfg) for cfg in args.base]
     cli = OmegaConf.from_dotlist(unknown)
     config = OmegaConf.merge(*configs, cli)
+
+    if args.sdckpt is not None:
+        config["model"]["sd_checkpoint"] = args.sdckpt
+    if args.ckpt is not None:
+        config["model"]["pretrained_checkpoint"] = args.ckpt
+    
     lightning_config = config.pop("lightning", OmegaConf.create())
     trainer_config = lightning_config.get("trainer", OmegaConf.create()) 
 
@@ -128,6 +136,7 @@ if __name__ == "__main__":
     
     ## setup callbacks
     callbacks_cfg = get_trainer_callbacks(lightning_config, config, workdir, ckptdir, logger)
+    callbacks_cfg['image_logger']['params']['save_dir'] = workdir
     trainer_kwargs["callbacks"] = [instantiate_from_config(callbacks_cfg[k]) for k in callbacks_cfg]
     strategy_cfg = get_trainer_strategy(lightning_config)
     trainer_kwargs["strategy"] = strategy_cfg if type(strategy_cfg) == str else instantiate_from_config(strategy_cfg)
