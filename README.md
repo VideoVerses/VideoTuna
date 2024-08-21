@@ -24,6 +24,32 @@ next:
 1. Human preference alignment/Post-training: RLFH, DPO.
 1. Post-processing: enhancement.
 
+### Code Structure
+```
+VideoTuna
+├── configs
+│ ├── model_name_inf.yaml
+│ └── model_name_train.yaml
+├── checkpoints
+├── docs
+├── inputs
+├── results
+├── src
+│ ├── dataset
+│ ├── model-1
+│ ├── model-2
+│ └── model-N
+├── scripts
+│ ├── inference_xxx.py
+│ └── train_xxx.py
+├── shscripts
+│ ├── inference_xxx.sh
+│ └── train_xxx.sh
+├── utils
+└── test
+
+```
+
 ### Models
 
 |T2V-Models|Resolution|Checkpoints|
