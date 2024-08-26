@@ -307,6 +307,11 @@ class DDPM(pl.LightningModule):
         )
 
     def get_loss(self, pred, target, mean=True):
+        
+        if target.size()[1] != pred.size()[1]:
+            c = target.size()[1]
+            pred = pred[:, :c, ...] # opensora, only previous 4 channels used for calculating loss.
+        
         if self.loss_type == 'l1':
             loss = (target - pred).abs()
             if mean:
@@ -743,14 +748,18 @@ class LatentDiffusion(DDPM):
         return loss, loss_dict
 
     def apply_model(self, x_noisy, t, cond, **kwargs):
-        if isinstance(cond, dict):
-            # hybrid case, cond is exptected to be a dict
-            pass
+        if self.model.conditioning_key == 'crossattn_stdit':
+            key = 'crossattn_stdit'
+            cond = {key: [cond['y']]}
         else:
-            if not isinstance(cond, list):
-                cond = [cond]
-            key = 'c_concat' if self.model.conditioning_key == 'concat' else 'c_crossattn'
-            cond = {key: cond}
+            if isinstance(cond, dict):
+                # hybrid case, cond is exptected to be a dict
+                pass
+            else:
+                if not isinstance(cond, list):
+                    cond = [cond]
+                key = 'c_concat' if self.model.conditioning_key == 'concat' else 'c_crossattn'
+                cond = {key: cond}
 
         x_recon = self.model(x_noisy, t, **cond, **kwargs)
 
@@ -878,20 +887,23 @@ class LatentDiffusion(DDPM):
             # get uncond embedding for classifier-free guidance sampling
             if unconditional_guidance_scale != 1.0:
                 if isinstance(c, dict):
-                    c_cat, c_emb = c["c_concat"][0], c["c_crossattn"][0]
-                    #log["condition_cat"] = c_cat
+                    if "y" in c:
+                        c_emb = c["y"]
+                        c_cat = None # set default value is None
+                    else:
+                        c_cat, c_emb = c["c_concat"][0], c["c_crossattn"][0]
                 else:
                     c_emb = c
-
+                
+                # get uc: unconditional condition for classifier-free guidance sampling
                 if self.uncond_type == "empty_seq":
                     prompts = N * [""]
                     uc = self.get_learned_conditioning(prompts)
                 elif self.uncond_type == "zero_embed":
                     uc = torch.zeros_like(c_emb)
-                ## hybrid case
-                if isinstance(c, dict):
-                    uc_hybrid = {"c_concat": [c_cat], "c_crossattn": [uc]}
-                    uc = uc_hybrid
+                # make uc for hybrid condition case
+                if isinstance(c, dict) and c_cat is not None:
+                    uc = {"c_concat": [c_cat], "c_crossattn": [uc]}
             else:
                 uc = None
 
@@ -1333,10 +1345,12 @@ class LatentVisualDiffusion(LatentDiffusion):
 class DiffusionWrapper(pl.LightningModule):
     def __init__(self, diff_model_config, conditioning_key):
         super().__init__()
+        self.precision = diff_model_config.pop('precision', None)
         self.diffusion_model = instantiate_from_config(diff_model_config)
         self.conditioning_key = conditioning_key
 
     def forward(self, x, t, c_concat: list = None, c_crossattn: list = None,
+                c_crossattn_stdit: list = None,
                 c_adm=None, s=None, mask=None, **kwargs):
         # temporal_context = fps is foNone
         if self.conditioning_key is None:
@@ -1347,6 +1361,14 @@ class DiffusionWrapper(pl.LightningModule):
         elif self.conditioning_key == 'crossattn':
             cc = torch.cat(c_crossattn, 1)
             out = self.diffusion_model(x, t, context=cc, **kwargs)
+        elif self.conditioning_key == 'crossattn_stdit':
+            cc = torch.cat(c_crossattn_stdit, 1) # [b, 77, 1024] 
+            if self.precision is not None and self.precision == 16:
+                cc = cc.to(torch.bfloat16)
+                hhself.diffusion_model = self.diffusion_model.to(torch.bfloat16)
+            # TODO add mask
+            out = self.diffusion_model(x, t, y=cc) 
+            # def forward(self, x, timestep, y, mask=None, x_mask=None, fps=None, height=None, width=None, **kwargs):
         elif self.conditioning_key == 'hybrid':
             ## it is just right [b,c,t,h,w]: concatenate in channel dim
             xc = torch.cat([x] + c_concat, dim=1)

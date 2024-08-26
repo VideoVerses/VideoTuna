@@ -201,6 +201,8 @@ class DDIMSampler(object):
                 size=target_size_,
                 mode="nearest",
                 )
+            if precision is not None and precision == 16:
+                img = img.to(torch.bfloat16)
             outs = self.p_sample_ddim(img, cond, ts, index=index, use_original_steps=ddim_use_original_steps,
                                       quantize_denoised=quantize_denoised, temperature=temperature,
                                       noise_dropout=noise_dropout, score_corrector=score_corrector,
@@ -262,6 +264,7 @@ class DDIMSampler(object):
             if guidance_rescale > 0.0:
                 e_t = rescale_noise_cfg(e_t, e_t_cond, guidance_rescale=guidance_rescale)
             model_output = e_t
+        
         if self.model.parameterization == "v":
             e_t = self.model.predict_eps_from_z_and_v(x, t, e_t)
             
@@ -284,6 +287,9 @@ class DDIMSampler(object):
         sigma_t = torch.full(size, sigmas[index], device=device)
         sqrt_one_minus_at = torch.full(size, sqrt_one_minus_alphas[index],device=device)
 
+        if e_t.shape[1] != 4: # channel dim
+            e_t = e_t[:,:4]
+        
         # current prediction for x_0
         if self.model.parameterization != "v":
             pred_x0 = (x - sqrt_one_minus_at * e_t) / a_t.sqrt()
