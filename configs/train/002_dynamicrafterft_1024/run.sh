@@ -3,11 +3,10 @@ export TOKENIZERS_PARALLELISM=false
 
 # dependencies
 SDCKPT="checkpoints/stablediffusion/v2-1_512-ema/model.ckpt"
-VC2CKPT="checkpoints/videocrafter/base_512_v2/model.ckpt"
+DCCKPT="checkpoints/dynamicrafter/i2v_576x1024/model.ckpt"
 
-# exp settings
-EXPNAME="train_t2v_512"                            # experiment name 
-CONFIG='configs/train/000_videocrafter2ft/config.yaml' # experiment config 
+EXPNAME="002_dynamicrafterft_1024"                            # experiment name 
+CONFIG='configs/train/002_dynamicrafterft_1024/config.yaml' # experiment config 
 RESROOT="results/train"                               # experiment saving directory
 
 # run
@@ -18,7 +17,8 @@ python scripts/train.py \
 --base $CONFIG \
 --logdir $RESROOT \
 --sdckpt $SDCKPT \
---ckpt $VC2CKPT \
+--ckpt $DCCKPT \
 --devices '0,' \
 lightning.trainer.num_nodes=1 \
 --auto_resume True
+

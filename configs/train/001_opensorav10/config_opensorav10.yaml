@@ -4,7 +4,7 @@ model:
   # empty_params_only: True # disable this means finetuning all parameters
   # sd_checkpoint: /project/llmsvgen/share/shared_ckpts/StableDiffusion/v2-1_512-ema-pruned.ckpt
   # pretrained_checkpoint: /project/llmsvgen/share/shared_ckpts/VideoCrafter/VideoCrafter2-Text2Video-512/model.ckpt
-  target: lvdm.models.ddpm3d.LatentDiffusion
+  target: src.lvdm.models.ddpm3d.LatentDiffusion
   params:
     loss_type: l1
     log_every_t: 200
@@ -31,7 +31,7 @@ model:
     scale_b: 0.7 # adapt to videocrafter-v2
 
     unet_config:
-      target: opensora.models.stdit.stdit.STDiT_XL_2
+      target: src.opensora.models.stdit.stdit.STDiT_XL_2
       params:
         # from_pretrained: None
         # qk_norm: True
@@ -54,7 +54,7 @@ model:
         # - True
         # - 'inter' 
     first_stage_config:
-      target: lvdm.models.autoencoder.AutoencoderKL
+      target: src.lvdm.models.autoencoder.AutoencoderKL
       params:
         embed_dim: 4
         monitor: val/rec_loss
@@ -77,7 +77,7 @@ model:
           target: torch.nn.Identity
     cond_stage_config:
       # target: lvdm.modules.encoders.condition.FrozenOpenCLIPEmbedder
-      target: opensora.models.text_encoder.t5.T5Encoder
+      target: src.opensora.models.text_encoder.t5.T5Encoder
       params:
         from_pretrained: "DeepFloyd/t5-v1_1-xxl"
         model_max_length: 120

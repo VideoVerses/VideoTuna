@@ -79,7 +79,10 @@ class MaCVid(Dataset):
                 index += 1
                 print(f"Load video failed! path = {video_path}")
                 return self.__getitem__(index)
-    
+            
+        fps_ori = video_reader.get_avg_fps()
+        fps_clip = fps_ori // self.frame_stride
+        
         all_frames = list(range(0, len(video_reader), self.frame_stride))
         if len(all_frames) < self.video_length:
             all_frames = list(range(0, len(video_reader), 1))
@@ -94,7 +97,10 @@ class MaCVid(Dataset):
         frames = torch.tensor(frames.asnumpy()).permute(3, 0, 1, 2).float() # [t,h,w,c] -> [c,t,h,w]
         assert(frames.shape[2] == self.resolution[0] and frames.shape[3] == self.resolution[1]), f'frames={frames.shape}, self.resolution={self.resolution}'
         frames = (frames / 255 - 0.5) * 2
-        data = {'video': frames, 'caption':self.videos[index]["misc"]['frame_caption'][0]}
+        data = {'video': frames, 
+                'caption':self.videos[index]["misc"]['frame_caption'][0],
+                'fps': fps_clip
+                }
         return data
     
     def __len__(self):

@@ -1,36 +1,36 @@
 model:
-  base_learning_rate: 6.0e-06 # 1.5e-04
+  base_learning_rate: 1.0e-05
   scale_lr: False
-  # empty_params_only: True # disable this means finetuning all parameters
-  target: src.lvdm.models.ddpm3d.LatentDiffusion
+  target: src.lvdm.models.ddpm3d.LatentVisualDiffusion
   params:
-    loss_type: l1
-    log_every_t: 200
+    rescale_betas_zero_snr: True
+    parameterization: "v"
     linear_start: 0.00085
     linear_end: 0.012
     num_timesteps_cond: 1
+    log_every_t: 200
     timesteps: 1000
     first_stage_key: video
     cond_stage_key: caption
-    cond_stage_trainable: false
-    conditioning_key: crossattn
-    image_size:
-    - 40
-    - 64
+    cond_stage_trainable: False
+    image_proj_model_trainable: True
+    conditioning_key: hybrid
+    image_size: [72, 128]
     channels: 4
-    scale_by_std: false
+    scale_by_std: False
     scale_factor: 0.18215
-    use_ema: false
-    uncond_type: empty_seq
-    monitor: val/loss_simple_ema
-    encoder_type: 2d
+    use_ema: False
+    uncond_prob: 0.05
+    uncond_type: 'empty_seq'
+    rand_cond_frame: true
     use_scale: true
-    scale_b: 0.7 # adapt to videocrafter-v2
+    scale_b: 0.3
+    fps_condition_type: 'fps'
 
     unet_config:
-      target: src.lvdm.modules.networks.openaimodel3d.UNetModel
+      target: src.lvdm.modules.networks.openaimodel3d_dc.UNetModel
       params:
-        in_channels: 4
+        in_channels: 8
         out_channels: 4
         model_channels: 320
         attention_resolutions:
@@ -43,28 +43,32 @@ model:
         - 2
         - 4
         - 4
+        dropout: 0.1
         num_head_channels: 64
         transformer_depth: 1
         context_dim: 1024
         use_linear: true
-        use_checkpoint: true
-        temporal_conv: true # adapt to videocrafter-v2
-        temporal_attention: true
+        use_checkpoint: True
+        temporal_conv: True
+        temporal_attention: True
         temporal_selfatt_only: true
-        use_relative_position: false # adapt to videocrafter-v2
-        use_causal_attention: false
+        use_relative_position: false
+        use_causal_attention: False
         temporal_length: 16
         addition_attention: true
-        fps_cond: true # adapt to videocrafter-v2
+        img_cross_attention: true
+        default_fs: 10
+        fs_condition: true
+
     first_stage_config:
       target: src.lvdm.models.autoencoder.AutoencoderKL
       params:
         embed_dim: 4
         monitor: val/rec_loss
         ddconfig:
-          double_z: true
+          double_z: True
           z_channels: 4
-          resolution: 512
+          resolution: 256
           in_channels: 3
           out_ch: 3
           ch: 128
@@ -78,42 +82,63 @@ model:
           dropout: 0.0
         lossconfig:
           target: torch.nn.Identity
+
     cond_stage_config:
       target: src.lvdm.modules.encoders.condition.FrozenOpenCLIPEmbedder
       params:
         freeze: true
-        layer: penultimate
+        layer: "penultimate"
+
+    img_cond_stage_config:
+      target: src.lvdm.modules.encoders.condition.FrozenOpenCLIPImageEmbedderV2
+      params:
+        freeze: true
+    
+    image_proj_stage_config:
+      target: src.lvdm.modules.encoders.ip_resampler.Resampler
+      params:
+        dim: 1024
+        depth: 4
+        dim_head: 64
+        heads: 12
+        num_queries: 16
+        embedding_dim: 1280
+        output_dim: 1024
+        ff_mult: 4
+        video_length: 16
 
 data:
   target: data.lightning_data.DataModuleFromConfig
   params:
-    batch_size: 3
+    batch_size: 1
     num_workers: 16
     wrap: false
     train:
       target: data.macvid.MaCVid
       params:
         data_root: configs/data/macvid/train_data.yaml
-        resolution: [320, 512]
+        resolution: [576, 1024]
         video_length: 16
         subset_split: all
     validation:
       target: data.macvid.MaCVid
       params:
         data_root: configs/data/macvid/val_data.yaml
-        resolution: [320, 512]
+        resolution: [576, 1024]
         video_length: 16
         subset_split: all
 
 lightning:
   trainer:
     benchmark: True
-    batch_size: 3
-    num_workers: 38
-    num_nodes: 1
     accumulate_grad_batches: 2
-    max_epochs: 2000
-    precision: 16 # training precision
+    max_steps: 100000
+    # logger
+    log_every_n_steps: 50
+    # val
+    val_check_interval: 0.5
+    gradient_clip_algorithm: 'norm'
+    gradient_clip_val: 0.5
   callbacks:
     image_logger:
       target: utils.callbacks.ImageLogger
@@ -122,17 +147,20 @@ lightning:
         max_images: 6
         to_local: True # save videos into files
         log_images_kwargs:
-          unconditional_guidance_scale: 12 # need this, otherwise it is grey
-    modelcheckpoint:
+          ddim_steps: 50
+          unconditional_guidance_scale: 7.5
+          timestep_spacing: uniform_trailing
+          guidance_rescale: 0.7
+    model_checkpoint:
       target: pytorch_lightning.callbacks.ModelCheckpoint
       params:
-        every_n_epochs: 1
+        every_n_train_steps: 9000 #1000
         filename: "{epoch:04}-{step:06}"
+        save_weights_only: True
     metrics_over_trainsteps_checkpoint:
       target: pytorch_lightning.callbacks.ModelCheckpoint
       params:
         filename: "{epoch:06}-{step:09}"
-        save_weights_only: False
-        every_n_epochs: 300
-        every_n_train_steps: null
+        save_weights_only: True
+        every_n_train_steps: 10000
     

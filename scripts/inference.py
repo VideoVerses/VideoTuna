@@ -12,9 +12,9 @@ import torch
 from pytorch_lightning import seed_everything
 
 sys.path.insert(0, os.getcwd())
-from lvdm.samplers.ddim import DDIMSampler
+from src.lvdm.samplers.ddim import DDIMSampler
 from utils.common_utils import instantiate_from_config
-from lvdm.samplers.ddim_multiplecond import DDIMSampler as DDIMSampler_multicond
+from src.lvdm.samplers.ddim_multiplecond import DDIMSampler as DDIMSampler_multicond
 from scripts.inference_utils import (
     load_model_checkpoint, 
     load_prompts, 

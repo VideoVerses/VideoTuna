@@ -19,10 +19,10 @@ from utils.save_video import log_local, prepare_to_log
 class ImageLogger(Callback):
     def __init__(self, 
                  batch_frequency, 
+                 save_dir,
                  max_images=8, 
                  clamp=True, 
                  rescale=True, 
-                 save_dir=None,
                  to_local=False, 
                  log_images_kwargs=None,
                  ):

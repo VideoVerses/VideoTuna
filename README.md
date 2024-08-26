@@ -3,32 +3,45 @@
 # VideoTuna
 Let's finetune video generation models!
 
-## TODOs
-[x] inference vc, dc   
-[x] finetune & train vc2，dc   
-[x] opensora-train, inference  
-[ ] dpo, lora  
-[ ] flux inference, fine-tune  
-[ ] cogvideo inference, fine-tune  
-[ ] vae  
-next:  
-[ ] inference dc interp & loop  
+## 🔆 Updates
 
-## Updates
 
-## What we have
+## 🔆 Introduction
+🤗🤗🤗 VideoTuna is an open-sourcing finetuning framework for text-to-video generation.
+
 ### Features
-1. Inference state-of-the-art models.
-2. Pretraining.
-1. Domain-specific finetuning: human, cartoon, robotics, autonomous driving, etc.
-1. Concept-specific finetuning: character, style, etc.
-1. Human preference alignment post-training: RLFH, DPO.
+1. All in one framework: Inference and finetune state-of-the-art T2V models.
+2. T2V Pretraining.
+1. Domain-specific finetuning.
+1. Human preference alignment/Post-training: RLFH, DPO.
 1. Post-processing: enhancement.
-- diffusion
-    - eps prediction
-    - x0 prediction
-    - v prediction
-    - [ ] flow models
+
+### Code Structure
+```
+VideoTuna
+├── configs
+│ ├── model_name_inf.yaml
+│ └── model_name_train.yaml
+├── checkpoints
+├── docs
+├── inputs
+├── results
+├── src
+│ ├── dataset
+│ ├── model-1
+│ ├── model-2
+│ └── model-N
+├── scripts
+│ ├── inference_xxx.py
+│ └── train_xxx.py
+├── shscripts
+│ ├── inference_xxx.sh
+│ └── train_xxx.sh
+├── utils
+└── test
+
+```
+
 ### Models
 
 |T2V-Models|Resolution|Checkpoints|
@@ -51,16 +64,16 @@ next:
 
 
 
-## Get started
+## 🔆 Get started
 
-### New a environment
+### 1.Prepare environment
 ```
 conda create -n videocrafter python=3.8
 pip install -r requirements_vc.txt
 conda activate videocrafter
 ```
 
-### Prepare checkpoints
+### 2.Prepare checkpoints
 ```
 wget https://huggingface.co/VideoCrafter/VideoCrafter2/resolve/main/model.ckpt   # videocrafter2-t2v-512
 wget https://huggingface.co/VideoCrafter/Text2Video-1024/resolve/main/model.ckpt # videocrafter1-t2v-1024
@@ -69,26 +82,43 @@ wget https://huggingface.co/Doubiiu/DynamiCrafter_1024/resolve/main/model.ckpt  
 
 ```
 
-### New a video
+### 3.Inference state-of-the-art T2V models
+#### (1) Cogvideo
+#### (2) Open-Sora
+
+#### (3) VideoCrafter
 Before running the following scripts, make sure you download the checkpoint and put it at `checkpoints/videocrafter/base_512_v2/model.ckpt`.
 ```
 bash scripts/inference_t2v_vc2.sh
 ```
 
-### New a model
-1. Prepare data
+
+### 4. Finetune T2V models
+(1) Prepare data
 
 
-2. Finetune  
+(2) Finetune  
 ```
 bash configs/train/000_videocrafter2ft/run.sh
 ```
 
-### Evaluation
+### 5. Evaluation
 
-## Contributors
 
-## License
+## ⏳ TODOs
+[x] inference vc, dc   
+[x] finetune & train vc2，dc   
+[x] opensora-train, inference  
+[ ] dpo, lora  
+[ ] flux inference, fine-tune  
+[ ] cogvideo inference, fine-tune  
+[ ] vae  
+next:  
+[ ] inference dc interp & loop  
 
-## Citation
+## 🍻 Contributors
+
+## 📋 License
+
+## 😊 Citation
 
