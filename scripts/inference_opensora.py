@@ -1,19 +1,18 @@
 import os
 import sys
-# sys.path.append(f'/home/zraoac/HKSora')
-sys.path.append(f'./models')
-
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 import torch
 import colossalai
 import torch.distributed as dist
 from mmengine.runner import set_random_seed
 
-from opensora.datasets import save_sample
-from opensora.registry import MODELS, SCHEDULERS, build_module
-from opensora.utils.config_utils import parse_configs
-from opensora.utils.misc import to_torch_dtype
-from opensora.acceleration.parallel_states import set_sequence_parallel_group
+from src.opensora.datasets import save_sample
+from src.opensora.registry import MODELS, SCHEDULERS, build_module
+from src.opensora.utils.config_utils import parse_configs
+from src.opensora.utils.misc import to_torch_dtype
+from src.opensora.acceleration.parallel_states import set_sequence_parallel_group
 from colossalai.cluster import DistCoordinator
 
 
