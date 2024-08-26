@@ -15,14 +15,15 @@
 
 ### For CUDA 12.x
 ```
-conda create -n cogvideo python=3.10
+conda create -n CogVideo python=3.10
 conda activate cogvideo
 ```
 
 
 ### Install dependencies
 ```
-pip install -r requirements.txt
+cd cogVideo
+pip install -r requirements_cogVideo.txt
 pip install --upgrade opencv-python transformers diffusers # Must using diffusers>=0.30.0
 ```
 
@@ -63,7 +64,11 @@ Parameters:
 
 ### Example
 ```
-python inference_diffusers.py --prompt "A video of a cat playing with a ball" --model_path /path/to/CogVideoX-2b --output_path output.mp4
+python inference_cogVideo_diffusers.py --prompt "A video of a cat playing with a ball" --model_path /path/to/CogVideoX-2b --output_path output.mp4
+```
+OR
+```
+bash /path/to/shscripts/inference_cogVideo_diffusers.sh
 ```
 It will generate a video of a cat playing with a ball and save it to the file /cogVideo/output.mp4.
 
@@ -73,6 +78,10 @@ It will generate a video of a cat playing with a ball and save it to the file /c
 
 ## Get started
 
+If you already use the inference by Diffusers, you can skip the following step
+- Set up environment 
+- Install the dependencies for CogVideo.
+
 ### Set up environment
 ```
 conda create -n CogVideo python=3.10
@@ -80,15 +89,20 @@ conda activate CogVideo
 ```
 
 ### Install dependencies
+1. Install the dependencies for the CogVideo.
 ```
 cd cogVideo
-pip install -r requirements.txt
-cd sat
-pip install -r requirements.txt
+pip install -r requirements_cogVideo.txt
+```
+2. Install the dependencies for the SAT model.
+```
+cd src/sat  # Go to the /path/to/src/sat
+pip install -r requirements_cogVideo_sat.txt
 ```
 
 ### Prepare checkpoints
 ```
+cd cogVideo # Go to the /path/to/cogVideo
 mkdir CogVideoX-2b-sat
 cd CogVideoX-2b-sat
 wget https://cloud.tsinghua.edu.cn/f/fdba7608a49c463ba754/?dl=1
@@ -105,7 +119,7 @@ mkdir t5-v1_1-xxl
 mv CogVideoX-2b/text_encoder/* CogVideoX-2b/tokenizer/* t5-v1_1-xxl
 ```
 
-### Modify the file in ```/path/to/cogVideo/sat/configs/cogvideox_2b.yaml```.
+### Modify the file in ```/path/to/src/sat/configs/cogvideox_2b.yaml```.
 ```
 model:
   scale_factor: 1.15258426
@@ -263,7 +277,7 @@ model:
           num_steps: 50
 ```
 
-### Modify the file in ```/path/to/cogVideo/sat/configs/inference.yaml```.
+### Modify the file in ```/path/to/src/sat/configs/inference.yaml```.
 ```
 args:
   latent_channels: 16
@@ -283,11 +297,11 @@ args:
 ```
 
 #### Remarks
-If you want to use your own prompt, you can modify the file in ```/path/to/CogVideo/sat/configs/test.txt```.
+If you want to use your own prompt, you can modify the file in ```/path/to/src/sat/configs/test.txt```.
 If multiple prompts is required, in which each line makes a prompt.
 
 ### Generate video
-Go to file ```/path/to/cogVideo/sat```, and run the following command:
+Go to file ```/path/to/src/sat```, and run the following command:
 ```
-bash inference.sh
+bash shscripts/inference_cogVideo_sat.sh
 ```
