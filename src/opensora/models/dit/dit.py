@@ -15,7 +15,8 @@ import torch.nn as nn
 import torch.utils.checkpoint
 from einops import rearrange
 from timm.models.vision_transformer import Mlp
-
+import sys
+print('NOTETTTTTTTT', sys.path)
 from src.opensora.acceleration.checkpoint import auto_grad_checkpoint
 from src.opensora.models.layers.blocks import (
     Attention,

@@ -30,10 +30,10 @@ def build_module(module, builder, **kwargs):
 
 MODELS = Registry(
     "model",
-    locations=["opensora.models"],
+    locations=["src.opensora.models"],
 )
 
 SCHEDULERS = Registry(
     "scheduler",
-    locations=["opensora.schedulers"],
+    locations=["src.opensora.schedulers"],
 )
