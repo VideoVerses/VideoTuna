@@ -56,6 +56,12 @@ def parse_args():
         help="path to save the json file that contains the prompt and dimension information",
     )
     parser.add_argument(
+        "--map_json_path",
+        type=str,
+        required=True,
+        help="json file path of mapping from video path to prompt",
+    )
+    parser.add_argument(
         "--videos_path",
         type=str,
         required=True,
@@ -157,12 +163,8 @@ def main():
     else:
         dimensions = args.dimension
 
-    root_path = Path(args.videos_path)
-    summary_path = Path(args.output_path) / 'summary'
-    summary_path.mkdir(exist_ok=True)
-
-    video_path = str(root_path / 'video')
-    prompt_file = str(root_path / 'info.json')
+    video_path = args.videos_path
+    prompt_file = args.map_json_path
 
     kwargs = {}
     prompt = []
@@ -193,7 +195,7 @@ def main():
     avg_dict = {}
     for key, value in result.items():
         avg_dict[key] = value[0]
-    with open(str(summary_path/'result.json'), 'w') as f:
+    with open(os.path.join(args.output_path, 'final_results.json'), 'w') as f:
         json.dump(avg_dict, f, indent=4)
 
     print('done')

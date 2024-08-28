@@ -92,8 +92,8 @@ ordered_scaled_res = [
 
 
 def main(args):
-    output_dir = Path(args.result_path) / 'summary'
-    ori_result_path = output_dir / "result.json"
+    ori_result_path = args.result_path
+    output_dir = os.path.dirname(ori_result_path)
     with open(ori_result_path, 'r') as f:
         full_results = json.load(f)
 
@@ -141,7 +141,7 @@ if __name__ == "__main__":
         "--result_path",
         type=str,
         required=True,
-        help="The directory of result json file",
+        help="The path of result json file",
     )
     args = parser.parse_args()
     main(args)
