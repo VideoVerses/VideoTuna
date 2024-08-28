@@ -1,10 +1,7 @@
 import os
 import sys
-# sys.path.append(f'/home/zraoac/HKSora')
-# sys.path.append(f'./src')
-print('xxxxxxxx', os.getcwd())
-sys.path.insert(0, os.getcwd())
-
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 import torch
 import colossalai
@@ -14,7 +11,7 @@ from mmengine.runner import set_random_seed
 from src.opensora.datasets import save_sample
 from src.opensora.registry import MODELS, SCHEDULERS, build_module
 from src.opensora.utils.config_utils import parse_configs
-from src.opensora.utils.misc import to_torch_dtype
+from src.opensora.utils.misc import to_torch_dtype, is_distributed
 from src.opensora.acceleration.parallel_states import set_sequence_parallel_group
 from colossalai.cluster import DistCoordinator
 
@@ -33,14 +30,15 @@ def main():
     cfg = parse_configs(training=False)
     print(cfg)
 
-    # init distributed
-    colossalai.launch_from_torch({})
-    coordinator = DistCoordinator()
-
-    if coordinator.world_size > 1:
-        set_sequence_parallel_group(dist.group.WORLD) 
-        enable_sequence_parallelism = True
+    # == init distributed env ==
+    if is_distributed():
+        colossalai.launch_from_torch({})
+        coordinator = DistCoordinator()
+        enable_sequence_parallelism = coordinator.world_size > 1
+        if enable_sequence_parallelism:
+            set_sequence_parallel_group(dist.group.WORLD)
     else:
+        coordinator = None
         enable_sequence_parallelism = False
 
     # ======================================================
@@ -81,14 +79,6 @@ def main():
     # 3.3. build scheduler
     scheduler = build_module(cfg.scheduler, SCHEDULERS)
 
-    # 3.4. support for multi-resolution
-    model_args = dict()
-    if cfg.multi_resolution:
-        image_size = cfg.image_size
-        hw = torch.tensor([image_size], device=device, dtype=dtype).repeat(cfg.batch_size, 1)
-        ar = torch.tensor([[image_size[0] / image_size[1]]], device=device, dtype=dtype).repeat(cfg.batch_size, 1)
-        model_args["data_info"] = dict(ar=ar, hw=hw)
-
     # ======================================================
     # 4. inference
     # ======================================================
@@ -105,18 +95,16 @@ def main():
             z_size=(vae.out_channels, *latent_size),
             prompts=batch_prompts,
             device=device,
-            additional_args=model_args,
+
         )
         samples = vae.decode(samples.to(dtype))
 
-        if coordinator.is_master():
-            for idx, sample in enumerate(samples):
-                prompt = batch_prompts[idx]
-                print(f"Prompt: {prompt}")
-                # save_path = os.path.join(save_dir, f"sample_{sample_idx}")
-                save_path = os.path.join(save_dir, f"{prompt.replace(' ', '_')}")
-                save_sample(sample, fps=cfg.fps, save_path=save_path)
-                sample_idx += 1
+        for idx, sample in enumerate(samples):
+            prompt = batch_prompts[idx]
+            print(f"Prompt: {prompt}")
+            save_path = os.path.join(save_dir, f"{prompt.replace(' ', '_')}")
+            save_sample(sample, fps=cfg.fps, save_path=save_path)
+            sample_idx += 1
 
 
 if __name__ == "__main__":

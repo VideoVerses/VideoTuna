@@ -37,3 +37,8 @@ SCHEDULERS = Registry(
     "scheduler",
     locations=["src.opensora.schedulers"],
 )
+
+DATASETS = Registry(
+    "dataset",
+    locations=["src.opensora.datasets"],
+)
