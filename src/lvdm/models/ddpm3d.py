@@ -78,7 +78,7 @@ class DDPM(pl.LightningModule):
         self.log_every_t = log_every_t
         self.first_stage_key = first_stage_key
         self.channels = channels
-        self.temporal_length = unet_config.params.temporal_length
+        self.temporal_length = unet_config.params.get('temporal_length', 16)
         self.image_size = image_size  # try conv?
         if isinstance(self.image_size, int):
             self.image_size = [self.image_size, self.image_size]
@@ -749,8 +749,8 @@ class LatentDiffusion(DDPM):
 
     def apply_model(self, x_noisy, t, cond, **kwargs):
         if self.model.conditioning_key == 'crossattn_stdit':
-            key = 'crossattn_stdit'
-            cond = {key: [cond['y']]}
+            key = 'c_crossattn_stdit'
+            cond = {key: [cond['y']], 'mask': [cond['mask']]} # support mask for T5 
         else:
             if isinstance(cond, dict):
                 # hybrid case, cond is exptected to be a dict
@@ -879,7 +879,8 @@ class LatentDiffusion(DDPM):
                                                 return_first_stage_outputs=True,
                                                 return_original_cond=True)
         N, _, T, H, W = x.shape
-        log["inputs"] = x
+        # TODO fix data type 
+        log["inputs"] = x.to(torch.bfloat16)
         log["reconst"] = xrec
         log["condition"] = xc
         
@@ -895,6 +896,10 @@ class LatentDiffusion(DDPM):
                 else:
                     c_emb = c
                 
+                # TODO fix data type 
+                z = z.to(torch.bfloat16)
+                c_emb = c_emb.to(torch.bfloat16)
+
                 # get uc: unconditional condition for classifier-free guidance sampling
                 if self.uncond_type == "empty_seq":
                     prompts = N * [""]
@@ -1034,7 +1039,7 @@ class LatentDiffusion(DDPM):
                                   mask=mask, x0=x0, **kwargs)
 
     @torch.no_grad()
-    def sample_log(self, cond, batch_size, ddim, ddim_steps, **kwargs):
+    def sample_log(self, cond, batch_size, ddim, ddim_steps, **kwargs):        
         if ddim:
             ddim_sampler = DDIMSampler(self)
             shape = (self.channels, self.temporal_length, *self.image_size)
@@ -1345,13 +1350,14 @@ class LatentVisualDiffusion(LatentDiffusion):
 class DiffusionWrapper(pl.LightningModule):
     def __init__(self, diff_model_config, conditioning_key):
         super().__init__()
-        self.precision = diff_model_config.pop('precision', None)
+        # print('diff model config: ', diff_model_config)
+        # self.precision = diff_model_config.pop('precision', None)
         self.diffusion_model = instantiate_from_config(diff_model_config)
         self.conditioning_key = conditioning_key
 
     def forward(self, x, t, c_concat: list = None, c_crossattn: list = None,
-                c_crossattn_stdit: list = None,
-                c_adm=None, s=None, mask=None, **kwargs):
+                c_crossattn_stdit: list = None, mask: list = None,
+                c_adm=None, s=None,  **kwargs):
         # temporal_context = fps is foNone
         if self.conditioning_key is None:
             out = self.diffusion_model(x, t)
@@ -1361,13 +1367,16 @@ class DiffusionWrapper(pl.LightningModule):
         elif self.conditioning_key == 'crossattn':
             cc = torch.cat(c_crossattn, 1)
             out = self.diffusion_model(x, t, context=cc, **kwargs)
-        elif self.conditioning_key == 'crossattn_stdit':
+        elif self.conditioning_key == 'crossattn_stdit':            
             cc = torch.cat(c_crossattn_stdit, 1) # [b, 77, 1024] 
-            if self.precision is not None and self.precision == 16:
-                cc = cc.to(torch.bfloat16)
-                hhself.diffusion_model = self.diffusion_model.to(torch.bfloat16)
-            # TODO add mask
-            out = self.diffusion_model(x, t, y=cc) 
+            mask = torch.cat(mask, 1)
+            # TODO fix precision 
+            # if self.precision is not None and self.precision == 'bf16':
+                # print('Convert datatype')
+            cc = cc.to(torch.bfloat16)
+            self.diffusion_model = self.diffusion_model.to(torch.bfloat16)
+            
+            out = self.diffusion_model(x, t, y=cc, mask=mask) 
             # def forward(self, x, timestep, y, mask=None, x_mask=None, fps=None, height=None, width=None, **kwargs):
         elif self.conditioning_key == 'hybrid':
             ## it is just right [b,c,t,h,w]: concatenate in channel dim

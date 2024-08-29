@@ -94,7 +94,10 @@ class MaCVid(Dataset):
         frames = video_reader.get_batch(frame_indices)
         assert(frames.shape[0] == self.video_length),f'{len(frames)}, self.video_length={self.video_length}'
 
-        frames = torch.tensor(frames.asnumpy()).permute(3, 0, 1, 2).float() # [t,h,w,c] -> [c,t,h,w]
+        # print('frames type: ', type(frames), frames.shape)
+
+        # frames = torch.tensor(frames.asnumpy()).permute(3, 0, 1, 2).float() # [t,h,w,c] -> [c,t,h,w]
+        frames = frames.permute(3, 0, 1, 2).float() # [t,h,w,c] -> [c,t,h,w]
         assert(frames.shape[2] == self.resolution[0] and frames.shape[3] == self.resolution[1]), f'frames={frames.shape}, self.resolution={self.resolution}'
         frames = (frames / 255 - 0.5) * 2
         data = {'video': frames, 

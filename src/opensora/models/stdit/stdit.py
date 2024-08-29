@@ -135,7 +135,8 @@ class STDiT(nn.Module):
         no_temporal_pos_emb=False,
         caption_channels=4096,
         model_max_length=120,
-        dtype=torch.float32,
+        # dtype=torch.float32,
+        dtype=torch.bfloat16, # TODO fix data type 
         space_scale=1.0,
         time_scale=1.0,
         freeze=None,
