@@ -78,7 +78,7 @@ class DDPM(pl.LightningModule):
         self.log_every_t = log_every_t
         self.first_stage_key = first_stage_key
         self.channels = channels
-        self.temporal_length = unet_config.params.temporal_length
+        self.temporal_length = unet_config.params.get('temporal_length', 16)
         self.image_size = image_size  # try conv?
         if isinstance(self.image_size, int):
             self.image_size = [self.image_size, self.image_size]
@@ -307,6 +307,11 @@ class DDPM(pl.LightningModule):
         )
 
     def get_loss(self, pred, target, mean=True):
+        
+        if target.size()[1] != pred.size()[1]:
+            c = target.size()[1]
+            pred = pred[:, :c, ...] # opensora, only previous 4 channels used for calculating loss.
+        
         if self.loss_type == 'l1':
             loss = (target - pred).abs()
             if mean:
@@ -743,14 +748,18 @@ class LatentDiffusion(DDPM):
         return loss, loss_dict
 
     def apply_model(self, x_noisy, t, cond, **kwargs):
-        if isinstance(cond, dict):
-            # hybrid case, cond is exptected to be a dict
-            pass
+        if self.model.conditioning_key == 'crossattn_stdit':
+            key = 'c_crossattn_stdit'
+            cond = {key: [cond['y']], 'mask': [cond['mask']]} # support mask for T5 
         else:
-            if not isinstance(cond, list):
-                cond = [cond]
-            key = 'c_concat' if self.model.conditioning_key == 'concat' else 'c_crossattn'
-            cond = {key: cond}
+            if isinstance(cond, dict):
+                # hybrid case, cond is exptected to be a dict
+                pass
+            else:
+                if not isinstance(cond, list):
+                    cond = [cond]
+                key = 'c_concat' if self.model.conditioning_key == 'concat' else 'c_crossattn'
+                cond = {key: cond}
 
         x_recon = self.model(x_noisy, t, **cond, **kwargs)
 
@@ -870,7 +879,8 @@ class LatentDiffusion(DDPM):
                                                 return_first_stage_outputs=True,
                                                 return_original_cond=True)
         N, _, T, H, W = x.shape
-        log["inputs"] = x
+        # TODO fix data type 
+        log["inputs"] = x.to(torch.bfloat16)
         log["reconst"] = xrec
         log["condition"] = xc
         
@@ -878,20 +888,27 @@ class LatentDiffusion(DDPM):
             # get uncond embedding for classifier-free guidance sampling
             if unconditional_guidance_scale != 1.0:
                 if isinstance(c, dict):
-                    c_cat, c_emb = c["c_concat"][0], c["c_crossattn"][0]
-                    #log["condition_cat"] = c_cat
+                    if "y" in c:
+                        c_emb = c["y"]
+                        c_cat = None # set default value is None
+                    else:
+                        c_cat, c_emb = c["c_concat"][0], c["c_crossattn"][0]
                 else:
                     c_emb = c
+                
+                # TODO fix data type 
+                z = z.to(torch.bfloat16)
+                c_emb = c_emb.to(torch.bfloat16)
 
+                # get uc: unconditional condition for classifier-free guidance sampling
                 if self.uncond_type == "empty_seq":
                     prompts = N * [""]
                     uc = self.get_learned_conditioning(prompts)
                 elif self.uncond_type == "zero_embed":
                     uc = torch.zeros_like(c_emb)
-                ## hybrid case
-                if isinstance(c, dict):
-                    uc_hybrid = {"c_concat": [c_cat], "c_crossattn": [uc]}
-                    uc = uc_hybrid
+                # make uc for hybrid condition case
+                if isinstance(c, dict) and c_cat is not None:
+                    uc = {"c_concat": [c_cat], "c_crossattn": [uc]}
             else:
                 uc = None
 
@@ -1022,7 +1039,7 @@ class LatentDiffusion(DDPM):
                                   mask=mask, x0=x0, **kwargs)
 
     @torch.no_grad()
-    def sample_log(self, cond, batch_size, ddim, ddim_steps, **kwargs):
+    def sample_log(self, cond, batch_size, ddim, ddim_steps, **kwargs):        
         if ddim:
             ddim_sampler = DDIMSampler(self)
             shape = (self.channels, self.temporal_length, *self.image_size)
@@ -1333,11 +1350,14 @@ class LatentVisualDiffusion(LatentDiffusion):
 class DiffusionWrapper(pl.LightningModule):
     def __init__(self, diff_model_config, conditioning_key):
         super().__init__()
+        # print('diff model config: ', diff_model_config)
+        # self.precision = diff_model_config.pop('precision', None)
         self.diffusion_model = instantiate_from_config(diff_model_config)
         self.conditioning_key = conditioning_key
 
     def forward(self, x, t, c_concat: list = None, c_crossattn: list = None,
-                c_adm=None, s=None, mask=None, **kwargs):
+                c_crossattn_stdit: list = None, mask: list = None,
+                c_adm=None, s=None,  **kwargs):
         # temporal_context = fps is foNone
         if self.conditioning_key is None:
             out = self.diffusion_model(x, t)
@@ -1347,6 +1367,17 @@ class DiffusionWrapper(pl.LightningModule):
         elif self.conditioning_key == 'crossattn':
             cc = torch.cat(c_crossattn, 1)
             out = self.diffusion_model(x, t, context=cc, **kwargs)
+        elif self.conditioning_key == 'crossattn_stdit':            
+            cc = torch.cat(c_crossattn_stdit, 1) # [b, 77, 1024] 
+            mask = torch.cat(mask, 1)
+            # TODO fix precision 
+            # if self.precision is not None and self.precision == 'bf16':
+                # print('Convert datatype')
+            cc = cc.to(torch.bfloat16)
+            self.diffusion_model = self.diffusion_model.to(torch.bfloat16)
+            
+            out = self.diffusion_model(x, t, y=cc, mask=mask) 
+            # def forward(self, x, timestep, y, mask=None, x_mask=None, fps=None, height=None, width=None, **kwargs):
         elif self.conditioning_key == 'hybrid':
             ## it is just right [b,c,t,h,w]: concatenate in channel dim
             xc = torch.cat([x] + c_concat, dim=1)

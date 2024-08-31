@@ -58,7 +58,8 @@ class STDiTBlock(nn.Module):
             hidden_size,
             num_heads=num_heads,
             qkv_bias=True,
-            enable_flashattn=enable_flashattn,
+            enable_flash_attn=enable_flashattn,
+            norm_layer=nn.LayerNorm,
         )
         self.cross_attn = self.mha_cls(hidden_size, num_heads)
         self.norm2 = get_layernorm(hidden_size, eps=1e-6, affine=False, use_kernel=enable_layernorm_kernel)
@@ -82,7 +83,8 @@ class STDiTBlock(nn.Module):
             hidden_size,
             num_heads=num_heads,
             qkv_bias=True,
-            enable_flashattn=self.enable_flashattn,
+            enable_flash_attn=self.enable_flashattn,
+            norm_layer=nn.LayerNorm,
         )
 
     def forward(self, x, y, t, mask=None, tpe=None):
@@ -134,7 +136,7 @@ class STDiT(nn.Module):
         caption_channels=4096,
         model_max_length=120,
         # dtype=torch.float32,
-        dtype=torch.bfloat16,
+        dtype=torch.bfloat16, # TODO fix data type 
         space_scale=1.0,
         time_scale=1.0,
         freeze=None,
@@ -225,19 +227,12 @@ class STDiT(nn.Module):
         Returns:
             x (torch.Tensor): output latent representation; of shape [B, C, T, H, W]
         """
-
         x = x.to(self.dtype)
         timestep = timestep.to(self.dtype)
         y = y.to(self.dtype)
 
         # embedding
-        print('x before embd: ', x.shape) #[32, 4, 16, 32, 32]
-
         x = self.x_embedder(x)  # [B, N, C]
-        print('x after embd: ', x.shape) # [32, 4096, 1152]
-        # 1 256 [16, 32, 32] (1, 2, 2)
-        print('n_temporal, n_spatial: ', self.num_temporal, self.num_spatial, self.input_size,self.patch_size)
-
         x = rearrange(x, "B (T S) C -> B T S C", T=self.num_temporal, S=self.num_spatial)
         x = x + self.pos_embed
         x = rearrange(x, "B T S C -> B (T S) C")
@@ -389,7 +384,6 @@ class STDiT(nn.Module):
 
 @MODELS.register_module("STDiT-XL/2")
 def STDiT_XL_2(from_pretrained=None, **kwargs):
-    # model = STDiT(depth=28, hidden_size=1152, input_size=(16,32,32), patch_size=(1, 2, 2), num_heads=16, **kwargs)
     model = STDiT(depth=28, hidden_size=1152, patch_size=(1, 2, 2), num_heads=16, **kwargs)
     if from_pretrained is not None:
         load_checkpoint(model, from_pretrained)

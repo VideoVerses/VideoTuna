@@ -33,6 +33,7 @@ model:
     unet_config:
       target: opensora.models.stdit.stdit.STDiT_XL_2
       params:
+        precision: 16
         # from_pretrained: None
         # qk_norm: True
         # enable_flash_attn: True
