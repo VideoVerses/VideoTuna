@@ -398,7 +398,7 @@ model:
 ### Modify the Run Script
 Modify the file in ```/path/to/src/sat/finetune_single_gpu.sh```
 ```
-run_cmd="torchrun --standalone --nproc_per_node=1 train_video.py --base configs/cogvideox_2b_lora.yaml configs/sft.yaml --seed $RANDOM"
+run_cmd="torchrun --standalone --nproc_per_node=8 train_video.py --base configs/cogvideox_2b_lora.yaml configs/sft.yaml --seed $RANDOM"
 ```
 
 ### Start Finetune
