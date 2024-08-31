@@ -1,9 +1,22 @@
-[] logo
+- [ ] logo
 
 # VideoTuna
 Let's finetune video generation models!
 
+
+## ⏰TODOs
+- [x] inference vc, dc   
+- [x] finetune & train vc2，dc   
+- [x] opensora-train, inference  
+- [ ] dpo, lora  
+- [ ] flux inference, fine-tune  
+- [ ] cogvideo inference, fine-tune  
+- [ ] vae  
+next:  
+- [ ] inference dc interp & loop  
+
 ## 🔆 Updates
+
 
 
 ## 🔆 Introduction
@@ -68,9 +81,11 @@ VideoTuna
 
 ### 1.Prepare environment
 ```
-conda create -n videocrafter python=3.8
-pip install -r requirements_vc.txt
-conda activate videocrafter
+conda create --name videotuna python=3.10 
+pip install -r requirements.txt
+conda install -c "nvidia/label/cuda-12.1.0" cuda-nvcc cuda-toolkit
+pip install git+https://github.com/huggingface/diffusers
+pip install -v --disable-pip-version-check --no-cache-dir --no-build-isolation --config-settings "--build-option=--cpp_ext" --config-settings "--build-option=--cuda_ext" git+https://github.com/NVIDIA/apex.git
 ```
 
 ### 2.Prepare checkpoints
