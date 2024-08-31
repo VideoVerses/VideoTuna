@@ -83,9 +83,13 @@ VideoTuna
 ```
 conda create --name videotuna python=3.10 
 pip install -r requirements.txt
+git clone https://github.com/JingyeChen/SwissArmyTransformer
+cd SwissArmyTransformer
+pip install -e .
 conda install -c "nvidia/label/cuda-12.1.0" cuda-nvcc cuda-toolkit
 pip install git+https://github.com/huggingface/diffusers
 pip install -v --disable-pip-version-check --no-cache-dir --no-build-isolation --config-settings "--build-option=--cpp_ext" --config-settings "--build-option=--cuda_ext" git+https://github.com/NVIDIA/apex.git
+pip install -U apex
 ```
 
 ### 2.Prepare checkpoints
