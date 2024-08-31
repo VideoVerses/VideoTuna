@@ -7,27 +7,27 @@
 | T2V-Models   | Resolution | Checkpoints                                                         |
 |--------------|------------|---------------------------------------------------------------------|
 | CogVideoX-2b | 720x480    | [Hugging Face](https://huggingface.co/THUDM/CogVideoX-2b/tree/main) |
-|
+
 
 ## Get started
 
-## Set up environment
+### Set up environment
 
-### For CUDA 12.x
+#### For CUDA 12.x
 ```
 conda create -n CogVideo python=3.10
 conda activate cogvideo
 ```
 
 
-### Install dependencies
+#### Install dependencies
 ```
 cd cogVideo
 pip install -r requirements_cogVideo.txt
 pip install --upgrade opencv-python transformers diffusers # Must using diffusers>=0.30.0
 ```
 
-## Prepare checkpoints
+### Prepare checkpoints
 
 Use the following command to clone the repository and download the checkpoints. 
 Or access the [Hugging Face](https://huggingface.co/THUDM/CogVideoX-2b) to download the checkpoints.
@@ -36,7 +36,7 @@ git lfs install
 git clone https://huggingface.co/THUDM/CogVideoX-2b
 ```
 
-### Remarks
+#### Remarks
 When downloading the checkpoints, the file /text_encoder/model-00001-of-00002.safetensors and
 /text_encoder/model-00002-of-00002.safetensors may not be successfully downloaded. You need to remove the
 files and download them again using the following command:
@@ -49,7 +49,7 @@ rm model-00002-of-00002.safetensors
 wget https://huggingface.co/THUDM/CogVideoX-2b/resolve/main/text_encoder/model-00002-of-00002.safetensors
 ```
 
-## Generate video
+### Generate video
 Generates a video based on the given prompt and saves it to the specified path.
 
 Parameters:
@@ -398,7 +398,7 @@ model:
 ### Modify the Run Script
 Modify the file in ```/path/to/src/sat/finetune_single_gpu.sh```
 ```
-run_cmd="torchrun --standalone --nproc_per_node=8 train_video.py --base configs/cogvideox_2b_lora.yaml configs/sft.yaml --seed $RANDOM"
+run_cmd="torchrun --standalone --nproc_per_node=1 train_video.py --base configs/cogvideox_2b_lora.yaml configs/sft.yaml --seed $RANDOM"
 ```
 
 ### Start Finetune
