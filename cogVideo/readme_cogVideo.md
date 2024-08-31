@@ -305,3 +305,123 @@ Go to file ```/path/to/src/sat```, and run the following command:
 ```
 bash shscripts/inference_cogVideo_sat.sh
 ```
+
+
+# SAT Finetune(Lora)
+- For Lora finetune, bs=1, it needs 47GB GPU memory.
+- This method only finetune the transformer part.
+
+## Get started
+
+### Set up environment
+```
+conda create -n CogVideo python=3.10
+conda activate CogVideo
+```
+
+### Install dependencies
+1. Install the dependencies for the CogVideo.
+```
+cd cogVideo
+pip install -r requirements_cogVideo.txt
+```
+2. Install the dependencies for the SAT model.
+```
+cd src/sat  # Go to the /path/to/src/sat
+pip install -r requirements_cogVideo_sat.txt
+```
+
+### Preparing the dataset
+The dataset should be prepared in the following format:
+```
+.
+├── labels
+│   ├── 1.txt
+│   ├── 2.txt
+│   ├── ...
+└── videos
+    ├── 1.mp4
+    ├── 2.mp4
+    ├── ...
+```
+
+#### Remarks
+- Each video should have a corresponding label file, 
+which contains the description of the video. 
+- The file name should be the same as the video file name.
+- For style finetune, the dataset should be larger than 50 videos and labels
+with similar styles.
+
+### Change the configs file
+1. Modify the file in ```/path/to/src/sat/configs/sft.yaml```.
+```
+  # checkpoint_activations: True ## Using gradient checkpointing (Both checkpoint_activations in the config file need to be set to True)
+  model_parallel_size: 1 # Model parallel size
+  experiment_name: lora-disney  # Experiment name (do not modify)
+  mode: finetune # Mode (do not modify)
+  load: "{your_CogVideoX-2b-sat_path}/transformer" ## Transformer model path
+  no_load_rng: True # Whether to load random seed
+  train_iters: 1000 # Training iterations
+  eval_iters: 1 # Evaluation iterations
+  eval_interval: 100    # Evaluation interval
+  eval_batch_size: 1  # Evaluation batch size
+  save: ckpts # Model save path
+  save_interval: 100 # Model save interval
+  log_interval: 20 # Log output interval
+  train_data: [ "your train data path" ]
+  valid_data: [ "your val data path" ] # Training and validation datasets can be the same
+  split: 1,0,0 # Training, validation, and test set ratio
+  num_workers: 8 # Number of worker threads for data loader
+  force_train: True # Allow missing keys when loading checkpoint (T5 and VAE are loaded separately)
+  only_log_video_latents: True # Avoid memory overhead caused by VAE decode
+  deepspeed:
+    bf16:
+      enabled: False # For CogVideoX-2B set to False and for CogVideoX-5B set to True
+    fp16:
+      enabled: True  # For CogVideoX-2B set to True and for CogVideoX-5B set to False
+```
+2. Modify the file in ```/path/to/src/sat/configs/cogvideox_2b_lora.yaml```
+```
+model:
+  scale_factor: 1.15258426
+  disable_first_stage_autocast: true
+  not_trainable_prefixes: [ 'all' ] ## Uncomment
+  log_keys:
+    - txt'
+
+  lora_config: ## Uncomment
+    target: sat.model.finetune.lora2.LoraMixin
+    params:
+      r: 256
+```
+
+### Modify the Run Script
+Modify the file in ```/path/to/src/sat/finetune_single_gpu.sh```
+```
+run_cmd="torchrun --standalone --nproc_per_node=8 train_video.py --base configs/cogvideox_2b_lora.yaml configs/sft.yaml --seed $RANDOM"
+```
+
+### Start Finetune
+```
+bash finetune_single_gpu.sh
+```
+The finetuned model will be saved in the path ```/path/to/src/sat/ckpts```.
+
+### Evaluation
+Modify the file in ```/path/to/shscripts/inference_cogVideo_sat.sh```
+```
+run_cmd="$environs python sample_video.py --base configs/cogvideox_2b_lora.yaml configs/inference.yaml --seed 42"
+```
+Modify the file in ```/path/to/src/sat/configs/inference.yaml```
+```
+load: "{your finetune model path}" # Finetune model path
+# For example: load: "/disk4/juno/cogVideo/sat/ckpts/lora-disney-08-29-01-00"
+```
+Run the following command to evaluate the finetuned model.\
+- The ```inference_cogVideo_sat.sh``` is in the ```/path/to/shscripts``` folder. 
+```
+bash inference_cogVideo_sat.sh
+```
+
+
+
