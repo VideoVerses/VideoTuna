@@ -1,4 +1,6 @@
-- [ ] logo
+<p align="center" width="50%">
+<img src="assets/tuna.png" alt="VideoTuna" style="width: 30%; min-width: 200px; display: block; margin: auto; background-color: transparent;">
+</p>
 
 # VideoTuna
 Let's finetune video generation models!
@@ -8,12 +10,14 @@ Let's finetune video generation models!
 - [x] inference vc, dc   
 - [x] finetune & train vc2，dc   
 - [x] opensora-train, inference  
-- [ ] dpo, lora  
-- [ ] flux inference, fine-tune  
-- [ ] cogvideo inference, fine-tune  
-- [ ] vae  
-next:  
-- [ ] inference dc interp & loop  
+- [x] flux inference, fine-tune  
+- [x] cogvideo inference, fine-tune  
+- [ ] merge diffusion parts
+- [ ] refactor vc, opensora, cogvideo and flux 
+- [ ] add peft lora 
+- [ ] add RL for alignment 
+- [ ] add documents 
+- [ ] add unit test support 
 
 ## 🔆 Updates
 
@@ -24,10 +28,11 @@ next:
 
 ### Features
 1. All in one framework: Inference and finetune state-of-the-art T2V models.
-2. T2V Pretraining.
-1. Domain-specific finetuning.
-1. Human preference alignment/Post-training: RLFH, DPO.
-1. Post-processing: enhancement.
+2. Continuous training
+3. Fintuning: domain-specific.
+4. Fintuning: enhanced language understanding.
+5. Fintuning: enhancement.
+6. Human preference alignment/Post-training: RLHF, DPO.
 
 ### Code Structure
 ```
@@ -102,17 +107,26 @@ wget https://huggingface.co/Doubiiu/DynamiCrafter_1024/resolve/main/model.ckpt  
 ```
 
 ### 3.Inference state-of-the-art T2V models
-#### (1) Cogvideo
-#### (2) Open-Sora
-
-#### (3) VideoCrafter
+#### (1) VideoCrafter
 Before running the following scripts, make sure you download the checkpoint and put it at `checkpoints/videocrafter/base_512_v2/model.ckpt`.
 ```
 bash scripts/inference_t2v_vc2.sh
 ```
+#### (2) Open-Sora
 
+
+#### (3) Cogvideo
+
+#### (4) DynamiCrafter
+#### (5) Flux 
 
 ### 4. Finetune T2V models
+#### Finetuning for specific domains 
+
+#### Finetuning for enhanced langugage understanding 
+
+#### Finetuning for generative video enhancement
+
 (1) Prepare data
 
 
@@ -124,16 +138,8 @@ bash configs/train/000_videocrafter2ft/run.sh
 ### 5. Evaluation
 
 
-## ⏳ TODOs
-[x] inference vc, dc   
-[x] finetune & train vc2，dc   
-[x] opensora-train, inference  
-[ ] dpo, lora  
-[ ] flux inference, fine-tune  
-[ ] cogvideo inference, fine-tune  
-[ ] vae  
-next:  
-[ ] inference dc interp & loop  
+### 6. Alignment
+
 
 ## 🍻 Contributors
 
