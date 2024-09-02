@@ -33,6 +33,7 @@ def get_parser(**parser_kwargs):
 
     parser.add_argument("--sdckpt", type=str, default=None, help="pretrained stable diffusion checkpoint")
     parser.add_argument("--ckpt", type=str, default=None, help="pretrained current model checkpoint")
+    parser.add_argument("--lorackpt", type=str, default=None, help="pretrained current model checkpoint")
     return parser
     
 def get_nondefault_trainer_args(args):
@@ -69,6 +70,8 @@ if __name__ == "__main__":
         config["model"]["sd_checkpoint"] = args.sdckpt
     if args.ckpt is not None:
         config["model"]["pretrained_checkpoint"] = args.ckpt
+    if args.lorackpt is not None:
+        config["model"]["params"]["lora_args"]["lora_ckpt"] = args.lorackpt
     
     lightning_config = config.pop("lightning", OmegaConf.create())
     trainer_config = lightning_config.get("trainer", OmegaConf.create()) 
@@ -96,7 +99,10 @@ if __name__ == "__main__":
             logger.warning("Auto-resuming skipped as No checkpoit found!")
     else:
         model = load_checkpoints(model, config.model)
-        
+    
+    # inject lora after load main checkpoint 
+    if len(model.lora_args)!=0:
+        model.inject_lora()
     ## update trainer config
     for k in get_nondefault_trainer_args(args):
         trainer_config[k] = getattr(args, k)

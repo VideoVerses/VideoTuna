@@ -37,6 +37,7 @@ __conditioning_keys__ = {'concat': 'c_concat',
                          'crossattn': 'c_crossattn',
                          'adm': 'y'}
 
+import peft 
 class DDPM(pl.LightningModule):
     # classic DDPM with Gaussian diffusion, in image space
     def __init__(self,
@@ -113,7 +114,7 @@ class DDPM(pl.LightningModule):
         self.logvar = torch.full(fill_value=logvar_init, size=(self.num_timesteps,))
         if self.learn_logvar:
             self.logvar = nn.Parameter(self.logvar, requires_grad=True)
-
+        
     def register_schedule(self, given_betas=None, beta_schedule="linear", timesteps=1000,
                           linear_start=1e-4, linear_end=2e-2, cosine_s=8e-3):
         if exists(given_betas):
@@ -496,6 +497,8 @@ class LatentDiffusion(DDPM):
         ckpt_path = kwargs.pop("ckpt_path", None)
         ignore_keys = kwargs.pop("ignore_keys", [])
         conditioning_key = default(conditioning_key, 'crossattn')
+        # TODO: inject lora into DDPM?
+        lora_args = kwargs.pop("lora_args", []) # lora args should be poped bofere super.init
         super().__init__(conditioning_key=conditioning_key, *args, **kwargs)
 
         self.cond_stage_trainable = cond_stage_trainable
@@ -564,7 +567,55 @@ class LatentDiffusion(DDPM):
         self.logdir = logdir
         self.rand_cond_frame = rand_cond_frame
         self.interp_mode = interp_mode
+        # peft lora config. The arg name is algned with peft. 
+        if len(lora_args) >0:
+            self.lora_ckpt_path = getattr(lora_args,"lora_ckpt", None)
+            self.lora_args = lora_args
+            self.lora_rank = getattr(lora_args, "lora_rank", 4)
+            self.lora_alpha =getattr(lora_args, "lora_alpha", 1)
+            self.lora_dropout =getattr(lora_args, "lora_dropout", 0.0)
+            self.target_modules = getattr(lora_args, "target_modules", ["to_k", "to_v", "to_q"]) 
+            # peft set other paramtere requires_grad to False 
+            self.lora_config = peft.LoraConfig(
+                r=self.lora_rank,
+                lora_alpha=self.lora_alpha,
+                target_modules=self.target_modules,        # only diffusion_model has these modules
+                lora_dropout=self.lora_dropout,
+            )
+    def load_lora_from_ckpt(self,model,path):
+        lora_state_dict = torch.load(path)['state_dict']
+        copy_tracker = {key: False for key in lora_state_dict}    
+        for n, p in model.named_parameters():
+            lora_n = f"base_model.model.{n}"
+            lora_n = n.replace("default.","")
+            if lora_n in lora_state_dict:
+                if copy_tracker[lora_n]:
+                    raise RuntimeError(f"Parameter {lora_n} has already been copied once.")
+                print(f"Copying parameter {lora_n}")
+                with torch.no_grad():
+                    p.copy_(lora_state_dict[lora_n])
+                copy_tracker[lora_n] = True
+        #check parameter load intergrity
+        for key, copied in copy_tracker.items():
+            if not copied:
+                raise RuntimeError(f"Parameter {key} from lora_state_dict was not copied to the model.")
+                # print(f"Parameter {key} from lora_state_dict was not copied to the model.")
+            else:
+                print(f"Parameter {key} was copied successfully.")
 
+    def inject_lora(self):
+        """inject lora into the denoising module. 
+        The self.model should be a instance of pl.LightningModule or nn.Module.
+        """
+        # TODO: we can support inistantiate from config in the future. Now we test correctness.
+        # for simplicity, we just inject denoising model. not injecting condition model. 
+        self.model = peft.get_peft_model(self.model, self.lora_config)
+
+        self.model.print_trainable_parameters()
+        
+        if self.lora_ckpt_path is not None:
+            self.load_lora_from_ckpt(self.model, self.lora_ckpt_path)
+        
     def make_cond_schedule(self, ):
         self.cond_ids = torch.full(size=(self.num_timesteps,), fill_value=self.num_timesteps - 1, dtype=torch.long)
         ids = torch.round(torch.linspace(0, self.num_timesteps - 1, self.num_timesteps_cond)).long()
@@ -1061,6 +1112,11 @@ class LatentDiffusion(DDPM):
                 if n not in self.empty_paras:
                     p.requires_grad = False
             mainlogger.info(f"@Training [{len(params)}] Empty Paramters ONLY.")
+        elif len(self.lora_args) > 0:
+            # if there is lora_args, but haven't injected lora, it would also work. 
+            # but the trainable params will be significantly more than the lora_params
+            params =[p for p in self.model.parameters() if p.requires_grad]
+            mainlogger.info(f"@Training [{len(params)}] Lora Paramters.")
         else:
             params = list(self.model.parameters())
             mainlogger.info(f"@Training [{len(params)}] Full Paramters.")
