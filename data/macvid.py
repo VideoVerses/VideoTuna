@@ -53,7 +53,7 @@ class MaCVid(Dataset):
         print(self.config)
         self.videos = []
         for meta_path in self.config['META']:
-            metadata_path = os.path.join(meta_path,'metadata_catpion.json')
+            metadata_path = os.path.join(meta_path,'metadata_caption.json')
             with open(metadata_path, 'r') as f:
                 videos = json.load(f)
                 for item in videos:

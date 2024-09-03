@@ -5,8 +5,8 @@ model:
   target: src.lvdm.models.ddpm3d.LatentDiffusion
   params:
     lora_args:
-      lora_ckpt: "/path/to/lora.ckpt"
-      target_modules: ["to_q", "to_k", "to_v"]
+      # lora_ckpt: "/path/to/lora.ckpt" # first time training, no need
+      target_modules: ["to_q"] # ["to_q", "to_k", "to_v","proj_in"]
       lora_rank: 4
       lora_alpha: 1
       lora_dropout: 0.0
@@ -101,15 +101,15 @@ data:
       params:
         data_root: configs/data/macvid/train_data.yaml
         resolution: [320, 512]
-        video_length: 16
+        video_length: 2
         subset_split: all
-    validation:
-      target: data.macvid.MaCVid
-      params:
-        data_root: configs/data/macvid/val_data.yaml
-        resolution: [320, 512]
-        video_length: 16
-        subset_split: all
+    # validation:
+    #   target: data.macvid.MaCVid
+    #   params:
+    #     data_root: configs/data/macvid/val_data.yaml
+    #     resolution: [320, 512]
+    #     video_length: 2
+    #     subset_split: all
 
 lightning:
   trainer:
@@ -131,15 +131,15 @@ lightning:
           unconditional_guidance_scale: 12 # need this, otherwise it is grey
     modelcheckpoint:
       # target: pytorch_lightning.callbacks.ModelCheckpoint
-      target: utils.callbacks.LoraModelCheckpointt
+      target: utils.callbacks.LoraModelCheckpoint
       params:
         every_n_epochs: 1
         filename: "{epoch:04}-{step:06}"
     metrics_over_trainsteps_checkpoint:
-      target: utils.callbacks.LoraModelCheckpointt
+      target: utils.callbacks.LoraModelCheckpoint
       params:
         filename: "{epoch:06}-{step:09}"
         save_weights_only: False
-        every_n_epochs: 300
-        every_n_train_steps: null
+        # every_n_epochs: 300
+        every_n_train_steps: 10
     

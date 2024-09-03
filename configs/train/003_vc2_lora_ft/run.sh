@@ -4,7 +4,7 @@ export TOKENIZERS_PARALLELISM=false
 # dependencies
 SDCKPT="checkpoints/stablediffusion/v2-1_512-ema/model.ckpt"
 VC2CKPT="checkpoints/videocrafter/base_512_v2/model.ckpt"
-LORACKPT="checkpoints/lora/512/lora.ckpt"
+# LORACKPT="checkpoints/lora/512/lora.ckpt"
 
 # exp settings
 EXPNAME="train_t2v_512_lora"                            # experiment name 
@@ -18,9 +18,11 @@ python scripts/train.py \
 --name "$current_time"_$EXPNAME \
 --base $CONFIG \
 --logdir $RESROOT \
---sdckpt $SDCKPT \
---lorackpt $LORACKPT \ 
 --ckpt $VC2CKPT \
 --devices '0,' \
 lightning.trainer.num_nodes=1 \
---auto_resume True
+--auto_resume 
+
+
+# --sdckpt $SDCKPT \
+# --lorackpt $LORACKPT \ 
