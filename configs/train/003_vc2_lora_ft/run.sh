@@ -24,5 +24,4 @@ lightning.trainer.num_nodes=1 \
 --auto_resume 
 
 
-# --sdckpt $SDCKPT \
-# --lorackpt $LORACKPT \ 
+

@@ -15,10 +15,10 @@
 
 # debugging flags (optional)
 
-nodes=( $( scontrol show hostnames $SLURM_JOB_NODELIST ) )
-nodes_array=($nodes)
-head_node=${nodes_array[0]}
-head_node_ip=$(srun --nodes=1 --ntasks=1 -w "$head_node" hostname --ip-address)
+# nodes=( $( scontrol show hostnames $SLURM_JOB_NODELIST ) )
+# nodes_array=($nodes)
+# head_node=${nodes_array[0]}
+# head_node_ip=$(srun --nodes=1 --ntasks=1 -w "$head_node" hostname --ip-address)
 
 export WANDB_API_KEY="231c840bf4c83c49cc2241bcce066cb7b75967b2"
 export WANDB_MODE="offline"
@@ -36,27 +36,28 @@ export WORK_DIR=../
 export PYTHONPATH=$WORK_DIR
 
 
-name="debug_512_t2v_6k_epoch_00_0228_wed_2_0303/epoch0-use_scale"
+name="debug_lora"
 
 # ckpt='/aifs4su/mmcode/videogen/share_ckpts/VideoCrafter/VideoCrafter2/model.ckpt'
 # ckpt='/project/suptest/xchiaa/debug-yq/MACVideoGen/test_macvid_t2v_512_debug_0228/checkpoints/epoch=0010-step=000770.ckpt'
-ckpt="/project/suptest/xchiaa/debug-yq/MACVideoGen/test_macvid_t2v_512_debug_0228/checkpoints/epoch=0000-step=000070.ckpt"
-config='configs/train_t2v_512_v1.0_debug0228.yaml'
-
+ckpt="checkpoints/videocrafter/base_512_v2/model.ckpt"
+config='/home/liurt/liurt_data/haoyu/VideoTuna/configs/inference/vc2_t2v_512_lora.yaml'
+LORACKPT="/home/liurt/liurt_data/haoyu/VideoTuna/results/train/20240904001209_train_t2v_512_lora/checkpoints/trainstep_checkpoints/epoch=000002-step=000000040.ckpt"
 # prompt_file="prompts/test_prompts.txt"
-prompt_file="prompts/test_prompt.txt"
+prompt_file="/home/liurt/liurt_data/haoyu/dataset/elon_musk_video/labels/1.txt"
 res_dir="results"
 
-python3 scripts/evaluation/inference.py \
---seed 123 \
---mode 'base' \
---ckpt_path $ckpt \
---config $config \
---savedir $res_dir/$name \
---n_samples 1 \
---bs 4 --height 320 --width 512 \
---unconditional_guidance_scale 12.0 \
---ddim_steps 50 \
---ddim_eta 1.0 \
---prompt_file $prompt_file \
---fps 28
+python3 scripts/inference.py \
+    --seed 123 \
+    --mode 't2v' \
+    --ckpt_path $ckpt \
+    --lorackpt $LORACKPT \
+    --config $config \
+    --savedir $res_dir/$name \
+    --n_samples 1 \
+    --bs 1 --height 320 --width 512 \
+    --unconditional_guidance_scale 12.0 \
+    --ddim_steps 50 \
+    --ddim_eta 1.0 \
+    --prompt_file $prompt_file \
+    --fps 28

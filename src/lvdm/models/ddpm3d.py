@@ -585,9 +585,16 @@ class LatentDiffusion(DDPM):
     def load_lora_from_ckpt(self,model,path):
         lora_state_dict = torch.load(path)['state_dict']
         copy_tracker = {key: False for key in lora_state_dict}    
+        # TODO: this function is not robust engough. The mapping will be easily changed if the model is changed.
+        # print(copy_tracker.keys())
         for n, p in model.named_parameters():
-            lora_n = f"base_model.model.{n}"
-            lora_n = n.replace("default.","")
+            if "lora" in n : 
+                # print(n)
+                lora_n = f"model.{n}"
+                # lora_n = lora_n.replace("default.","")
+                # print(lora_n)
+            else: 
+                continue
             if lora_n in lora_state_dict:
                 if copy_tracker[lora_n]:
                     raise RuntimeError(f"Parameter {lora_n} has already been copied once.")
@@ -595,6 +602,8 @@ class LatentDiffusion(DDPM):
                 with torch.no_grad():
                     p.copy_(lora_state_dict[lora_n])
                 copy_tracker[lora_n] = True
+            else:
+                exit()
         #check parameter load intergrity
         for key, copied in copy_tracker.items():
             if not copied:
