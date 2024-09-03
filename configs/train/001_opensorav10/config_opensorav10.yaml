@@ -4,9 +4,9 @@ model:
   # empty_params_only: True # disable this means finetuning all parameters
   # sd_checkpoint: /project/llmsvgen/share/shared_ckpts/StableDiffusion/v2-1_512-ema-pruned.ckpt
   # pretrained_checkpoint: /project/llmsvgen/share/shared_ckpts/VideoCrafter/VideoCrafter2-Text2Video-512/model.ckpt
-  target: src.lvdm.models.ddpm3d.LatentDiffusion
+  target: src.lvdm.models.iddpm3d.LatentDiffusion
   params:
-    loss_type: l1
+    # loss_type: l1
     log_every_t: 200
     linear_start: 0.00085
     linear_end: 0.012
@@ -44,7 +44,7 @@ model:
         time_scale: 1.0
         # from_pretrained: "PixArt-XL-2-512x512.pth"
         enable_flashattn: True
-        enable_layernorm_kernel: True
+        enable_layernorm_kernel: False
         input_size:
         - 16
         - 32

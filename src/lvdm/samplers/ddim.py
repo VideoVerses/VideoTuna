@@ -211,7 +211,8 @@ class DDIMSampler(object):
                 # img = img.to(torch.bfloat16)
             
             # TODO fix dtype here 
-            img = img.to(torch.bfloat16)
+            # img = img.to(torch.bfloat16)
+            img = img.to(torch.float32)
 
             outs = self.p_sample_ddim(img, cond, ts, index=index, use_original_steps=ddim_use_original_steps,
                                       quantize_denoised=quantize_denoised, temperature=temperature,

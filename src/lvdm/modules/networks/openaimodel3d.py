@@ -571,7 +571,7 @@ class UNetModel(nn.Module):
             h = torch.cat([h, hs.pop()], dim=1)
             h = module(h, emb, context=context, batch_size=b)
         h = h.type(x.dtype)
-        y = self.out(h)
+        y = self.out(h).type(x.dtype)
         
         # reshape back to (b c t h w)
         y = rearrange(y, '(b t) c h w -> b c t h w', b=b)
