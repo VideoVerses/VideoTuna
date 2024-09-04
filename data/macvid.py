@@ -8,10 +8,12 @@ import random
 import json
 import torch
 from torch.utils.data import Dataset
+import decord 
 from decord import VideoReader, cpu
 import glob
 import pandas as pd
 import yaml
+decord.bridge.set_bridge('torch')
 
 class MaCVid(Dataset):
     """
