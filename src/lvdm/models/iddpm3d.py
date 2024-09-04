@@ -1,6 +1,7 @@
 import logging
 import os
 import random
+import math
 from contextlib import contextmanager
 from functools import partial
 
@@ -28,7 +29,7 @@ from src.lvdm.models.utils_diffusion import make_beta_schedule, rescale_zero_ter
 from utils.common_utils import instantiate_from_config
 
 
-def mean_flat(tensor: torch.Tensor, mask=None):
+def mean_flat(tensor: torch.Tensor, mask=None) -> torch.Tensor:
     """
     Take the mean over all non-batch dimensions.
     """
@@ -41,6 +42,90 @@ def mean_flat(tensor: torch.Tensor, mask=None):
         denom = mask.sum(dim=1) * tensor.shape[-1]
         loss = (tensor * mask.unsqueeze(2)).sum(dim=1).sum(dim=1) / denom
         return loss
+
+
+def _warmup_beta(beta_start, beta_end, num_diffusion_timesteps, warmup_frac):
+    betas = beta_end * np.ones(num_diffusion_timesteps, dtype=np.float64)
+    warmup_time = int(num_diffusion_timesteps * warmup_frac)
+    betas[:warmup_time] = np.linspace(beta_start, beta_end, warmup_time, dtype=np.float64)
+    return betas
+
+
+def get_beta_schedule(beta_schedule: str, *, beta_start, beta_end, num_diffusion_timesteps: int) -> np.ndarray:
+    """
+    This is the deprecated API for creating beta schedules.
+    See get_named_beta_schedule() for the new library of schedules.
+    """
+    if beta_schedule == "quad":
+        betas = (
+            np.linspace(
+                beta_start**0.5,
+                beta_end**0.5,
+                num_diffusion_timesteps,
+                dtype=np.float64,
+            )
+            ** 2
+        )
+    elif beta_schedule == "linear":
+        betas = np.linspace(beta_start, beta_end, num_diffusion_timesteps, dtype=np.float64)
+    elif beta_schedule == "warmup10":
+        betas = _warmup_beta(beta_start, beta_end, num_diffusion_timesteps, 0.1)
+    elif beta_schedule == "warmup50":
+        betas = _warmup_beta(beta_start, beta_end, num_diffusion_timesteps, 0.5)
+    elif beta_schedule == "const":
+        betas = beta_end * np.ones(num_diffusion_timesteps, dtype=np.float64)
+    elif beta_schedule == "jsd":  # 1/T, 1/(T-1), 1/(T-2), ..., 1
+        betas = 1.0 / np.linspace(num_diffusion_timesteps, 1, num_diffusion_timesteps, dtype=np.float64)
+    else:
+        raise NotImplementedError(beta_schedule)
+    assert betas.shape == (num_diffusion_timesteps,)
+    return betas
+
+
+def get_named_beta_schedule(schedule_name: str, num_diffusion_timesteps: int) -> np.ndarray:
+    """
+    Get a pre-defined beta schedule for the given name.
+    The beta schedule library consists of beta schedules which remain similar
+    in the limit of num_diffusion_timesteps.
+    Beta schedules may be added, but should not be removed or changed once
+    they are committed to maintain backwards compatibility.
+    """
+    if schedule_name == "linear":
+        # Linear schedule from Ho et al, extended to work for any number of
+        # diffusion steps.
+        scale = 1000 / num_diffusion_timesteps
+        return get_beta_schedule(
+            "linear",
+            beta_start=scale * 0.0001,
+            beta_end=scale * 0.02,
+            num_diffusion_timesteps=num_diffusion_timesteps,
+        )
+    elif schedule_name == "squaredcos_cap_v2":
+        return betas_for_alpha_bar(
+            num_diffusion_timesteps,
+            lambda t: math.cos((t + 0.008) / 1.008 * math.pi / 2) ** 2,
+        )
+    else:
+        raise NotImplementedError(f"unknown beta schedule: {schedule_name}")
+    
+
+def betas_for_alpha_bar(num_diffusion_timesteps, alpha_bar, max_beta=0.999) -> np.ndarray:
+    """
+    Create a beta schedule that discretizes the given alpha_t_bar function,
+    which defines the cumulative product of (1-beta) over time from t = [0,1].
+    :param num_diffusion_timesteps: the number of betas to produce.
+    :param alpha_bar: a lambda that takes an argument t from 0 to 1 and
+                      produces the cumulative product of (1-beta) up to that
+                      part of the diffusion process.
+    :param max_beta: the maximum beta to use; use values lower than 1 to
+                     prevent singularities.
+    """
+    betas = []
+    for i in range(num_diffusion_timesteps):
+        t1 = i / num_diffusion_timesteps
+        t2 = (i + 1) / num_diffusion_timesteps
+        betas.append(min(1 - alpha_bar(t2) / alpha_bar(t1), max_beta))
+    return np.array(betas)
 
 
 class ModelMeanType(enum.Enum):
@@ -96,6 +181,8 @@ class IDDPM(DDPM):
             betas = make_beta_schedule(beta_schedule, timesteps, linear_start=linear_start, linear_end=linear_end, cosine_s=cosine_s)
         if self.rescale_betas_zero_snr:
             betas = rescale_zero_terminal_snr(betas)
+        # transform the type of betas to numpy array
+        betas = np.array(betas, dtype=np.float32)
 
         timesteps = betas.shape[0]
         self.num_timesteps = int(timesteps)
@@ -529,7 +616,7 @@ class SpacedDiffusion(IDDPM):
     def __init__(self, use_timesteps, **kwargs):
         self.use_timesteps = set(use_timesteps)
         self.timestep_map = []
-        self.original_num_steps = len(kwargs["betas"])
+        self.original_num_steps = len(kwargs["given_betas"])
 
         base_diffusion = IDDPM(**kwargs)  # pylint: disable=missing-kwoa
         last_alpha_cumprod = 1.0
@@ -539,9 +626,9 @@ class SpacedDiffusion(IDDPM):
                 new_betas.append(1 - alpha_cumprod / last_alpha_cumprod)
                 last_alpha_cumprod = alpha_cumprod
                 self.timestep_map.append(i)
-        kwargs["betas"] = torch.FloatTensor(new_betas)
+        kwargs["given_betas"] = torch.FloatTensor(new_betas)
         super().__init__(**kwargs)
-        self.map_tensor = torch.tensor(self.timestep_map, device='cuda')  # TODO: get device
+        self.map_tensor = torch.tensor(self.timestep_map)  # TODO: get device
 
     def p_mean_variance(self, model, *args, **kwargs):  # pylint: disable=signature-differs
         return super().p_mean_variance(self._wrap_model(model), *args, **kwargs)
@@ -593,7 +680,7 @@ class LatentDiffusion(SpacedDiffusion):
                  scale_factor=1.0,
                  scale_by_std=False,
                  fps_condition_type='fs',
-                 # added for LVDM
+                 # Added for LVDM
                  encoder_type="2d",
                  frame_cond=None,
                  only_model=False,
@@ -606,6 +693,8 @@ class LatentDiffusion(SpacedDiffusion):
                  logdir=None,
                  rand_cond_frame=False,
                  empty_params_only=False,
+                 num_sampling_steps=None, # Added for SpacedDiffusion
+                 timestep_respacing=None, # Added for SpacedDiffusion
                  *args, **kwargs):
         self.num_timesteps_cond = default(num_timesteps_cond, 1)
         self.scale_by_std = scale_by_std
@@ -614,7 +703,18 @@ class LatentDiffusion(SpacedDiffusion):
         ckpt_path = kwargs.pop("ckpt_path", None)
         ignore_keys = kwargs.pop("ignore_keys", [])
         conditioning_key = default(conditioning_key, 'crossattn')
-        super().__init__(conditioning_key=conditioning_key, *args, **kwargs)
+
+        given_betas = get_named_beta_schedule("linear", kwargs['timesteps'])
+        if num_sampling_steps is not None:
+            assert timestep_respacing is None
+            timestep_respacing = str(num_sampling_steps)
+        if timestep_respacing is None or timestep_respacing == "":
+            timestep_respacing = [kwargs['timesteps']]
+
+        super().__init__(use_timesteps=space_timesteps(kwargs['timesteps'], timestep_respacing),
+                        given_betas=given_betas,
+                        conditioning_key=conditioning_key,
+                        *args, **kwargs)
 
         self.cond_stage_trainable = cond_stage_trainable
         self.cond_stage_key = cond_stage_key
