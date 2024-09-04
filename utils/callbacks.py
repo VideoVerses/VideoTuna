@@ -101,7 +101,6 @@ class ImageLogger(Callback):
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx=None):
         if self.batch_freq != -1 and pl_module.logdir:
             self.log_batch_imgs(pl_module, batch, batch_idx, split="train")
-            print("train batch end")
 
     def on_validation_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx=None):
         ## different with validation_step() that saving the whole validation set and only keep the latest,
