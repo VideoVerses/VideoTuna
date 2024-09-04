@@ -69,6 +69,7 @@ class DDPM(pl.LightningModule):
                  learn_logvar=False,
                  logvar_init=0.,
                  rescale_betas_zero_snr=False,
+                 lora_args=[],
                  ):
         super().__init__()
         assert parameterization in ["eps", "x0", "v"], 'currently only supporting "eps" and "x0" and "v"'
@@ -85,6 +86,23 @@ class DDPM(pl.LightningModule):
             self.image_size = [self.image_size, self.image_size]
         self.use_positional_encodings = use_positional_encodings
         self.model = DiffusionWrapper(unet_config, conditioning_key)
+        # load lora models 
+        # peft lora config. The arg name is algned with peft. 
+        if len(lora_args) >0:
+            self.lora_ckpt_path = getattr(lora_args,"lora_ckpt", None)
+            self.lora_args = lora_args
+            self.lora_rank = getattr(lora_args, "lora_rank", 4)
+            self.lora_alpha =getattr(lora_args, "lora_alpha", 1)
+            self.lora_dropout =getattr(lora_args, "lora_dropout", 0.0)
+            self.target_modules = getattr(lora_args, "target_modules", ["to_k", "to_v", "to_q"]) 
+            # peft set other paramtere requires_grad to False 
+            self.lora_config = peft.LoraConfig(
+                r=self.lora_rank,
+                lora_alpha=self.lora_alpha,
+                target_modules=self.target_modules,        # only diffusion_model has these modules
+                lora_dropout=self.lora_dropout,
+            )
+
         #count_params(self.model, verbose=True)
         self.use_ema = use_ema
         self.rescale_betas_zero_snr = rescale_betas_zero_snr
@@ -459,7 +477,49 @@ class DDPM(pl.LightningModule):
             params = params + [self.logvar]
         opt = torch.optim.AdamW(params, lr=lr)
         return opt
+    def load_lora_from_ckpt(self,model,path):
+        lora_state_dict = torch.load(path)['state_dict']
+        copy_tracker = {key: False for key in lora_state_dict}    
+        # TODO: this function is not robust engough. The mapping will be easily changed if the model is changed.
+        # print(copy_tracker.keys())
+        for n, p in model.named_parameters():
+            if "lora" in n : 
+                # print(n)
+                lora_n = f"model.{n}"
+                # lora_n = lora_n.replace("default.","")
+                # print(lora_n)
+            else: 
+                continue
+            if lora_n in lora_state_dict:
+                if copy_tracker[lora_n]:
+                    raise RuntimeError(f"Parameter {lora_n} has already been copied once.")
+                print(f"Copying parameter {lora_n}")
+                with torch.no_grad():
+                    p.copy_(lora_state_dict[lora_n])
+                copy_tracker[lora_n] = True
+            else:
+                exit()
+        #check parameter load intergrity
+        for key, copied in copy_tracker.items():
+            if not copied:
+                raise RuntimeError(f"Parameter {key} from lora_state_dict was not copied to the model.")
+                # print(f"Parameter {key} from lora_state_dict was not copied to the model.")
+            else:
+                print(f"Parameter {key} was copied successfully.")
 
+    def inject_lora(self):
+        """inject lora into the denoising module. 
+        The self.model should be a instance of pl.LightningModule or nn.Module.
+        """
+        # TODO: we can support inistantiate from config in the future. Now we test correctness.
+        # for simplicity, we just inject denoising model. not injecting condition model. 
+        self.model = peft.get_peft_model(self.model, self.lora_config)
+
+        self.model.print_trainable_parameters()
+        
+        if self.lora_ckpt_path is not None:
+            self.load_lora_from_ckpt(self.model, self.lora_ckpt_path)
+        
 
 class LatentDiffusion(DDPM):
     """main class"""
@@ -497,8 +557,7 @@ class LatentDiffusion(DDPM):
         ckpt_path = kwargs.pop("ckpt_path", None)
         ignore_keys = kwargs.pop("ignore_keys", [])
         conditioning_key = default(conditioning_key, 'crossattn')
-        # TODO: inject lora into DDPM?
-        lora_args = kwargs.pop("lora_args", []) # lora args should be poped bofere super.init
+        
         super().__init__(conditioning_key=conditioning_key, *args, **kwargs)
 
         self.cond_stage_trainable = cond_stage_trainable
@@ -567,64 +626,7 @@ class LatentDiffusion(DDPM):
         self.logdir = logdir
         self.rand_cond_frame = rand_cond_frame
         self.interp_mode = interp_mode
-        # peft lora config. The arg name is algned with peft. 
-        if len(lora_args) >0:
-            self.lora_ckpt_path = getattr(lora_args,"lora_ckpt", None)
-            self.lora_args = lora_args
-            self.lora_rank = getattr(lora_args, "lora_rank", 4)
-            self.lora_alpha =getattr(lora_args, "lora_alpha", 1)
-            self.lora_dropout =getattr(lora_args, "lora_dropout", 0.0)
-            self.target_modules = getattr(lora_args, "target_modules", ["to_k", "to_v", "to_q"]) 
-            # peft set other paramtere requires_grad to False 
-            self.lora_config = peft.LoraConfig(
-                r=self.lora_rank,
-                lora_alpha=self.lora_alpha,
-                target_modules=self.target_modules,        # only diffusion_model has these modules
-                lora_dropout=self.lora_dropout,
-            )
-    def load_lora_from_ckpt(self,model,path):
-        lora_state_dict = torch.load(path)['state_dict']
-        copy_tracker = {key: False for key in lora_state_dict}    
-        # TODO: this function is not robust engough. The mapping will be easily changed if the model is changed.
-        # print(copy_tracker.keys())
-        for n, p in model.named_parameters():
-            if "lora" in n : 
-                # print(n)
-                lora_n = f"model.{n}"
-                # lora_n = lora_n.replace("default.","")
-                # print(lora_n)
-            else: 
-                continue
-            if lora_n in lora_state_dict:
-                if copy_tracker[lora_n]:
-                    raise RuntimeError(f"Parameter {lora_n} has already been copied once.")
-                print(f"Copying parameter {lora_n}")
-                with torch.no_grad():
-                    p.copy_(lora_state_dict[lora_n])
-                copy_tracker[lora_n] = True
-            else:
-                exit()
-        #check parameter load intergrity
-        for key, copied in copy_tracker.items():
-            if not copied:
-                raise RuntimeError(f"Parameter {key} from lora_state_dict was not copied to the model.")
-                # print(f"Parameter {key} from lora_state_dict was not copied to the model.")
-            else:
-                print(f"Parameter {key} was copied successfully.")
 
-    def inject_lora(self):
-        """inject lora into the denoising module. 
-        The self.model should be a instance of pl.LightningModule or nn.Module.
-        """
-        # TODO: we can support inistantiate from config in the future. Now we test correctness.
-        # for simplicity, we just inject denoising model. not injecting condition model. 
-        self.model = peft.get_peft_model(self.model, self.lora_config)
-
-        self.model.print_trainable_parameters()
-        
-        if self.lora_ckpt_path is not None:
-            self.load_lora_from_ckpt(self.model, self.lora_ckpt_path)
-        
     def make_cond_schedule(self, ):
         self.cond_ids = torch.full(size=(self.num_timesteps,), fill_value=self.num_timesteps - 1, dtype=torch.long)
         ids = torch.round(torch.linspace(0, self.num_timesteps - 1, self.num_timesteps_cond)).long()
