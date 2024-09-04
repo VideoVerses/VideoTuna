@@ -5,7 +5,7 @@ model:
   target: src.lvdm.models.ddpm3d.LatentDiffusion
   params:
     lora_args:
-      # lora_ckpt: "/path/to/lora.ckpt" # first time training, no need
+      # lora_ckpt: "/path/to/lora.ckpt" # first time training, no need; this is for resume training. 
       target_modules:  ["to_q", "to_k", "to_v"]
       lora_rank: 4
       lora_alpha: 1
@@ -103,13 +103,13 @@ data:
         resolution: [320, 512]
         video_length: 2
         subset_split: all
-    # validation:
-    #   target: data.macvid.MaCVid
-    #   params:
-    #     data_root: configs/data/macvid/val_data.yaml
-    #     resolution: [320, 512]
-    #     video_length: 2
-    #     subset_split: all
+    validation:
+      target: data.macvid.MaCVid
+      params:
+        data_root: configs/data/macvid/val_data.yaml
+        resolution: [320, 512]
+        video_length: 2
+        subset_split: all
 
 lightning:
   trainer:
@@ -124,7 +124,7 @@ lightning:
     image_logger:
       target: utils.callbacks.ImageLogger
       params:
-        batch_frequency: 100
+        batch_frequency: 100000
         max_images: 2
         to_local: True # save videos into files
         log_images_kwargs:

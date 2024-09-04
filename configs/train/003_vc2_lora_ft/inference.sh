@@ -36,13 +36,13 @@ export WORK_DIR=../
 export PYTHONPATH=$WORK_DIR
 
 
-name="debug_lora"
+name="overfit-lora"
 
 # ckpt='/aifs4su/mmcode/videogen/share_ckpts/VideoCrafter/VideoCrafter2/model.ckpt'
 # ckpt='/project/suptest/xchiaa/debug-yq/MACVideoGen/test_macvid_t2v_512_debug_0228/checkpoints/epoch=0010-step=000770.ckpt'
 ckpt="checkpoints/videocrafter/base_512_v2/model.ckpt"
 config='/home/liurt/liurt_data/haoyu/VideoTuna/configs/inference/vc2_t2v_512_lora.yaml'
-LORACKPT="/home/liurt/liurt_data/haoyu/VideoTuna/results/train/20240904001209_train_t2v_512_lora/checkpoints/trainstep_checkpoints/epoch=000002-step=000000040.ckpt"
+LORACKPT="/home/liurt/liurt_data/haoyu/VideoTuna/results/train/20240904012736_train_t2v_512_lora/checkpoints/trainstep_checkpoints/epoch=000109-step=000005350.ckpt"
 # prompt_file="prompts/test_prompts.txt"
 prompt_file="/home/liurt/liurt_data/haoyu/dataset/elon_musk_video/labels/1.txt"
 res_dir="results"
