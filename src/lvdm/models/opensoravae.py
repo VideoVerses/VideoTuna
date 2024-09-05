@@ -26,13 +26,13 @@ class VideoAutoencoderKL(pl.LightningModule):
         x = rearrange(x, "B C T H W -> (B T) C H W")
 
         if self.micro_batch_size is None:
-            x = self.module.encode(x).latent_dist.sample().mul_(0.18215)
+            x = self.module.encode(x).latent_dist.sample()
         else:
             bs = self.micro_batch_size
             x_out = []
             for i in range(0, x.shape[0], bs):
                 x_bs = x[i : i + bs]
-                x_bs = self.module.encode(x_bs).latent_dist.sample().mul_(0.18215)
+                x_bs = self.module.encode(x_bs).latent_dist.sample()
                 x_out.append(x_bs)
             x = torch.cat(x_out, dim=0)
         x = rearrange(x, "(B T) C H W -> B C T H W", B=B)
@@ -43,13 +43,13 @@ class VideoAutoencoderKL(pl.LightningModule):
         B = x.shape[0]
         x = rearrange(x, "B C T H W -> (B T) C H W")
         if self.micro_batch_size is None:
-            x = self.module.decode(x / 0.18215).sample
+            x = self.module.decode(x).sample
         else:
             bs = self.micro_batch_size
             x_out = []
             for i in range(0, x.shape[0], bs):
                 x_bs = x[i : i + bs]
-                x_bs = self.module.decode(x_bs / 0.18215).sample
+                x_bs = self.module.decode(x).sample
                 x_out.append(x_bs)
             x = torch.cat(x_out, dim=0)
         x = rearrange(x, "(B T) C H W -> B C T H W", B=B)
