@@ -480,14 +480,9 @@ class DDPM(pl.LightningModule):
     def load_lora_from_ckpt(self,model,path):
         lora_state_dict = torch.load(path)['state_dict']
         copy_tracker = {key: False for key in lora_state_dict}    
-        # TODO: this function is not robust engough. The mapping will be easily changed if the model is changed.
-        # print(copy_tracker.keys())
         for n, p in model.named_parameters():
             if "lora" in n : 
-                # print(n)
                 lora_n = f"model.{n}"
-                # lora_n = lora_n.replace("default.","")
-                # print(lora_n)
             else: 
                 continue
             if lora_n in lora_state_dict:
@@ -498,14 +493,13 @@ class DDPM(pl.LightningModule):
                     p.copy_(lora_state_dict[lora_n])
                 copy_tracker[lora_n] = True
             else:
-                exit()
+                raise RuntimeError(f"Parameter {lora_n} not found in lora_state_dict.")
         #check parameter load intergrity
         for key, copied in copy_tracker.items():
             if not copied:
                 raise RuntimeError(f"Parameter {key} from lora_state_dict was not copied to the model.")
                 # print(f"Parameter {key} from lora_state_dict was not copied to the model.")
-            else:
-                print(f"Parameter {key} was copied successfully.")
+        print(f"All Parameters was copied successfully.")
 
     def inject_lora(self):
         """inject lora into the denoising module. 
@@ -1126,7 +1120,8 @@ class LatentDiffusion(DDPM):
         elif len(self.lora_args) > 0:
             # if there is lora_args, but haven't injected lora, it would also work. 
             # but the trainable params will be significantly more than the lora_params
-            params =[p for p in self.model.parameters() if p.requires_grad]
+            # filter out the non lora parameters. 
+            params =[p for n,p in self.model.named_parameters() if p.requires_grad and "lora" in n]
             mainlogger.info(f"@Training [{len(params)}] Lora Paramters.")
         else:
             params = list(self.model.parameters())
