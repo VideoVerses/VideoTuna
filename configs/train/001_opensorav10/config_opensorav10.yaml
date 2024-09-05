@@ -26,7 +26,7 @@ model:
     use_ema: false
     uncond_type: empty_seq
     monitor: val/loss_simple_ema
-    encoder_type: 2d
+    encoder_type: 3d
     use_scale: true
     scale_b: 0.7 # adapt to videocrafter-v2
 
@@ -54,27 +54,10 @@ model:
         # - True
         # - 'inter' 
     first_stage_config:
-      target: src.lvdm.models.autoencoder.AutoencoderKL
+      target: src.lvdm.models.opensoravae.VideoAutoencoderKL
       params:
-        embed_dim: 4
-        monitor: val/rec_loss
-        ddconfig:
-          double_z: true
-          z_channels: 4
-          resolution: 512
-          in_channels: 3
-          out_ch: 3
-          ch: 128
-          ch_mult:
-          - 1
-          - 2
-          - 4
-          - 4
-          num_res_blocks: 2
-          attn_resolutions: []
-          dropout: 0.0
-        lossconfig:
-          target: torch.nn.Identity
+          from_pretrained: stabilityai/sd-vae-ft-ema
+          micro_batch_size: 4
     cond_stage_config:
       # target: lvdm.modules.encoders.condition.FrozenOpenCLIPEmbedder
       target: src.opensora.models.text_encoder.t5.T5Encoder
