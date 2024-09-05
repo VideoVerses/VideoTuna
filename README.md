@@ -88,6 +88,7 @@ VideoTuna
 ```
 conda create --name videotuna python=3.10 
 pip install -r requirements.txt
+conda activate videotuna
 git clone https://github.com/JingyeChen/SwissArmyTransformer
 cd SwissArmyTransformer
 pip install -e .
