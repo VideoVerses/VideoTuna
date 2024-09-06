@@ -2,10 +2,11 @@ from functools import partial
 
 import torch
 
-from opensora.registry import SCHEDULERS
+from src.opensora.registry import SCHEDULERS
 
 from . import gaussian_diffusion as gd
 from .respace import SpacedDiffusion, space_timesteps
+from .speed import SpeeDiffusion
 
 
 @SCHEDULERS.register_module("iddpm")
@@ -60,6 +61,7 @@ class IDDPM(SpacedDiffusion):
         prompts,
         device,
         additional_args=None,
+        mask=None,
     ):
         n = len(prompts)
         z = torch.randn(n, *z_size, device=device)
@@ -79,6 +81,39 @@ class IDDPM(SpacedDiffusion):
             model_kwargs=model_args,
             progress=True,
             device=device,
+            mask=mask,
+        )
+        samples, _ = samples.chunk(2, dim=0)
+        return samples
+    
+    def sample_new(
+        self,
+        model,
+        text_encoder,
+        z,
+        prompts,
+        device,
+        additional_args=None,
+        mask=None,
+    ):
+        n = len(prompts)
+        z = torch.cat([z, z], 0)
+        model_args = text_encoder.encode(prompts)
+        y_null = text_encoder.null(n)
+        model_args["y"] = torch.cat([model_args["y"], y_null], 0)
+        if additional_args is not None:
+            model_args.update(additional_args)
+
+        forward = partial(forward_with_cfg, model, cfg_scale=self.cfg_scale, cfg_channel=self.cfg_channel)
+        samples = self.p_sample_loop(
+            forward,
+            z.shape,
+            z,
+            clip_denoised=False,
+            model_kwargs=model_args,
+            progress=True,
+            device=device,
+            mask=mask,
         )
         samples, _ = samples.chunk(2, dim=0)
         return samples
@@ -88,6 +123,9 @@ def forward_with_cfg(model, x, timestep, y, cfg_scale, cfg_channel=None, **kwarg
     # https://github.com/openai/glide-text2im/blob/main/notebooks/text2im.ipynb
     half = x[: len(x) // 2]
     combined = torch.cat([half, half], dim=0)
+    if "x_mask" in kwargs and kwargs["x_mask"] is not None:
+        if len(kwargs["x_mask"]) != len(x):
+            kwargs["x_mask"] = torch.cat([kwargs["x_mask"], kwargs["x_mask"]], dim=0)
     model_out = model.forward(combined, timestep, y, **kwargs)
     model_out = model_out["x"] if isinstance(model_out, dict) else model_out
     if cfg_channel is None:
