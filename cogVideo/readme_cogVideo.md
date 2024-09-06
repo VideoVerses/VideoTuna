@@ -7,6 +7,8 @@
 | T2V-Models   | Resolution | Checkpoints                                                         |
 |--------------|------------|---------------------------------------------------------------------|
 | CogVideoX-2b | 720x480    | [Hugging Face](https://huggingface.co/THUDM/CogVideoX-2b/tree/main) |
+ | CogVideoX-5b | 720x480    | [Hugging Face](https://huggingface.co/THUDM/CogVideoX-5b/tree/main) |
+
 
 
 ## Get started
@@ -29,6 +31,7 @@ pip install --upgrade opencv-python transformers diffusers # Must using diffuser
 
 ### Prepare checkpoints
 
+#### CogVideoX-2b
 Use the following command to clone the repository and download the checkpoints. 
 Or access the [Hugging Face](https://huggingface.co/THUDM/CogVideoX-2b) to download the checkpoints.
 ```
@@ -48,6 +51,15 @@ wget https://huggingface.co/THUDM/CogVideoX-2b/resolve/main/text_encoder/model-0
 rm model-00002-of-00002.safetensors
 wget https://huggingface.co/THUDM/CogVideoX-2b/resolve/main/text_encoder/model-00002-of-00002.safetensors
 ```
+
+#### CogVideoX-5b
+Use the following command to clone the repository and download the checkpoints.
+Or access the [Hugging Face](https://huggingface.co/THUDM/CogVideoX-5b) to download the checkpoints.
+```
+git lfs install
+git clone https://huggingface.co/THUDM/CogVideoX-5b
+```
+
 
 ### Generate video
 Generates a video based on the given prompt and saves it to the specified path.
@@ -70,7 +82,7 @@ OR
 ```
 bash /path/to/shscripts/inference_cogVideo_diffusers.sh
 ```
-It will generate a video of a cat playing with a ball and save it to the file /cogVideo/output.mp4.
+It will generate a video of a cat playing with a ball and save it to the file /cogVideo/output.mp4, with the model CogVideoX-2b.
 
 # SAT Inference
 * Single GPU Inference (FP16), the model need 18GB GPU memory. \
