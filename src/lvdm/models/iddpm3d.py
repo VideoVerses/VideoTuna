@@ -173,21 +173,16 @@ class IDDPM(DDPM):
         self.model_var_type = model_var_type
         self.loss_type = loss_type
     
-    def register_schedule(self, given_betas=None, beta_schedule="linear", timesteps=1000,
-                          linear_start=1e-4, linear_end=2e-2, cosine_s=8e-3):
+    def register_schedule(self, given_betas, *args, **kwargs):
         if exists(given_betas):
             betas = given_betas
         else:
-            betas = make_beta_schedule(beta_schedule, timesteps, linear_start=linear_start, linear_end=linear_end, cosine_s=cosine_s)
-        if self.rescale_betas_zero_snr:
-            betas = rescale_zero_terminal_snr(betas)
-        # transform the type of betas to numpy array
+            raise ValueError("given_betas must be provided")
+            
         betas = np.array(betas, dtype=np.float32)
 
         timesteps = betas.shape[0]
         self.num_timesteps = int(timesteps)
-        self.linear_start = linear_start
-        self.linear_end = linear_end
 
         alphas = 1. - betas
         alphas_cumprod = np.cumprod(alphas, axis=0)
@@ -212,11 +207,30 @@ class IDDPM(DDPM):
         # calculations for posterior q(x_{t-1} | x_t, x_0)
         posterior_variance = (1 - self.v_posterior) * betas * (1. - alphas_cumprod_prev) / (1. - alphas_cumprod) + self.v_posterior * betas
         self.register_buffer('posterior_variance', to_torch(posterior_variance))
-        self.register_buffer('posterior_log_variance_clipped', to_torch(np.log(np.maximum(posterior_variance, 1e-20))))  # TODO: check this
+        self.register_buffer('posterior_log_variance_clipped', to_torch(
+                np.log(np.append(posterior_variance[1], posterior_variance[1:]))
+            ) if len(self.posterior_variance) > 1 else torch.DoubleTensor([])
+        )
         self.register_buffer('posterior_mean_coef1', to_torch(
             betas * np.sqrt(alphas_cumprod_prev) / (1. - alphas_cumprod)))
         self.register_buffer('posterior_mean_coef2', to_torch(
             (1. - alphas_cumprod_prev) * np.sqrt(alphas) / (1. - alphas_cumprod)))
+    
+    def predict_start_from_noise(self, x_t, t, noise):
+        assert noise.shape == x_t.shape
+        return super().predict_start_from_noise(x_t, t, noise)
+
+    def predict_start_from_prev(self, x_t, t, x_prev):
+        assert x_prev.shape == x_t.shape
+        return (  # (x_prev - coef2 * x_t) / coef1
+            extract_into_tensor(
+                1.0 / self.posterior_mean_coef1, t, x_t.shape
+            ) * x_prev
+            - extract_into_tensor(
+                self.posterior_mean_coef2 / self.posterior_mean_coef1, t, x_t.shape
+            ) * x_t
+        )
+        
     
     def p_mean_variance(self, x, t, clip_denoised=True, denoised_fn=None, model_kwargs=None):
         """
@@ -281,20 +295,20 @@ class IDDPM(DDPM):
                 return x.clamp(-1, 1)
             return x
 
-        if self.model_mean_type == ModelMeanType.START_X:
+        if self.model_mean_type == ModelMeanType.PREVIOUS_X:
+            model_mean = model_output
+            pred_xstart = process_xstart(self.predict_start_from_prev(x_t=x, t=t, x_prev=model_output))
+        elif self.model_mean_type == ModelMeanType.START_X:
             pred_xstart = process_xstart(model_output)
-        else:
+            model_mean, _, _ = self.q_posterior(x_start=pred_xstart, x_t=x, t=t)
+        elif self.model_mean_type == ModelMeanType.EPSILON:
             pred_xstart = process_xstart(self.predict_start_from_noise(x_t=x, t=t, eps=model_output))
-        model_mean, _, _ = self.q_posterior(x_start=pred_xstart, x_t=x, t=t)
+            model_mean, _, _ = self.q_posterior(x_start=pred_xstart, x_t=x, t=t)
+        else:
+            raise NotImplementedError(self.model_mean_type)
 
         assert model_mean.shape == model_log_variance.shape == pred_xstart.shape == x.shape
-        # return {
-        #     "mean": model_mean,
-        #     "variance": model_variance,
-        #     "log_variance": model_log_variance,
-        #     "pred_xstart": pred_xstart,
-        #     "extra": extra,
-        # }
+
         return model_mean, model_variance, model_log_variance
 
     @torch.no_grad()
@@ -512,7 +526,8 @@ class IDDPM(DDPM):
                 model_output, model_var_values = torch.split(model_output, C, dim=1)
                 # Learn the variance using the variational bound, but don't let
                 # it affect our mean prediction.
-                frozen_out = torch.cat([model_output.detach(), model_var_values], dim=1)
+                # TODO: refactor this protect mean prediction
+                # frozen_out = torch.cat([model_output.detach(), model_var_values], dim=1)
                 terms["vb"] = self._vb_terms_bpd(
                     x_start=x_start,
                     x_t=x_t,
@@ -973,7 +988,11 @@ class LatentDiffusion(SpacedDiffusion):
                 key = 'c_concat' if self.model.conditioning_key == 'concat' else 'c_crossattn'
                 cond = {key: cond}
 
-        x_recon = self.model(x_noisy, t, **cond, **kwargs)
+        # If model is provided as a keyword argument, use it to train the variance.
+        if 'model' not in kwargs:
+            x_recon = self.model(x_noisy, t, **cond, **kwargs)
+        else:
+            x_recon = kwargs['model'](x_noisy, t)
 
         if isinstance(x_recon, tuple):
             return x_recon[0]
@@ -989,7 +1008,7 @@ class LatentDiffusion(SpacedDiffusion):
             t0 = torch.zeros_like(t)
             x_t0 = self.q_sample(x_start, t0, noise=noise)
             x_t = torch.where(mask[:, None, :, None, None], x_t, x_t0)
-
+        print(x_start.shape)
         model_output = self.apply_model(x_t, t, cond, **kwargs)
 
         terms = {}
@@ -1011,6 +1030,7 @@ class LatentDiffusion(SpacedDiffusion):
                     t=t,
                     clip_denoised=False,
                     mask=mask,
+                    model=lambda *args, r=frozen_out: r,
                     **kwargs,
                 )
                 if self.loss_type == LossType.RESCALED_MSE:
@@ -1233,7 +1253,7 @@ class LatentDiffusion(SpacedDiffusion):
     def p_sample(self, x, c, t, clip_denoised=False, repeat_noise=False, return_x0=False, \
                  temperature=1., noise_dropout=0., score_corrector=None, corrector_kwargs=None, **kwargs):
         b, *_, device = *x.shape, x.device
-        outputs = self.p_mean_variance(x=x, c=c, t=t, clip_denoised=clip_denoised, return_x0=return_x0, \
+        outputs = self.p_mean_variance(model=self.model, x=x, c=c, t=t, clip_denoised=clip_denoised, return_x0=return_x0, \
                                        score_corrector=score_corrector, corrector_kwargs=corrector_kwargs, **kwargs)
         if return_x0:
             model_mean, _, model_log_variance, x0 = outputs
