@@ -67,6 +67,7 @@ data:
         resolution: [256, 256]
         video_length: 16
         frame_interval: 4
+        train: True
     validation:
       target: data.datasets.DatasetFromCSV
       params:
@@ -74,6 +75,7 @@ data:
         resolution: [256, 256]
         video_length: 16
         frame_interval: 4
+        train: False
 
 lightning:
   callbacks:

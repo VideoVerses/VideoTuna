@@ -42,6 +42,7 @@ class DatasetFromCSV(torch.utils.data.Dataset):
     def __init__(
         self,
         csv_path,
+        train,
         resoluton=(256, 256),
         num_frames=16,
         frame_interval=1,
@@ -58,15 +59,21 @@ class DatasetFromCSV(torch.utils.data.Dataset):
             samples.extend(df.values.tolist())
         random.shuffle(samples)
 
-        self.safe_data_list = set()
         self.data_list = []
         for sample in samples:
             video_path = sample[0]
             caption = sample[1]
             data_dict = {"video_path": video_path, "caption": caption}
             self.data_list.append(data_dict)
+        
+        if train:
+            self.data_list = self.data_list[100:]
+            print(f"Training Dataset size: {len(self.data_list)}")
+        else:
+            self.data_list = self.data_list[:100]
+            print(f"Validation Dataset size: {len(self.data_list)}")
 
-        self.is_video = True
+        self.safe_data_list = set()
 
         self.video_transform = get_transforms_video(resoluton)
         self.image_transform = get_transforms_image(resoluton)
