@@ -38,7 +38,7 @@ def initialize_context_parallel(context_parallel_size):
 
     rank = torch.distributed.get_rank()
     world_size = torch.distributed.get_world_size()
-    import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
     for i in range(0, world_size, context_parallel_size):
         ranks = range(i, i + context_parallel_size)
         group = torch.distributed.new_group(ranks)

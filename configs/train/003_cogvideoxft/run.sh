@@ -2,7 +2,7 @@ export TOKENIZERS_PARALLELISM=false
 
 
 # dependencies
-COGCKPT="/home/liurt/liurt_data/haoyu/VideoTuna/cogVideo/CogVideoX-2b-sat/transformer/1000/mp_rank_00_model_states.pt"
+COGCKPT="/home/rliuay/haoyu/research/VideoTuna/cogVideo/CogVideoX-2b-sat/transformer/1000/mp_rank_00_model_states.pt"
 
 # exp settings
 EXPNAME="correctness"                            # experiment name 

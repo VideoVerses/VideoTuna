@@ -592,7 +592,7 @@ class VideoAutoencoderInferenceWrapper(VideoAutoencodingEngine):
         input_cp: bool = False,
         output_cp: bool = False,
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, dict]]:
-        import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
         if self.cp_size > 0 and not input_cp:
             if not is_context_parallel_initialized():
                 initialize_context_parallel(self.cp_size)
