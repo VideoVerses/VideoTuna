@@ -1008,7 +1008,7 @@ class LatentDiffusion(SpacedDiffusion):
             t0 = torch.zeros_like(t)
             x_t0 = self.q_sample(x_start, t0, noise=noise)
             x_t = torch.where(mask[:, None, :, None, None], x_t, x_t0)
-        print(x_start.shape)
+
         model_output = self.apply_model(x_t, t, cond, **kwargs)
 
         terms = {}

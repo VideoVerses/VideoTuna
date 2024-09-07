@@ -33,13 +33,6 @@ model:
     unet_config:
       target: src.opensora.models.stdit.stdit.STDiT_XL_2
       params:
-        # from_pretrained: None
-        # qk_norm: True
-        # enable_flash_attn: True
-        # enable_flashattn: True
-        # enable_layernorm_kernel: True
-        # # freeze_y_embedder: True
-        # freeze: 'text'
         space_scale: 0.5
         time_scale: 1.0
         from_pretrained: "/project/llmsvgen/share/opensora_ckpt/stage4/last/model_ckpt.pt"
@@ -49,17 +42,12 @@ model:
         - 16
         - 32
         - 32 
-        # skip_y_embedder: True
-        # freeze_previous_blocks: 
-        # - True
-        # - 'inter' 
     first_stage_config:
       target: src.lvdm.models.opensoravae.VideoAutoencoderKL
       params:
           from_pretrained: stabilityai/sd-vae-ft-ema
           micro_batch_size: 4
     cond_stage_config:
-      # target: lvdm.modules.encoders.condition.FrozenOpenCLIPEmbedder
       target: src.opensora.models.text_encoder.t5.T5Encoder
       params:
         from_pretrained: "DeepFloyd/t5-v1_1-xxl"
@@ -73,26 +61,26 @@ data:
     num_workers: 16
     wrap: false
     train:
-      target: data.macvid.MaCVid
+      target: data.datasets.DatasetFromCSV
       params:
-        data_root: configs/data/macvid/train_data.yaml
+        csv_path: /project/llmsvgen/share/opensora_datafile/artgrid_caption_long_base.csv
         resolution: [256, 256]
         video_length: 16
-        subset_split: all
+        frame_interval: 4
     validation:
-      target: data.macvid.MaCVid
+      target: data.datasets.DatasetFromCSV
       params:
-        data_root: configs/data/macvid/val_data.yaml
+        csv_path: /project/llmsvgen/share/opensora_datafile/artgrid_caption_long_base.csv
         resolution: [256, 256]
         video_length: 16
-        subset_split: all
+        frame_interval: 4
 
 lightning:
   callbacks:
     image_logger:
       target: utils.callbacks.ImageLogger
       params:
-        batch_frequency: 20
+        batch_frequency: 200
         max_images: 6
         to_local: True # save videos into files
         log_images_kwargs:
@@ -103,18 +91,17 @@ lightning:
       params:
         filename: "{epoch:06}-{step:09}"
         save_weights_only: False
-        every_n_epochs: 300
-        every_n_train_steps: null
+        every_n_epochs: null
+        every_n_train_steps: 100
   trainer:
     benchmark: True
-    batch_size: 1
-    num_workers: 38
+    num_workers: 32
     num_nodes: 1
-    accumulate_grad_batches: 2
+    accumulate_grad_batches: 1
     max_epochs: 2000
     precision: bf16 # training precision
-  modelcheckpoint:
-    target: pytorch_lightning.callbacks.ModelCheckpoint
-    params:
-      every_n_epochs: 1
-      filename: "{epoch:04}-{step:06}"
+  # modelcheckpoint:
+  #   target: pytorch_lightning.callbacks.ModelCheckpoint
+  #   params:
+  #     every_n_epochs: 1
+  #     filename: "{epoch:04}-{step:06}"
