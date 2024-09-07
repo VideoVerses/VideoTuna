@@ -75,14 +75,14 @@ model:
           ucg_rate: 0.1
           target: sgm.modules.encoders.modules.FrozenT5Embedder
           params:
-            model_dir: "{absolute_path/to/your/t5-v1_1-xxl}/t5-v1_1-xxl" # Absolute path to the t5-v1_1-xxl weights folder
+            model_dir: "/home/liurt/liurt_data/haoyu/VideoTuna/cogVideo/CogVideoX-2b-sat/t5-v1_1-xxl" # Absolute path to the t5-v1_1-xxl weights folder
             max_length: 226
 
   first_stage_config:
     target: vae_modules.autoencoder.VideoAutoencoderInferenceWrapper
     params:
       cp_size: 1
-      ckpt_path: "{absolute_path/to/your/t5-v1_1-xxl}/CogVideoX-2b-sat/vae/3d-vae.pt" # Absolute path to the CogVideoX-2b-sat/vae/3d-vae.pt folder
+      ckpt_path: "/home/liurt/liurt_data/haoyu/VideoTuna/cogVideo/CogVideoX-2b-sat/vae/3d-vae.pt"  # Absolute path to the CogVideoX-2b-sat/vae/3d-vae.pt folder
       ignore_keys: [ 'loss' ]
 
       loss_config:
