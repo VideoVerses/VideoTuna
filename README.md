@@ -87,8 +87,8 @@ VideoTuna
 ### 1.Prepare environment
 ```
 conda create --name videotuna python=3.10 
-pip install -r requirements.txt
 conda activate videotuna
+pip install -r requirements.txt
 git clone https://github.com/JingyeChen/SwissArmyTransformer
 cd SwissArmyTransformer
 pip install -e .
