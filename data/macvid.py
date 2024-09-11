@@ -8,10 +8,12 @@ import random
 import json
 import torch
 from torch.utils.data import Dataset
+import decord 
 from decord import VideoReader, cpu
 import glob
 import pandas as pd
 import yaml
+decord.bridge.set_bridge('torch')
 
 class MaCVid(Dataset):
     """
@@ -53,7 +55,7 @@ class MaCVid(Dataset):
         print(self.config)
         self.videos = []
         for meta_path in self.config['META']:
-            metadata_path = os.path.join(meta_path,'metadata_catpion.json')
+            metadata_path = os.path.join(meta_path,'metadata_caption.json')
             with open(metadata_path, 'r') as f:
                 videos = json.load(f)
                 for item in videos:

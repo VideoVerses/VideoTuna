@@ -146,7 +146,7 @@ class DDIMSampler(object):
                       precision=None,fs=None,guidance_rescale=0.0,
                       **kwargs):
         device = self.model.betas.device        
-        # print('ddim device', device)
+        print('ddim device', device)
         b = shape[0]
         if x_T is None:
             img = torch.randn(shape, device=device)
@@ -159,7 +159,7 @@ class DDIMSampler(object):
                 img = img.to(dtype=torch.bfloat16)
 
         # TODO fix dtype 
-        img = img.to(dtype=torch.bfloat16)
+        # img = img.to(dtype=torch.bfloat16)
 
 
         if timesteps is None:
@@ -211,7 +211,7 @@ class DDIMSampler(object):
                 # img = img.to(torch.bfloat16)
             
             # TODO fix dtype here 
-            img = img.to(torch.bfloat16)
+            # img = img.to(torch.bfloat16)
 
             outs = self.p_sample_ddim(img, cond, ts, index=index, use_original_steps=ddim_use_original_steps,
                                       quantize_denoised=quantize_denoised, temperature=temperature,
