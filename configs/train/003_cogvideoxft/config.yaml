@@ -1,6 +1,7 @@
 model:
   base_learning_rate: 6.0e-06 # 1.5e-04
   scale_lr: False
+  not_trainable_prefixes: ['all'] ## Using Lora
   # empty_params_only: True # disable this means finetuning all parameters
   scale_factor: 1.15258426
   disable_first_stage_autocast: true
@@ -58,6 +59,11 @@ model:
                 text_length: 226
                 height_interpolation: 1.875
                 width_interpolation: 1.875
+
+            lora_config:
+                target: sat.model.finetune.lora2.LoraMixin
+                params:
+                    r: 16
 
             patch_embed_config:
               target: dit_video_concat.ImagePatchEmbeddingMixin
