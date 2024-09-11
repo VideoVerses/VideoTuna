@@ -1,0 +1,40 @@
+Cat riding a skateboard.
+Dog riding a skateboard.
+Rabbit riding a skateboard.
+Raccoon riding a skateboard.
+Monkey riding a skateboard.
+Hedgehog riding a skateboard.
+Bat riding a skateboard.
+Mouse riding a skateboard.
+Cat working on a laptop.
+Dog working on a laptop.
+Rabbit working on a laptop.
+Raccoon working on a laptop.
+Monkey working on a laptop.
+Hedgehog working on a laptop.
+Bat working on a laptop.
+Mouse working on a laptop.
+Cat reading a book.
+Dog reading a book.
+Rabbit reading a book.
+Raccoon reading a book.
+Monkey reading a book.
+Hedgehog reading a book.
+Bat reading a book.
+Mouse reading a book.
+Cat eating an apple.
+Dog eating an apple.
+Rabbit eating an apple.
+Raccoon eating an apple.
+Monkey eating an apple.
+Hedgehog eating an apple.
+Bat eating an apple.
+Mouse eating an apple.
+Cat eating watermelon.
+Dog eating watermelon.
+Rabbit eating watermelon.
+Raccoon eating watermelon.
+Monkey eating watermelon.
+Hedgehog eating watermelon.
+Bat eating watermelon.
+Mouse eating watermelon.

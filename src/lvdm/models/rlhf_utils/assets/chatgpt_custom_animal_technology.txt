@@ -1,0 +1,50 @@
+The dog is using a computer, typing on the keyboard.
+The cat is talking on a phone.
+The rabbit is playing a video game with a controller.
+The bear is watching TV.
+The raccoon is taking a selfie with a phone.
+The squirrel is wearing headphones and listening to music.
+The monkey is using a tablet.
+The lion is using a laptop.
+The fox is changing TV channels with a remote control.
+The panda is checking the time on a smartwatch.
+The dog is browsing on a tablet.
+The cat is taking a photo with a camera.
+The rabbit is video calling a friend on a laptop.
+The bear is listening to music on a speaker.
+The raccoon is charging a phone.
+The squirrel is reading an e-book on a tablet.
+The monkey is typing on a laptop.
+The lion is taking a video with a phone.
+The fox is setting an alarm on a smartwatch.
+The panda is playing a game on a tablet.
+The dog is watching videos on a phone.
+The cat is using a fitness tracker.
+The rabbit is browsing the internet on a computer.
+The bear is listening to a podcast on a phone.
+The raccoon is texting on a phone.
+The squirrel is watching a movie on a tablet.
+The monkey is scrolling through social media on a phone.
+The lion is video calling a friend on a laptop.
+The fox is using a calculator on a phone.
+The panda is playing a video game with a controller.
+The dog is checking email on a computer.
+The cat is listening to music with earbuds.
+The rabbit is using a webcam for a video chat.
+The bear is typing a document on a laptop.
+The raccoon is taking a photo with a tablet.
+The squirrel is using a microwave to heat food.
+The monkey is reading a digital book on an e-reader.
+The lion is taking a picture with a smartphone.
+The fox is watching a show on a tablet.
+The panda is checking the weather on a smartphone.
+The dog is using a laptop to write a story.
+The cat is using a smart light to change colors.
+The rabbit is listening to an audiobook on a phone.
+The bear is making a video call on a tablet.
+The raccoon is setting a reminder on a smartwatch.
+The squirrel is using a digital thermometer to check the temperature.
+The monkey is editing a photo on a laptop.
+The lion is playing music on a Bluetooth speaker.
+The fox is setting a timer on a smartphone.
+The panda is watching a tutorial on a computer.
