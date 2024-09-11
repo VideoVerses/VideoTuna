@@ -172,10 +172,11 @@ data:
         data_dir : /home/rliuay/haoyu/elon_musk_video
         video_size: [ 480, 720 ]
         fps: 8
-        max_num_frames: 16
+        max_num_frames: 2
         skip_frms_num: 3.
 
 lightning:
+  strategy: deepspeed
   strategy: deepspeed
   trainer:
     benchmark: True
@@ -189,8 +190,9 @@ lightning:
     image_logger:
       target: utils.callbacks.ImageLogger
       params:
-        batch_frequency: -1
+        batch_frequency: -1 # set to -1 to disable
         max_images: 6
+
         to_local: False # save videos into files
         log_images_kwargs:
         

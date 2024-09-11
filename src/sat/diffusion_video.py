@@ -97,7 +97,7 @@ class SATVideoDiffusionEngine(pl.LightningModule):
         self.no_cond_log = no_cond_log
         # haoyu TODO: fix device
         # self.device = args.device
-        self.logdir ="/home/rliuay/haoyu/research/VideoTuna/log_image"
+        self.logdir ="/home/liurt/liurt_data/haoyu/VideoTuna/log_image/"
     def disable_untrainable_params(self):
         total_trainable = 0
         for n, p in self.named_parameters():
@@ -336,6 +336,9 @@ class SATVideoDiffusionEngine(pl.LightningModule):
         self.log("global_step", self.global_step,
                  prog_bar=True, logger=True, on_step=True, on_epoch=False)
 
+        # if self.use_scheduler:
+        #     lr = self.optimizers().param_groups[0]['lr']
+        #     self.log('lr_abs', lr, prog_bar=True, logger=True, on_step=True, on_epoch=False)
         # if self.use_scheduler:
         #     lr = self.optimizers().param_groups[0]['lr']
         #     self.log('lr_abs', lr, prog_bar=True, logger=True, on_step=True, on_epoch=False)
