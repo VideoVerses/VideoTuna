@@ -2,7 +2,7 @@ model:
   base_learning_rate: 6.0e-06 # 1.5e-04
   scale_lr: False
   pretrained_checkpoint: /home/liurt/liurt_data/haoyu/DPO-videocrafter/init_ckpt/vc2/model.ckpt
-  target: lvdm.models.ddpm3d.RewardLVDMTrainer
+  target: src.lvdm.models.ddpm3d.RewardLVDMTrainer
   params:
     lora_args:
       # lora_ckpt: "/path/to/lora.ckpt" # first time training, no need; this is for resume training. 
@@ -33,7 +33,7 @@ model:
     use_scale: true
     scale_b: 0.7 # adapt to videocrafter-v2
     unet_config:
-      target: lvdm.modules.networks.openaimodel3d.UNetModel
+      target: src.lvdm.modules.networks.openaimodel3d.UNetModel
       params:
         in_channels: 4
         out_channels: 4
@@ -62,7 +62,7 @@ model:
         addition_attention: true
         fps_cond: true # adapt to videocrafter-v2
     first_stage_config:
-      target: lvdm.models.autoencoder.AutoencoderKL
+      target: src.lvdm.models.autoencoder.AutoencoderKL
       params:
         embed_dim: 4
         monitor: val/rec_loss
@@ -84,7 +84,7 @@ model:
         lossconfig:
           target: torch.nn.Identity
     cond_stage_config:
-      target: lvdm.modules.encoders.condition.FrozenOpenCLIPEmbedder
+      target: src.lvdm.modules.encoders.condition.FrozenOpenCLIPEmbedder
       params:
         freeze: true
         layer: penultimate
@@ -98,7 +98,7 @@ data:
     train:
       target: data.rlhf.RLHF_PROMPT
       params:
-        data_root: /home/liurt/liurt_data/haoyu/cache_code/DPO-videocrafter/lvdm/models/rlhf_utils/assets/chatgpt_custom_instruments.txt
+        data_root: src/lvdm/models/rlhf_utils/assets/chatgpt_custom_instruments.txt
         resolution:  [320, 512]
         video_length: 4  # set to 4 for faster training RLHF  
         # subset_split: all
@@ -132,7 +132,6 @@ lightning:
         every_n_train_steps: 199
   trainer:
     benchmark: True
-    # batch_size: 6
     num_workers: 10
     num_nodes: 1
     accumulate_grad_batches: 1
