@@ -32,12 +32,14 @@ from src.lvdm.samplers.ddim import DDIMSampler
 from src.lvdm.modules.encoders.ip_resampler import ImageProjModel, Resampler
 from src.lvdm.models.utils_diffusion import make_beta_schedule, rescale_zero_terminal_snr
 from utils.common_utils import instantiate_from_config
+import peft 
+
 
 __conditioning_keys__ = {'concat': 'c_concat',
                          'crossattn': 'c_crossattn',
                          'adm': 'y'}
 
-import peft 
+
 class DDPM(pl.LightningModule):
     # classic DDPM with Gaussian diffusion, in image space
     def __init__(self,
@@ -88,9 +90,9 @@ class DDPM(pl.LightningModule):
         self.model = DiffusionWrapper(unet_config, conditioning_key)
         # load lora models 
         # peft lora config. The arg name is algned with peft. 
-        if len(lora_args) >0:
+        self.lora_args = lora_args        
+        if len(lora_args) > 0:
             self.lora_ckpt_path = getattr(lora_args,"lora_ckpt", None)
-            self.lora_args = lora_args
             self.lora_rank = getattr(lora_args, "lora_rank", 4)
             self.lora_alpha =getattr(lora_args, "lora_alpha", 1)
             self.lora_dropout =getattr(lora_args, "lora_dropout", 0.0)
