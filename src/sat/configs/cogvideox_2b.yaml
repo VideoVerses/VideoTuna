@@ -37,7 +37,7 @@ model:
       num_attention_heads: 30
 
       transformer_args:
-        checkpoint_activations: True ## using gradient checkpointing
+        checkpoint_activations: False ## using gradient checkpointing
         vocab_size: 1
         max_sequence_length: 64
         layernorm_order: pre

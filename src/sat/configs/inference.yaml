@@ -1,15 +1,11 @@
 args:
   latent_channels: 16
   mode: inference
-  load: "/home/liurt/liurt_data/haoyu/VideoTuna/cogVideo/CogVideoX-2b-sat/transformer" # This is for Full model without lora adapter
-  # load: "{your lora folder} such as zRzRzRzRzRzRzR/lora-disney-08-20-13-28" # This is for Full model without lora adapter
-
+  ckpt_path: "/home/liurt/liurt_data/haoyu/VideoTuna/cogVideo/CogVideoX-2b-sat/transformer/1000/mp_rank_00_model_states.pt"
   batch_size: 1
   input_type: txt
-  input_file: configs/test.txt
+  input_file: /home/liurt/liurt_data/haoyu/VideoTuna/src/sat/configs/test.txt
   sampling_num_frames: 13  # Must be 13, 11 or 9
   sampling_fps: 8
   fp16: True # For CogVideoX-2B
-#  bf16: True # For CogVideoX-5B
-  output_dir: outputs/
-  force_inference: True
+#  bf16: True # For CogVideoX-5Bs/
