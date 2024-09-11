@@ -50,31 +50,10 @@ class DatasetFromCSV(torch.utils.data.Dataset):
         **kwargs,
     ):
         self.csv_path = csv_path
-        if isinstance(csv_path, str):
-            csv_path = [csv_path]
+        # if isinstance(csv_path, str):
+        #     csv_path = [csv_path]
 
-        samples = []
-        for path in csv_path:
-            df = pd.read_csv(path)
-            samples.extend(df.values.tolist())
-        random.shuffle(samples)
-
-        self.data_list = []
-        for sample in samples:
-            video_path = sample[0]
-            caption = sample[1]
-            data_dict = {"video_path": video_path, "caption": caption}
-            self.data_list.append(data_dict)
-        
-        if train:
-            self.data_list = self.data_list[100:]
-            print(f"Training Dataset size: {len(self.data_list)}")
-        else:
-            self.data_list = self.data_list[:100]
-            print(f"Validation Dataset size: {len(self.data_list)}")
-
-        self.safe_data_list = set()
-
+        self.resolution = resoluton
         self.video_transform = get_transforms_video(resoluton)
         self.image_transform = get_transforms_image(resoluton)
 
@@ -86,7 +65,36 @@ class DatasetFromCSV(torch.utils.data.Dataset):
         self.frame_limit = num_frames * frame_interval
         self.data_root = data_root
 
-    def getitem(self, index):
+        # for path in csv_path:
+        df = pd.read_csv(csv_path)
+        self.check_df(df, csv_path)
+
+        self.data_list = []
+        for _, row in df.iterrows():
+            video_path = row["video_path"]
+            caption = row["caption"]
+            
+            # filter the bad data in advance
+            if "frames" in row and "height" in row:
+                if not self._is_bad_data(row):
+                    data_dict = {"video_path": video_path, "caption": caption}
+                else:
+                    continue
+            else:
+                data_dict = {"video_path": video_path, "caption": caption}
+
+            self.data_list.append(data_dict)
+        
+        if train:
+            self.data_list = self.data_list[100:]
+            print(f"Training Dataset size: {len(self.data_list)}")
+        else:
+            self.data_list = self.data_list[:100]
+            print(f"Validation Dataset size: {len(self.data_list)}")
+
+        self.safe_data_list = set()
+
+    def getitem(self, index) -> dict:
         data = self.data_list[index]
         path = data["video_path"]
         text = data["caption"]
@@ -94,12 +102,11 @@ class DatasetFromCSV(torch.utils.data.Dataset):
             path = os.path.join(self.data_root, path)
 
         if path.split(".")[-1] in VIDEO_EXTS:
-            # assert os.path.exists(path), f"{path} does not exist."
             vframes, fps = read_video(path, fps=True)
             length = vframes.shape[0]
             h = vframes.shape[2]
             w = vframes.shape[3]
-            if length <= self.frame_limit or h < 256 or w < 256:
+            if length <= self.frame_limit or h < self.resolution[0] or w < self.resolution[1]:
                 raise ValueError(f"Bad video: {path}")
 
             total_frames = len(vframes)
@@ -125,11 +132,13 @@ class DatasetFromCSV(torch.utils.data.Dataset):
         # TCHW -> CTHW
         video = video.permute(1, 0, 2, 3)
 
-        return {
+        output = {
                 "video": video,
                 "caption": text,
                 "fps": fps/self.frame_interval
                 }
+
+        return output
 
     def __getitem__(self, index):
         cnt = 100
@@ -153,3 +162,14 @@ class DatasetFromCSV(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.data_list)
+    
+    def _is_bad_data(self, row) -> bool:
+        if row["frames"] <= self.frame_limit or row["height"] < self.resolution[0] or row["width"] < self.resolution[1]:
+            return True
+    
+    @staticmethod
+    def check_df(df, df_path):
+        if "video_path" not in df.columns:
+            raise ValueError(f"The csv file {df_path} must have a column named \'video_path\'.")
+        elif "caption" not in df.columns:
+            raise ValueError(f"The csv file {df_path} must have a column named \'caption\'.")

@@ -94,7 +94,7 @@ lightning:
         filename: "{epoch:06}-{step:09}"
         save_weights_only: False
         every_n_epochs: null
-        every_n_train_steps: 100
+        every_n_train_steps: 1000
   trainer:
     benchmark: True
     num_workers: 32
