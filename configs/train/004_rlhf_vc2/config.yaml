@@ -5,11 +5,11 @@ model:
   target: lvdm.models.ddpm3d.RewardLVDMTrainer
   params:
     lora_args:
-      lora_implementation: orig # orig / peft . orig means inject a lora.py  
-      inject_unet: True
-      inject_clip: False
-      inject_unet_key_word: ["TimestepEmbedSequential", "SpatialTemporalTransformer", "MemoryEfficientCrossAttention", "CrossAttention", "Attention", "GEGLU"]
+      # lora_ckpt: "/path/to/lora.ckpt" # first time training, no need; this is for resume training. 
+      target_modules:  ["to_q", "to_k", "to_v"]
       lora_rank: 4
+      lora_alpha: 1
+      lora_dropout: 0.0
     loss_type: aesthetic
     log_every_t: 2
     linear_start: 0.00085

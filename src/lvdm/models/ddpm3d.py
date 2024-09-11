@@ -33,12 +33,12 @@ from src.lvdm.modules.encoders.ip_resampler import ImageProjModel, Resampler
 from src.lvdm.models.utils_diffusion import make_beta_schedule, rescale_zero_terminal_snr
 from utils.common_utils import instantiate_from_config
 import peft 
-
-
+# import rlhf utils 
+from lvdm.models.rlhf_utils.batch_ddim import batch_ddim_sampling
+from lvdm.models.rlhf_utils.reward_fn import aesthetic_loss_fn
 __conditioning_keys__ = {'concat': 'c_concat',
                          'crossattn': 'c_crossattn',
                          'adm': 'y'}
-
 
 class DDPM(pl.LightningModule):
     # classic DDPM with Gaussian diffusion, in image space
@@ -1172,9 +1172,7 @@ class LatentDiffusion(DDPM):
             raise NotImplementedError
         return lr_scheduler
 
-# import rlhf utils 
-from lvdm.models.rlhf_utils.batch_ddim import batch_ddim_sampling
-from lvdm.models.rlhf_utils.reward_fn import aesthetic_loss_fn
+
 
 class RewardLVDMTrainer(LatentDiffusion):
     def __init__(self, *args, **kwargs):
