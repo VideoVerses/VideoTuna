@@ -98,7 +98,7 @@ data:
     train:
       target: data.rlhf.RLHF_PROMPT
       params:
-        data_root: src/lvdm/models/rlhf_utils/assets/chatgpt_custom_instruments.txt
+        data_root: src/lvdm/models/rlhf_utils/rlhf_dataset/chatgpt_custom_instruments.txt
         resolution:  [320, 512]
         video_length: 4  # set to 4 for faster training RLHF  
         # subset_split: all
