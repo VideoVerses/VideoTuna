@@ -9,7 +9,7 @@ from transformers import CLIPModel, CLIPProcessor
 from PIL import Image  
 import os  
 
-ASSETS_PATH = files("lvdm.models.rlhf_utils.assets")
+ASSETS_PATH = files("lvdm.models.rlhf_utils.pretrained_models")
 
 class MLPDiff(nn.Module):
     def __init__(self):

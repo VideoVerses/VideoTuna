@@ -59,7 +59,7 @@ def get_parser():
     parser.add_argument("--num_val_runs", type=int, default=1, help="total number of validation samples = num_val_runs * num_gpus * num_val_batch")
     parser.add_argument("--train_batch_size", type=int, default=1, help="batch size for training")
     parser.add_argument("--reward_fn", type=str, default="aesthetic", help="reward function: 'aesthetic', 'hps', 'aesthetic_hps', 'pick_score', 'rainy', 'snowy', 'objectDetection', 'actpred', 'compression'")
-    parser.add_argument("--compression_model_path", type=str, default='../assets/compression_reward.pt', help="compression model path") # The compression model is used only when reward_fn is 'compression'
+    parser.add_argument("--compression_model_path", type=str, default='../pretrained_models/compression_reward.pt', help="compression model path") # The compression model is used only when reward_fn is 'compression'
     # The "book." is for grounding-dino model . Remember to add "." at the end of the object name for grounding-dino model. 
     # But for yolos model, do not add "." at the end of the object name. Instead, you should set the object name to "book" for example.
     parser.add_argument("--target_object", type=str, default="book", help="target object for object detection reward function")
@@ -366,9 +366,9 @@ def weather_loss_fn(inference_dtype=None, device=None, weather="rainy", target=N
         loss_fn: function, the loss function of the weather reward function.
     '''
     if weather == "rainy":
-        reward_model_path = "../assets/rainy_reward.pt"
+        reward_model_path = "../pretrained_models/rainy_reward.pt"
     elif weather == "snowy":
-        reward_model_path = "../assets/snowy_reward.pt"
+        reward_model_path = "../pretrained_models/snowy_reward.pt"
     else:
         raise NotImplementedError
     scorer = WeatherScorer(dtype=inference_dtype, model_path=reward_model_path).to(device, dtype=inference_dtype)

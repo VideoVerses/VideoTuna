@@ -5,8 +5,8 @@ import random
 # import inflect
 
 # IE = inflect.engine()
-ASSETS_PATH = files("lvdm.models.rlhf_utils.assets")
-# ASSETS_PATH = "assets"
+ASSETS_PATH = files("lvdm.models.rlhf_utils.pretrained_models")
+
 
 
 @functools.lru_cache(maxsize=None)
