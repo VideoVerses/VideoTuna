@@ -5,11 +5,11 @@ sys.path.insert(1, os.path.join(sys.path[0], '..', '..'))# setting path to get C
 import torchvision
 from transformers.utils import ContextManagers
 from transformers import AutoProcessor, AutoModel, AutoImageProcessor, AutoModelForObjectDetection, AutoModelForZeroShotObjectDetection
-from lvdm.models.rlhf_utils.Core.aesthetic_scorer import AestheticScorerDiff
-from lvdm.models.rlhf_utils.Core.actpred_scorer import ActPredScorer
-from lvdm.models.rlhf_utils.Core.weather_scorer import WeatherScorer
-from lvdm.models.rlhf_utils.Core.compression_scorer import JpegCompressionScorer, jpeg_compressibility
-import lvdm.models.rlhf_utils.Core.prompts as prompts_file
+from lvdm.models.rlhf_utils.aesthetic_scorer import AestheticScorerDiff
+from lvdm.models.rlhf_utils.actpred_scorer import ActPredScorer
+from lvdm.models.rlhf_utils.weather_scorer import WeatherScorer
+from lvdm.models.rlhf_utils.compression_scorer import JpegCompressionScorer, jpeg_compressibility
+import lvdm.models.rlhf_utils.prompts as prompts_file
 from hpsv2.src.open_clip import create_model_and_transforms, get_tokenizer
 import hpsv2
 
