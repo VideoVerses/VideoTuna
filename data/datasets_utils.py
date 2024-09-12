@@ -1,7 +1,7 @@
 import decord
 from decord import VideoReader, cpu
 from einops import rearrange
-
+import cv2
 import numpy as np
 import torch
 from PIL import Image
@@ -9,7 +9,7 @@ from torchvision.io import write_video
 from torchvision.utils import save_image
 import torchvision.transforms as transforms
 
-from . import video_transforms
+from . import transforms
 
 
 IMG_EXTS = {'jpg','bmp','png','jpeg','rgb','tif'}
@@ -70,29 +70,36 @@ def read_video(video_path, fps=False):
         return vframes
 
 
-def get_transforms_video(resolution=256):
-    transform_video = transforms.Compose(
-        [
-            video_transforms.ToTensorVideo(),  # TCHW
-            video_transforms.RandomHorizontalFlipVideo(),
-            video_transforms.UCFCenterCropVideo(resolution),
-            transforms.Normalize(
-                mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True
-            ),
-        ]
-    )
-    return transform_video
+def read_video_meta(video_path):
+    # Video fps
+    cap = cv2.VideoCapture(str(video_path))
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    # The number of frames
+    num_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    # Height
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    # Width
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    return {
+        "fps": fps,
+        "frames": num_frames,
+        "height": height,
+        "width": width,
+    }
 
 
-def get_transforms_image(resolution=256):
-    transform = transforms.Compose(
-        [
-            transforms.Lambda(lambda pil_image: center_crop_arr(pil_image, resolution)),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            transforms.Normalize(
-                mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True
-            ),
-        ]
-    )
-    return transform
+def read_image_meta(image_path):
+    img = cv2.imread(image_path)
+    height, width = img.shape[:2]
+    return {
+        "height": height,
+        "width": width,
+    }
+
+
+def is_video(path):
+    return path.split(".")[-1] in VIDEO_EXTS
+
+
+def is_image(path):
+    return path.split(".")[-1] in IMG_EXTS
