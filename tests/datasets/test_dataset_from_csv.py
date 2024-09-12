@@ -26,7 +26,7 @@ class TestDatasets(unittest.TestCase):
             self.assertGreater(dataset[i]["fps"], 0)
 
         print(f"len(dataset): {len(dataset)}")
-        self.assertEqual(len(dataset), 105)
+        self.assertEqual(len(dataset), 128)
         self.assertEqual(dataset[0]["video"].shape[2], 256)
 
         transform_video.transforms[0] = transforms.LoadDummyVideo(probs_fail=0.4)
@@ -52,7 +52,7 @@ class TestDatasets(unittest.TestCase):
             self.assertGreater(dataset[i]["fps"], 0)
 
         print(f"len(dataset): {len(dataset)}")
-        self.assertEqual(len(dataset), 105)
+        self.assertEqual(len(dataset), 128)
         self.assertEqual(dataset[0]["video"].shape[2], 256)
 
     def test_image_dataset_from_csv(self):
@@ -71,7 +71,7 @@ class TestDatasets(unittest.TestCase):
             self.assertEqual(dataset[i]["fps"], 0)
 
         print(f"len(dataset): {len(dataset)}")
-        self.assertEqual(len(dataset), 8)
+        self.assertEqual(len(dataset), 16)
         self.assertEqual(dataset[0]["video"].shape[2], 256)
 
     def test_multi_res(self):
@@ -92,7 +92,7 @@ class TestDatasets(unittest.TestCase):
             self.assertTrue("fps" in dataset[i].keys())
 
         print(f"len(dataset): {len(dataset)}")
-        self.assertEqual(len(dataset), 105)
+        self.assertEqual(len(dataset), 128)
         self.assertEqual(dataset[0]["video"].shape[2], 256)
 
         # Test Image
@@ -112,13 +112,13 @@ class TestDatasets(unittest.TestCase):
             self.assertEqual(dataset[i]["fps"], 0)
 
         print(f"len(dataset): {len(dataset)}")
-        self.assertEqual(len(dataset), 8)
+        self.assertEqual(len(dataset), 16)
         self.assertEqual(dataset[0]["video"].shape[2], 256)
 
     def test_concat_dataset_from_csv(self):
         transform_video = transforms.get_transforms_video()
         if not os.path.exists("data/toy_videos"):
-            transform_video.transforms[0] = transforms.LoadDummyImage(probs_fail=0.5)
+            transform_video.transforms[0] = transforms.LoadDummyVideo(probs_fail=0.5)
 
         transform_image = transforms.get_transforms_image()
         if not os.path.exists("data/toy_images"):
@@ -138,7 +138,7 @@ class TestDatasets(unittest.TestCase):
             self.assertTrue("fps" in dataset[i].keys())
 
         print(f"len(dataset): {len(dataset)}")
-        self.assertEqual(len(dataset), 105 + 8)
+        self.assertEqual(len(dataset), 144)
         self.assertEqual(dataset[0]["video"].shape[2], 256)
 
     def test_anno_wo_meta_info(self):
@@ -163,7 +163,7 @@ class TestDatasets(unittest.TestCase):
             self.assertTrue("fps" in dataset[i].keys())
 
         print(f"len(dataset): {len(dataset)}")
-        self.assertEqual(len(dataset), 105)
+        self.assertEqual(len(dataset), 128)
         self.assertEqual(dataset[0]["video"].shape[2], 256)
 
     def test_anno_wo_meta_info_wo_multi_res(self):
@@ -188,7 +188,7 @@ class TestDatasets(unittest.TestCase):
             self.assertTrue("fps" in dataset[i].keys())
 
         print(f"len(dataset): {len(dataset)}")
-        self.assertEqual(len(dataset), 105)
+        self.assertEqual(len(dataset), 128)
         self.assertEqual(dataset[0]["video"].shape[2], 256)
 
     def test_video_dataset_from_csv_with_split(self):
@@ -210,7 +210,7 @@ class TestDatasets(unittest.TestCase):
             self.assertGreater(train_dataset[i]["fps"], 0)
 
         print(f"len(dataset): {len(train_dataset)}")
-        self.assertLessEqual(len(train_dataset), 105)
+        self.assertLessEqual(len(train_dataset), 128)
         self.assertEqual(train_dataset[0]["video"].shape[2], 256)
 
         # Test Validation Dataset
@@ -228,11 +228,12 @@ class TestDatasets(unittest.TestCase):
             self.assertGreater(val_dataset[i]["fps"], 0)
 
         print(f"len(dataset): {len(val_dataset)}")
-        self.assertLessEqual(len(val_dataset), 105)
+        self.assertLessEqual(len(val_dataset), 128)
         self.assertEqual(val_dataset[0]["video"].shape[2], 256)
         # Check if the sum of the lengths of the training and validation datasets is equal to the total number of samples
-        self.assertEqual(len(train_dataset) + len(val_dataset), 105)
+        self.assertEqual(len(train_dataset) + len(val_dataset), 128)
 
 
 if __name__ == "__main__":
     unittest.main()
+    # TestDatasets().test_multi_res()

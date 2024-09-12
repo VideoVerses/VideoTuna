@@ -2,7 +2,7 @@ import os
 import random
 import copy
 import pandas as pd
-
+from typing import List, Union, Dict, Any
 import torch
 from torchvision.transforms import Compose
 
@@ -58,10 +58,10 @@ class DatasetFromCSV(torch.utils.data.Dataset):
 
     def __init__(
         self,
-        csv_path: str | list[str],
-        data_root: str | list[str] | None = None,
-        transform: dict[str, Compose] | None = None,
-        resoluton: int | tuple[int] = (256, 256),
+        csv_path: Union[str, List[str]],
+        data_root: Union[str, List[str], None] = None,
+        transform: Union[Dict[str, Compose] | None] = None,
+        resoluton: Union[int, tuple[int]] = (256, 256),
         num_frames: int = 16,
         frame_interval: int = 1,
         use_multi_res: bool = False,
