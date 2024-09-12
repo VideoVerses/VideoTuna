@@ -1,9 +1,6 @@
 export TOKENIZERS_PARALLELISM=false
-
-
 # dependencies
 COGCKPT="/home/rliuay/haoyu/research/VideoTuna/cogVideo/CogVideoX-2b-sat/transformer/1000/mp_rank_00_model_states.pt"
-
 # exp settings
 EXPNAME="correctness"                              # experiment name 
 CONFIG='configs/train/003_cogvideoxft/config.yaml' # experiment config 
