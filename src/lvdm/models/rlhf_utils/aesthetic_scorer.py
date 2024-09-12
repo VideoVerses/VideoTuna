@@ -10,8 +10,7 @@ from PIL import Image
 import os  
 
 # ASSETS_PATH = files("lvdm.models.rlhf_utils.pretrained_reward_models")
-# pls compute the absolute path of the assets folder
-ASSETS_PATH = "src.lvdm.models.rlhf_utils.pretrained_reward_models"
+ASSETS_PATH = "src/lvdm/models/rlhf_utils/pretrained_reward_models"
 
 class MLPDiff(nn.Module):
     def __init__(self):
@@ -78,14 +77,14 @@ class AestheticScorerDiff(torch.nn.Module):
                 score = self.eval_video(video_folder + '/' + file)
                 scores.append(score)
 
+## the main function is a aesthetic scorer that takes in a video folder and returns the aesthetic scores
 if __name__=="__main__":
     target_size = (224, 224)
     normalize = torchvision.transforms.Normalize(mean=[0.48145466, 0.4578275, 0.40821073],
                                                 std=[0.26862954, 0.26130258, 0.27577711])
-    
     scorer = AestheticScorerDiff(dtype=torch_dtype).to(device, dtype=torch_dtype)
     scorer.requires_grad_(False)
-    video_folder = "/home/liurt/liurt_data/haoyu/DPO-videocrafter/rlhf-visual-results/lora_aes_chatgpt_instructions-3184"
+    video_folder = "path to video /rlhf-visual-results/lora_aes_chatgpt_instructions-3184"
     scores = scorer.eval_video_folder(video_folder)
     print(type(scores),type(scores[0]))
     print(scores, np.mean(scores))
