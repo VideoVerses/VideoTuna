@@ -1208,11 +1208,10 @@ class RewardLVDMTrainer(LatentDiffusion):
         self.configure_reward_loss()
     def training_step(self, batch, batch_idx):
         """training_step for Reward Model Feedback"""
-        # 构造输入,与denoise训练不一样的地方是这里不需要VAE encode ，只需要nosie shape 
-        # 默认的cond是text prompt
+        # in reward model training, we just need shape of video frames
+        # default cond is text prompt
         prompts = batch[self.cond_stage_key]
-        print(prompts) #  Elon mask is talking
-        # import pdb;pdb.set_trace()
+        # print(prompts) #  Elon mask is talking
         x, c = self.get_batch_input(
             batch, random_uncond=self.classifier_free_guidance, is_imgbatch=False
         ) # x is latent image ; c is text embedding(tensor)
@@ -1222,8 +1221,8 @@ class RewardLVDMTrainer(LatentDiffusion):
         # print("noise shape",noise_shape)
         fps = torch.tensor([self.fps]*batch_size).to(self.device).long()
         cond = {"c_crossattn": [c], "fps": fps}
-        # 注意这个batch_ddim_sampling是VADER自己改过的版本 
-        # 输入的cond 是 cond = {"c_crossattn": [text_emb], "fps": fps}
+        # Notice: VADER has modified ddim for training 
+        # input cond = {"c_crossattn": [text_emb], "fps": fps}
         batch_samples = batch_ddim_sampling(self, cond, noise_shape, self.n_samples, \
                                             self.ddim_steps, self.ddim_eta, self.classifier_free_guidance,\
                                             None, backprop_mode=self.backprop_mode, decode_frame=self.decode_frame,\
