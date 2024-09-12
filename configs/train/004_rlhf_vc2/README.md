@@ -15,7 +15,18 @@ We follow VADER to use "hpsv2" as aesthetic reward model to finetune.
 
 # VideoTuna Support 
 
-// environment configuration follow official RADER 
+Environment configuration follow official VADER
+Base on videocrafter environment,please add the following dependencies. 
+```shell
+git clone https://github.com/tgxs002/HPSv2.git
+cd HPSv2/
+pip install -e .
+cd ..
+
+pip install decord==0.6.0
+pip install kornia==0.7.3
+pip install inflect==7.3.0
+```
 
 ## Train VADER with VideoTuna
 
