@@ -1,3 +1,4 @@
+deepspeed
 av==12.3.0
 beautifulsoup4==4.12.3
 colossalai==0.4.0
@@ -5,7 +6,6 @@ decord==0.6.0
 einops==0.8.0
 fire==0.6.0
 torch==2.2.2
-flash_attn==2.6.3
 ftfy==6.2.3
 huggingface_hub==0.24.6
 imwatermark==0.0.2
@@ -34,3 +34,7 @@ pyramid==1.5
 wandb==0.17.8
 scipy==1.14.1
 beartype==0.18.5
+numpy==1.*
+https://github.com/Dao-AILab/flash-attention/releases/download/v2.6.3/flash_attn-2.6.3+cu123torch2.2cxx11abiFALSE-cp310-cp310-linux_x86_64.whl
+git+https://github.com/huggingface/diffusers
+apex

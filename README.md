@@ -1,5 +1,5 @@
 <p align="center" width="50%">
-<img src="assets/tuna.png" alt="VideoTuna" style="width: 30%; min-width: 200px; display: block; margin: auto; background-color: transparent;">
+<img src="assets/logo.jpg" alt="VideoTuna" style="width: 30%; min-width: 200px; display: block; margin: auto; background-color: transparent;">
 </p>
 
 # VideoTuna
@@ -86,16 +86,12 @@ VideoTuna
 
 ### 1.Prepare environment
 ```
-conda create --name videotuna python=3.10 
+conda create --name videotuna python=3.10 -y
 conda activate videotuna
 pip install -r requirements.txt
 git clone https://github.com/JingyeChen/SwissArmyTransformer
-cd SwissArmyTransformer
-pip install -e .
-conda install -c "nvidia/label/cuda-12.1.0" cuda-nvcc cuda-toolkit
-pip install git+https://github.com/huggingface/diffusers
-pip install -v --disable-pip-version-check --no-cache-dir --no-build-isolation --config-settings "--build-option=--cpp_ext" --config-settings "--build-option=--cuda_ext" git+https://github.com/NVIDIA/apex.git
-pip install -U apex
+pip install -e SwissArmyTransformer/
+rm -rf SwissArmyTransformer
 ```
 
 ### 2.Prepare checkpoints
