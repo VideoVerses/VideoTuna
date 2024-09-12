@@ -45,6 +45,13 @@ class TestDatasets(unittest.TestCase):
             "data/anno_files/toy_video_dataset.csv",
             "data/toy_videos",
         )
+        if not os.path.exists("data/toy_videos"):
+            transform_video = dataset.transform["video"]
+            transform_video.transforms[0] = transforms.LoadDummyVideo(probs_fail=0.5)
+            dataset = DatasetFromCSV(
+                "data/anno_files/toy_video_dataset.csv",
+                transform={"video": transform_video},
+            )
         for i in range(min(5, len(dataset))):
             print(dataset[i].keys())
             self.assertFalse("height" in dataset[i].keys())
@@ -236,4 +243,3 @@ class TestDatasets(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    # TestDatasets().test_multi_res()
