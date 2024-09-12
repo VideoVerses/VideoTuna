@@ -3,7 +3,7 @@ import numpy as np
 from tqdm import tqdm
 import torch
 from lvdm.models.utils_diffusion import make_ddim_sampling_parameters, make_ddim_timesteps
-from lvdm.common import noise_like
+from lvdm.modules.utils import noise_like
 import random
 # import ipdb
 # st = ipdb.set_trace

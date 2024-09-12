@@ -9,7 +9,7 @@ import random
 
 import torch
 import torchvision
-sys.path.insert(1, os.path.join(sys.path[0], '..', '..'))
+sys.path.append("src")
 from lvdm.models.rlhf_utils.rl_ddim import DDIMSampler
 # import ipdb
 # st = ipdb.set_trace
