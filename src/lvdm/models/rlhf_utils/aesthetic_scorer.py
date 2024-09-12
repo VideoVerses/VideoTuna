@@ -1,7 +1,7 @@
 # Based on https://github.com/christophschuhmann/improved-aesthetic-predictor/blob/fe88a163f4661b4ddabba0751ff645e2e620746e/simple_inference.py
 # import ipdb
 # st = ipdb.set_trace
-from importlib_resources import files
+# from importlib_resources import files
 import torch
 import torch.nn as nn
 import numpy as np
@@ -9,7 +9,9 @@ from transformers import CLIPModel, CLIPProcessor
 from PIL import Image  
 import os  
 
-ASSETS_PATH = files("lvdm.models.rlhf_utils.pretrained_reward_models")
+# ASSETS_PATH = files("lvdm.models.rlhf_utils.pretrained_reward_models")
+# pls compute the absolute path of the assets folder
+ASSETS_PATH = "src.lvdm.models.rlhf_utils.pretrained_reward_models"
 
 class MLPDiff(nn.Module):
     def __init__(self):
@@ -35,7 +37,7 @@ class AestheticScorerDiff(torch.nn.Module):
         super().__init__()
         self.clip = CLIPModel.from_pretrained("openai/clip-vit-large-patch14")
         self.mlp = MLPDiff()
-        state_dict = torch.load(ASSETS_PATH.joinpath("sac+logos+ava1-l14-linearMSE.pth"))
+        state_dict = torch.load(os.path.join(ASSETS_PATH,"sac+logos+ava1-l14-linearMSE.pth"))
         self.mlp.load_state_dict(state_dict)
         self.dtype = dtype
         self.eval()
