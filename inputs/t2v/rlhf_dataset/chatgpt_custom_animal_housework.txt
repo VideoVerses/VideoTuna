@@ -1,0 +1,150 @@
+The monkey is watering the plants.
+The raccoon is vacuuming the carpet.
+The cat is sweeping the floor.
+The rabbit is wiping the windows.
+The hedgehog is washing the car.
+The dog is wiping the dining table.
+The bat is dusting the shelves.
+The monkey is watering the garden.
+The raccoon is vacuuming the stairs.
+The cat is sweeping the porch.
+The rabbit is wiping the windowsills.
+The hedgehog is washing the car windows.
+The dog is wiping the kitchen table.
+The bat is dusting the bookshelf.
+The monkey is watering the indoor plants.
+The raccoon is vacuuming the bedroom.
+The cat is sweeping the garage.
+The rabbit is wiping the patio doors.
+The hedgehog is washing the car hood.
+The dog is wiping the coffee table.
+The bat is dusting the mantle.
+The monkey is watering the hanging plants.
+The raccoon is vacuuming the living room rug.
+The cat is sweeping the basement.
+The rabbit is wiping the bedroom windows.
+The hedgehog is washing the car tires.
+The dog is wiping the side table.
+The bat is dusting the picture frames.
+The monkey is watering the flower pots.
+The raccoon is vacuuming the hallway.
+The cat is sweeping the deck.
+The rabbit is wiping the kitchen windows.
+The hedgehog is washing the car bumper.
+The dog is wiping the dining chairs.
+The bat is dusting the TV stand.
+The monkey is watering the balcony plants.
+The raccoon is vacuuming the study.
+The cat is sweeping the driveway.
+The rabbit is wiping the glass doors.
+The hedgehog is washing the car rear window.
+The dog is wiping the dining table before dinner.
+The bat is dusting the living room shelves.
+The monkey is watering the backyard garden.
+The raccoon is vacuuming the hallway carpet.
+The cat is sweeping the patio.
+The rabbit is wiping the sliding doors.
+The hedgehog is washing the car front grille.
+The dog is wiping the kitchen table after a meal.
+The bat is dusting the study shelves.
+The monkey is watering the windowsill plants.
+The raccoon is vacuuming the nursery.
+The cat is sweeping the front porch.
+The rabbit is wiping the exterior windows.
+The hedgehog is washing the car side mirrors.
+The dog is wiping the dining table after dinner.
+The bat is dusting the bedroom nightstands.
+The monkey is watering the kitchen herb garden.
+The raccoon is vacuuming the playroom.
+The cat is sweeping the mudroom.
+The rabbit is wiping the windows with a squeegee.
+The hedgehog is washing the car headlights.
+The dog is wiping the dining table after breakfast.
+The bat is dusting the entertainment center.
+The monkey is watering the sunroom plants.
+The raccoon is vacuuming the family room.
+The cat is sweeping the garden shed.
+The rabbit is wiping the windows in the family room.
+The hedgehog is washing the car roof.
+The dog is wiping the living room table.
+The bat is dusting the home office shelves.
+The monkey is watering the front yard flowers.
+The raccoon is vacuuming the home theater.
+The cat is sweeping the steps.
+The rabbit is wiping the kitchen windows with a sponge.
+The hedgehog is washing the car front bumper.
+The dog is wiping the dining table after lunch.
+The bat is dusting the mantelpiece.
+The monkey is watering the windowsill herbs.
+The raccoon is vacuuming the dining room.
+The cat is sweeping the entryway.
+The rabbit is wiping the interior windows.
+The hedgehog is washing the car fenders.
+The dog is wiping the dining table before a meal.
+The bat is dusting the entertainment center.
+The monkey is watering the patio plants.
+The raccoon is vacuuming the basement.
+The cat is sweeping the sidewalk.
+The rabbit is wiping the blinds.
+The hedgehog is washing the car tires.
+The dog is wiping the kitchen table before setting it.
+The bat is dusting the bookshelf.
+The monkey is watering the office plants.
+The raccoon is vacuuming the guest room.
+The cat is sweeping the garden shed.
+The rabbit is wiping the playroom windows.
+The hedgehog is washing the car roof.
+The dog is wiping the dining table after breakfast.
+The bat is dusting the picture frames.
+The monkey is watering the porch plants.
+The raccoon is vacuuming the family room carpet.
+The cat is sweeping the garage.
+The rabbit is wiping the sunroom windows.
+The hedgehog is washing the car hood.
+The dog is wiping the kitchen table after lunch.
+The bat is dusting the nightstands.
+The monkey is watering the balcony plants.
+The raccoon is vacuuming the home theater carpet.
+The cat is sweeping the front steps.
+The rabbit is wiping the living room windows.
+The hedgehog is washing the car side mirrors.
+The dog is wiping the dining table before dinner.
+The bat is dusting the study shelves.
+The monkey is watering the backyard flowers.
+The raccoon is vacuuming the bedroom carpet.
+The cat is sweeping the patio.
+The rabbit is wiping the glass doors.
+The hedgehog is washing the car front grille.
+The dog is wiping the dining table after a meal.
+The bat is dusting the bookshelf.
+The monkey is watering the hallway plants.
+The raccoon is vacuuming the living room carpet.
+The cat is sweeping the garage floor.
+The rabbit is wiping the patio doors.
+The hedgehog is washing the car bumper.
+The dog is wiping the dining table before setting it.
+The bat is dusting the family room shelves.
+The monkey is watering the kitchen herbs.
+The raccoon is vacuuming the playroom carpet.
+The cat is sweeping the front porch.
+The rabbit is wiping the windowsills.
+The hedgehog is washing the car hood.
+The dog is wiping the dining chairs.
+The bat is dusting the TV stand.
+The monkey is watering the garden.
+The raccoon is vacuuming the stairs.
+The cat is sweeping the basement.
+The rabbit is wiping the kitchen windows.
+The hedgehog is washing the car rear window.
+The dog is wiping the dining table before dinner.
+The bat is dusting the nightstands.
+The monkey is watering the flower pots.
+The raccoon is vacuuming the hallway.
+The cat is sweeping the deck.
+The rabbit is wiping the kitchen windows.
+The hedgehog is washing the car tires.
+The dog is wiping the dining chairs.
+The bat is dusting the TV stand.
+The monkey is watering the indoor plants.
+The raccoon is vacuuming the bedroom carpet.
+The cat is sweeping the floor.
