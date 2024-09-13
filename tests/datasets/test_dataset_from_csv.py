@@ -13,7 +13,7 @@ class TestDatasets(unittest.TestCase):
     def test_video_dataset_from_csv(self):
         transform_video = transforms.get_transforms_video()
         if not os.path.exists("data/toy_videos"):
-            transform_video.transforms[0] = transforms.LoadDummyVideo(probs_fail=0.5)
+            transform_video.transforms[0] = transforms.LoadDummyVideo((100, 100), probs_fail=0.5)
         dataset = DatasetFromCSV(
             "data/anno_files/toy_video_dataset.csv",
             "data/toy_videos",

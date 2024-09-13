@@ -212,10 +212,11 @@ def hflip(clip):
     return clip.flip(-1)
 
 
-def get_transforms_video(resolution=256, num_frames=16, frame_interval=1):
+def get_transforms_video(resolution=(256, 256), num_frames=16, frame_interval=1):
     transform_video = torch_transforms.Compose(
         [
             LoadVideo(),
+            CheckVideo(resolution, num_frames, frame_interval),
             TemporalRandomCrop(num_frames, frame_interval),
             ToTensorVideo(),  # TCHW
             RandomHorizontalFlipVideo(),
@@ -529,25 +530,28 @@ class TemporalRandomCrop(object):
 
 
 class LoadDummyVideo:
-    def __init__(self, frame_interval=1, num_frames=32, probs_fail=0):
-        self.frame_interval = frame_interval
+    def __init__(self, resolution=(256, 256), num_frames=32, probs_fail=0):
+        if isinstance(resolution, int):
+            resolution = (resolution, resolution)
+
+        self.resolution = resolution
         self.num_frames = num_frames
-        self.frame_limit = num_frames * frame_interval
         self.probs_fail = probs_fail
 
     def __call__(self, video_path):
         if self.probs_fail > 0 and random.random() < self.probs_fail:
             raise ValueError(f"Failed to load video: {video_path}")
         return torch.randint(
-            0, 256, size=(self.num_frames, 3, 256, 256), dtype=torch.uint8
+            0,
+            256,
+            size=(self.num_frames, 3, self.resolution[0], self.resolution[1]),
+            dtype=torch.uint8,
         )
 
 
 class LoadVideo:
-    def __init__(self, frame_interval=1, num_frames=32):
-        self.frame_interval = frame_interval
-        self.num_frames = num_frames
-        self.frame_limit = num_frames * frame_interval
+    def __init__(self):
+        pass
 
     def __call__(self, video_path):
         assert video_path.split(".")[-1] in VIDEO_EXTS
@@ -557,12 +561,28 @@ class LoadVideo:
         indexes = range(0, video_len)
         vframes = video.get_batch(indexes)
         vframes = rearrange(vframes, "t h w c -> t c h w")
+        return vframes
+
+
+class CheckVideo:
+    def __init__(self, resolution=(256, 256), frame_interval=1, num_frames=32):
+        if isinstance(resolution, int):
+            resolution = (resolution, resolution)
+        self.resolution = resolution
+        self.frame_interval = frame_interval
+        self.num_frames = num_frames
+        self.frame_limit = num_frames * frame_interval
+
+    def __call__(self, vframes):
         length = vframes.shape[0]
         h = vframes.shape[2]
         w = vframes.shape[3]
-        if length <= self.frame_limit or h < 256 or w < 256:
-            raise ValueError(f"Bad video: {video_path}")
-
+        if length <= self.frame_limit:
+            raise ValueError(
+                f"The video has not enough frames. Currnet frames: {length}"
+            )
+        if h < self.resolution[0] or w < self.resolution[1]:
+            raise ValueError(f"Video resolution is too low: (h, w) = {(h, w)}")
         return vframes
 
 

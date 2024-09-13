@@ -61,7 +61,7 @@ class DatasetFromCSV(torch.utils.data.Dataset):
         csv_path: Union[str, List[str]],
         data_root: Union[str, List[str], None] = None,
         transform: Union[Dict[str, Compose], None] = None,
-        resoluton: Union[int, Tuple[int]] = (256, 256),
+        resolution: Union[int, Tuple[int]] = (256, 256),
         num_frames: int = 16,
         frame_interval: int = 1,
         use_multi_res: bool = False,
@@ -84,17 +84,18 @@ class DatasetFromCSV(torch.utils.data.Dataset):
 
         if transform is None:
             transform = dict(
-                video=get_transforms_video(resoluton, num_frames, frame_interval),
-                image=get_transforms_image(resoluton, num_frames),
+                video=get_transforms_video(resolution, num_frames, frame_interval),
+                image=get_transforms_image(resolution, num_frames),
             )
 
         assert (
             "video" in transform or "image" in transform
         ), "The transform should contain 'video' or 'image'."
         self.transform = transform
-        self.resoluton = resoluton
+        self.resolution = resolution
         self.num_frames = num_frames
         self.frame_interval = frame_interval
+        self.frame_limit = num_frames * frame_interval
         self.data_root = data_root
         self.use_multi_res = use_multi_res
         self.train = train
@@ -165,8 +166,8 @@ class DatasetFromCSV(torch.utils.data.Dataset):
                 if self.use_multi_res:
                     data["height"] = file_meta["height"]
                     data["width"] = file_meta["width"]
-                if not data.get("fps", None):
-                    data["fps"] = file_meta["fps"] / self.frame_interval
+
+                data["fps"] = file_meta["fps"] / self.frame_interval
 
         if is_image(path):
             if self.use_multi_res and not (
@@ -193,9 +194,8 @@ class DatasetFromCSV(torch.utils.data.Dataset):
                 return data_item
             except (ValueError, AssertionError) as e:
                 import traceback
-
                 traceback.print_exc()
-
+                
                 index = (
                     random.choice(list(self.safe_data_list))
                     if len(self.safe_data_list) > 0
@@ -209,7 +209,13 @@ class DatasetFromCSV(torch.utils.data.Dataset):
         return len(self.data_list)
 
     def _is_valid_data(self, row) -> bool:
-        if row.get("height", None) or row.get("width", None):
+        if (
+            row.get("height", None) is None
+            or row.get("width", None) is None
+            or row.get("frames", None) is None
+        ):
+            # if the video meta is not provided,
+            # the video will be loaded to get the meta in `transforms`.
             return True
 
         if (
