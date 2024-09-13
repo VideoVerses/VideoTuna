@@ -3,7 +3,7 @@
 this branch use pytorch lightning framework to reorganize cogvideo training and inference. 
 
 ## environment
-please follow the requirenments at
+please follow the requirenments at `requrienemnt_cogVideo.txt`
 ## inference
 
 ```shell
