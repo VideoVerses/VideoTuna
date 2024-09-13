@@ -49,7 +49,7 @@ class VideoAutoencoderKL(pl.LightningModule):
             x_out = []
             for i in range(0, x.shape[0], bs):
                 x_bs = x[i : i + bs]
-                x_bs = self.module.decode(x).sample
+                x_bs = self.module.decode(x_bs).sample
                 x_out.append(x_bs)
             x = torch.cat(x_out, dim=0)
         x = rearrange(x, "(B T) C H W -> B C T H W", B=B)

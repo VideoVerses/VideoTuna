@@ -32,7 +32,7 @@ def load_model_checkpoint(model, ckpt):
         except:
             if "state_dict" in list(state_dict.keys()):
                 state_dict = state_dict["state_dict"]
-            model.load_state_dict(state_dict, strict=full_strict)
+            model.load_state_dict(state_dict, strict=False)
         return model
     load_checkpoint(model, ckpt, full_strict=True)
     print('[INFO] model checkpoint loaded.')

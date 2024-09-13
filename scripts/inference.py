@@ -138,7 +138,7 @@ def run_inference(args, gpu_num=1, rank=0, **kwargs):
     # inference
     start = time.time()
     n_iters = len(prompt_list_rank) // args.bs + (1 if len(prompt_list_rank) % args.bs else 0)
-    with torch.no_grad(), torch.cuda.amp.autocast():
+    with torch.no_grad():
         for idx in trange(0, n_iters, desc="Sample Iters"):
             # print(f'[rank:{rank}] batch {idx}: prompt bs {args.bs}) x nsamples_per_prompt {args.n_samples_prompt} ...')
 

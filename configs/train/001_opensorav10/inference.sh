@@ -15,23 +15,23 @@
 
 # debugging flags (optional)
 
-nodes=( $( scontrol show hostnames $SLURM_JOB_NODELIST ) )
-nodes_array=($nodes)
-head_node=${nodes_array[0]}
-head_node_ip=$(srun --nodes=1 --ntasks=1 -w "$head_node" hostname --ip-address)
+# nodes=( $( scontrol show hostnames $SLURM_JOB_NODELIST ) )
+# nodes_array=($nodes)
+# head_node=${nodes_array[0]}
+# head_node_ip=$(srun --nodes=1 --ntasks=1 -w "$head_node" hostname --ip-address)
 
-export WANDB_API_KEY="231c840bf4c83c49cc2241bcce066cb7b75967b2"
-export WANDB_MODE="offline"
-export OPENCV_IO_ENABLE_OPENEXR=1
-export NCCL_DEBUG=TRACE
-export PYTHONFAULTHANDLER=1
-export NCCL_SOCKET_IFNAME="^docker0,lo,bond0"
-export MASTER_PORT=12345
+# export WANDB_API_KEY="231c840bf4c83c49cc2241bcce066cb7b75967b2"
+# export WANDB_MODE="offline"
+# export OPENCV_IO_ENABLE_OPENEXR=1
+# export NCCL_DEBUG=TRACE
+# export PYTHONFAULTHANDLER=1
+# export NCCL_SOCKET_IFNAME="^docker0,lo,bond0"
+# export MASTER_PORT=12345
 # export WORLD_SIZE=$SLURM_NTASKS
 # export LOCAL_RANK=$SLURM_LOCALID
 # export RANK=$SLURM_LOCALID
 # export NODE_RANK=$SLURM_PROCID
-export MASTER_ADDR=$head_node_ip
+# export MASTER_ADDR=$head_node_ip
 export WORK_DIR=../
 export PYTHONPATH=$WORK_DIR
 
@@ -40,23 +40,24 @@ name="debug_512_t2v_6k_epoch_00_0228_wed_2_0303/epoch0-use_scale"
 
 # ckpt='/aifs4su/mmcode/videogen/share_ckpts/VideoCrafter/VideoCrafter2/model.ckpt'
 # ckpt='/project/suptest/xchiaa/debug-yq/MACVideoGen/test_macvid_t2v_512_debug_0228/checkpoints/epoch=0010-step=000770.ckpt'
-ckpt="/project/suptest/xchiaa/debug-yq/MACVideoGen/test_macvid_t2v_512_debug_0228/checkpoints/epoch=0000-step=000070.ckpt"
-config='configs/train_t2v_512_v1.0_debug0228.yaml'
+ckpt="/project/llmsvgen/share/videotuna_ckpt/opensorav10/model_ckpt.pt"
+config='configs/train/001_opensorav10/config_opensorav10.yaml'
 
 # prompt_file="prompts/test_prompts.txt"
-prompt_file="prompts/test_prompt.txt"
+prompt_file="samples/test.txt"
 res_dir="results"
 
-python3 scripts/evaluation/inference.py \
+python3 scripts/inference.py \
 --seed 123 \
---mode 'base' \
+--mode 't2v' \
 --ckpt_path $ckpt \
 --config $config \
 --savedir $res_dir/$name \
 --n_samples 1 \
---bs 4 --height 320 --width 512 \
+--bs 2 --height 256 --width 256 \
 --unconditional_guidance_scale 12.0 \
 --ddim_steps 50 \
 --ddim_eta 1.0 \
 --prompt_file $prompt_file \
---fps 28
+--fps 8 \
+--frames 16 \
