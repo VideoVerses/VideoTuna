@@ -114,7 +114,8 @@ if __name__ == "__main__":
             logger.warning("Auto-resuming skipped as No checkpoit found!")
     else:
         model = load_checkpoints(model, config.model)
-        
+    if len(model.lora_args)!=0:
+        model.inject_lora()
     ## update trainer config
     for k in get_nondefault_trainer_args(args):
         trainer_config[k] = getattr(args, k)
