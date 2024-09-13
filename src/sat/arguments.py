@@ -10,7 +10,9 @@ from sat import mpu
 from sat.arguments import set_random_seed
 from sat.arguments import add_training_args, add_evaluation_args, add_data_args
 import torch.distributed
-
+import sys
+# This is a work around to import the modules from the src folder.
+sys.path.append('src/sat')
 
 def add_model_config_args(parser):
     """Model arguments"""
@@ -171,7 +173,7 @@ def get_args(args_list=None, parser=None):
 
     # initialize distributed and random seed because it always seems to be necessary.
     initialize_distributed(args)
-    args.seed = args.seed + mpu.get_data_parallel_rank()
+    # args.seed = args.seed + mpu.get_data_parallel_rank()
     set_random_seed(args.seed)
     return args
 

@@ -25,7 +25,6 @@ from sgm.util import (
     get_context_parallel_group_rank,
 )
 from vae_modules.cp_enc_dec import _conv_split, _conv_gather
-
 logpy = logging.getLogger(__name__)
 
 
@@ -593,8 +592,9 @@ class VideoAutoencoderInferenceWrapper(VideoAutoencodingEngine):
         input_cp: bool = False,
         output_cp: bool = False,
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, dict]]:
+        # import pdb; pdb.set_trace()
         if self.cp_size > 0 and not input_cp:
-            if not is_context_parallel_initialized:
+            if not is_context_parallel_initialized():
                 initialize_context_parallel(self.cp_size)
 
             global_src_rank = get_context_parallel_group_rank() * self.cp_size
@@ -623,7 +623,7 @@ class VideoAutoencoderInferenceWrapper(VideoAutoencodingEngine):
         **kwargs,
     ):
         if self.cp_size > 0 and not input_cp:
-            if not is_context_parallel_initialized:
+            if not is_context_parallel_initialized():
                 initialize_context_parallel(self.cp_size)
 
             global_src_rank = get_context_parallel_group_rank() * self.cp_size

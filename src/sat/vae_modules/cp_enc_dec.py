@@ -16,6 +16,7 @@ from sgm.util import (
     get_context_parallel_group_rank,
 )
 
+
 # try:
 from vae_modules.utils import SafeConv3d as Conv3d
 # except:
@@ -133,12 +134,14 @@ def _gather(input_, dim):
 
 
 def _conv_split(input_, dim, kernel_size):
-    cp_world_size = get_context_parallel_world_size()
-
+    # 直接bypass了 我受不了这个额代码了
+    
+    return input_
     # Bypass the function if context parallel is 1
-    if cp_world_size == 1:
-        return input_
+    # if cp_world_size == 1:
+    #     return input_
 
+    # cp_world_size = get_context_parallel_world_size()
     # print('in _conv_split, cp_rank:', cp_rank, 'input_size:', input_.shape)
 
     cp_rank = get_context_parallel_rank()

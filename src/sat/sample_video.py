@@ -131,7 +131,7 @@ def sampling_main(args, model_cls):
         raise NotImplementedError
 
     image_size = [480, 720]
-
+    import pdb; pdb.set_trace()
     sample_func = model.sample
     T, H, W, C, F = args.sampling_num_frames, image_size[0], image_size[1], args.latent_channels, 8
     num_samples = [1]
@@ -200,6 +200,7 @@ def sampling_main(args, model_cls):
                     else:
                         clear_fake_cp_cache = False
                     with torch.no_grad():
+                        import pdb;pdb.set_trace()
                         recon = first_stage_model.decode(
                             latent[:, :, start_frame:end_frame].contiguous(), clear_fake_cp_cache=clear_fake_cp_cache
                         )
