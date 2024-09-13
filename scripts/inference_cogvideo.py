@@ -73,10 +73,15 @@ def load_model(args, cuda_idx=0):
     model = model.cuda(cuda_idx)
     # load weights
     assert os.path.exists(args.ckpt_path), f"Error: checkpoint [{args.ckpt_path}] Not Found!"
-    from sat.training.model_io import load_checkpoint
     print(args.ckpt_path)
     # customized checkpoint loader 
-    missing_keys, unexpected_keys = model.load_state_dict(torch.load(args.ckpt_path)['module'], strict=False)
+    try:
+        # pl chekcpoint 
+        missing_keys, unexpected_keys = model.load_state_dict(torch.load(args.ckpt_path)['state_dict'], strict=False)
+    except:
+        # pretrained checkpoint 
+        missing_keys, unexpected_keys = model.load_state_dict(torch.load(args.ckpt_path)['module'], strict=False)
+        
     if len(unexpected_keys) > 0:
         print_rank0(
             f'Will continue but found unexpected_keys! Check whether you are loading correct checkpoints: {unexpected_keys}.')
@@ -262,12 +267,12 @@ if __name__ == "__main__":
         os.environ["LOCAL_RANK"] = os.environ["OMPI_COMM_WORLD_LOCAL_RANK"]
         os.environ["WORLD_SIZE"] = os.environ["OMPI_COMM_WORLD_SIZE"]
         os.environ["RANK"] = os.environ["OMPI_COMM_WORLD_RANK"]
-    py_parser = argparse.ArgumentParser(add_help=False)
-    known, args_list = py_parser.parse_known_args()
-    # args = get_parser().parse_args()
-    args = get_args(args_list)
-    args = argparse.Namespace(**vars(args), **vars(known))
-    del args.deepspeed_config
+    # py_parser = argparse.ArgumentParser(add_help=False)
+    # known, args_list = py_parser.parse_known_args()
+    args = get_parser().parse_args()
+    # args = get_args(args_list)
+    # # args = argparse.Namespace(**vars(args), **vars(known))
+    # del args.deepspeed_config
     print(args)
     # args.model_config.first_stage_config.params.cp_size = 1
     # args.model_config.network_config.params.transformer_args.model_parallel_size = 1
@@ -275,12 +280,12 @@ if __name__ == "__main__":
     # args.model_config.loss_fn_config.params.sigma_sampler_config.params.uniform_sampling = False
     args.height = 480
     args.width = 720
-    args.savedir = args.output_dir
-    args.savefps = args.sampling_fps
-    args.frames = args.sampling_num_frames
-    args.config = "/home/liurt/liurt_data/haoyu/VideoTuna/configs/inference/cogvideo_t2v_pl.yaml"
-    args.ckpt_path = args.load
-    args.prompt_file = args.input_file
+    # args.savedir = args.output_dir
+    # args.savefps = args.sampling_fps
+    # args.frames = args.sampling_num_frames
+    # args.config = "/home/liurt/liurt_data/haoyu/VideoTuna/configs/inference/cogvideo_t2v_pl.yaml"
+    # args.ckpt_path = args.load
+    # args.prompt_file = args.input_file
     args.bs = 1
     args.n_samples_prompt = 1
     args.seed = 11111
