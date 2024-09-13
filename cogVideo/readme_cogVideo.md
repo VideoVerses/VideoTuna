@@ -40,6 +40,7 @@ cd checkpoints/cogvideo
 wget https://cloud.tsinghua.edu.cn/f/fdba7608a49c463ba754/?dl=1
 mv 'index.html?dl=1' vae.zip
 unzip vae.zip
+rm vae.zip
 ```
 
 #### Clone the T5 model
@@ -47,6 +48,7 @@ unzip vae.zip
 git clone https://huggingface.co/THUDM/CogVideoX-2b.git
 mkdir t5-v1_1-xxl
 mv CogVideoX-2b/text_encoder/* CogVideoX-2b/tokenizer/* t5-v1_1-xxl
+rm -r CogVideoX-2b
 ```
 
 #### CogVideoX-2b
@@ -56,31 +58,6 @@ Or access the [Hugging Face](https://huggingface.co/THUDM/CogVideoX-2b) to downl
 git lfs install
 git clone https://huggingface.co/THUDM/CogVideoX-2b
 ```
-
-[//]: # (#### Remarks)
-
-[//]: # (When downloading the checkpoints, the file /text_encoder/model-00001-of-00002.safetensors and)
-
-[//]: # (/text_encoder/model-00002-of-00002.safetensors may not be successfully downloaded. You need to remove the)
-
-[//]: # (files and download them again using the following command:)
-
-[//]: # (```)
-
-[//]: # (cd CogVideoX-2b)
-
-[//]: # (cd text_encoder)
-
-[//]: # (rm model-00001-of-00002.safetensors)
-
-[//]: # (wget https://huggingface.co/THUDM/CogVideoX-2b/resolve/main/text_encoder/model-00001-of-00002.safetensors)
-
-[//]: # (rm model-00002-of-00002.safetensors)
-
-[//]: # (wget https://huggingface.co/THUDM/CogVideoX-2b/resolve/main/text_encoder/model-00002-of-00002.safetensors)
-
-[//]: # (```)
-
 #### CogVideoX-5b
 Use the following command to clone the repository and download the checkpoints.
 Or access the [Hugging Face](https://huggingface.co/THUDM/CogVideoX-5b) to download the checkpoints.
@@ -97,6 +74,7 @@ cd CogVideoX-2b-sat
 wget https://cloud.tsinghua.edu.cn/f/556a3e1329e74f1bac45/?dl=1
 mv 'index.html?dl=1' transformer.zip
 unzip transformer.zip
+rm transformer.zip
 ```
 
 #### CogVideoX-5b-sat
@@ -108,29 +86,9 @@ cd CogVideoX-5b-sat
 wget "https://cloud.tsinghua.edu.cn/d/fcef5b3904294a6885e5/files/?p=%2F1%2FCogVideoX-5B-transformer.tar.gz&dl=1"
 mv 'index.html?p=%2F1%2FCogVideoX-5B-transformer.tar.gz&dl=1' transformer.tar.gz
 tar -xzvf transformer.tar.gz
+rm transformer.tar.gz
 ```
-
-
-
 The model structure should be as follows:
-
-[//]: # (```)
-
-[//]: # (.)
-
-[//]: # (├── transformer)
-
-[//]: # (│   ├── 1000 &#40;or 1&#41;)
-
-[//]: # (│   │   └── mp_rank_00_model_states.pt)
-
-[//]: # (│   └── latest)
-
-[//]: # (└── vae)
-
-[//]: # (    └── 3d-vae.pt)
-
-[//]: # (```)
 ```
 .
 ├── vae
@@ -167,7 +125,7 @@ python inference_cogVideo_diffusers.py --prompt "A video of a cat playing with a
 ```
 OR
 ```
-bash /path/to/shscripts/inference_cogVideo_diffusers.sh
+bash ./shscripts/inference_cogVideo_diffusers.sh
 ```
 It will generate a video of a cat playing with a ball and save it to the file cogVideo/output.mp4, with the model CogVideoX-2b.
 
@@ -328,6 +286,20 @@ Run the following command to evaluate the finetuned model.
 ```
 bash inference_cogVideo_sat.sh
 ```
+
+## Remarks
+When downloading the checkpoints, the file /text_encoder/model-00001-of-00002.safetensors and
+/text_encoder/model-00002-of-00002.safetensors may not be successfully downloaded. You need to remove the
+files and download them again using the following command:
+```
+cd CogVideoX-2b
+cd text_encoder
+rm model-00001-of-00002.safetensors
+wget https://huggingface.co/THUDM/CogVideoX-2b/resolve/main/text_encoder/model-00001-of-00002.safetensors
+rm model-00002-of-00002.safetensors
+wget https://huggingface.co/THUDM/CogVideoX-2b/resolve/main/text_encoder/model-00002-of-00002.safetensors
+```
+
 
 
 
