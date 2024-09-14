@@ -5,9 +5,12 @@ import pandas as pd
 from typing import List, Union, Dict, Tuple
 import torch
 from torchvision.transforms import Compose
-
-from .transforms import get_transforms_image, get_transforms_video
-from .datasets_utils import (
+from torchvision.datasets.folder import pil_loader
+import sys
+sys.path.append('/home/zraoac/VideoTuna')
+from data.transforms import get_transforms_image, get_transforms_video, CheckVideo
+from data.datasets_utils import (
+    read_video,
     read_video_meta,
     read_image_meta,
     is_video,
@@ -101,6 +104,7 @@ class DatasetFromCSV(torch.utils.data.Dataset):
         self.train = train
         self.split_val = split_val
         self.safe_data_list = set()
+        self.check_video = CheckVideo(resolution, frame_interval, num_frames)
 
         self.load_annotations(csv_path, data_root)
 
@@ -148,16 +152,19 @@ class DatasetFromCSV(torch.utils.data.Dataset):
         data = copy.deepcopy(self.data_list[index])
         path = data.pop("path")
         if is_video(path):
-            video = self.transform["video"](path)
+            video = read_video(path)
+            video = self.check_video(video)  # filter the video with unsatisfied resolution and frames
+            video = self.transform["video"](video)
         elif is_image(path):
-            video = self.transform["image"](path)
+            video = pil_loader(path)
+            video = self.transform["image"](video)
         else:
             raise ValueError(f"Unsupported file format: {path}")
         # TCHW -> CTHW
         video = video.permute(1, 0, 2, 3)
         data["video"] = video
         if is_video(path) and not (
-            data.get("height", None)
+            data.get("width", None)
             and data.get("height", None)
             and data.get("fps", None)
         ):
@@ -239,3 +246,10 @@ class DatasetFromCSV(torch.utils.data.Dataset):
             raise ValueError(
                 f"The csv file {df_path} must have a column named 'caption'."
             )
+
+
+if __name__ == "__main__":
+    csv_path = '/project/llmsvgen/share/opensora_datafile/artgrid_caption_long_base.csv'
+    dataset = DatasetFromCSV(csv_path, train=True, split_val=True)
+    data = dataset[0]
+    print('test')

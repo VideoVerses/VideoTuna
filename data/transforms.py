@@ -215,8 +215,6 @@ def hflip(clip):
 def get_transforms_video(resolution=(256, 256), num_frames=16, frame_interval=1):
     transform_video = torch_transforms.Compose(
         [
-            LoadVideo(),
-            CheckVideo(resolution, num_frames, frame_interval),
             TemporalRandomCrop(num_frames, frame_interval),
             ToTensorVideo(),  # TCHW
             RandomHorizontalFlipVideo(),
@@ -232,7 +230,6 @@ def get_transforms_video(resolution=(256, 256), num_frames=16, frame_interval=1)
 def get_transforms_image(resolution=256, num_frames=16):
     transform = torch_transforms.Compose(
         [
-            LoadImage(),
             torch_transforms.Lambda(
                 lambda pil_image: center_crop_arr(pil_image, resolution)
             ),
@@ -338,15 +335,23 @@ class UCFCenterCropVideo:
         self,
         size,
         interpolation_mode="bilinear",
-    ):
+    ):  
+        if not isinstance(size, int):
+            assert len(size) == 2 or len(size) == 1, "size should be int or tuple"
+
         if isinstance(size, tuple):
             if len(size) != 2:
                 raise ValueError(
                     f"size should be tuple (height, width), instead got {size}"
                 )
             self.size = size
-        else:
+        elif isinstance(size, int):
             self.size = (size, size)
+        else:
+            if len(size) == 2:
+                self.size = size
+            else:
+                self.size = (size, size)
 
         self.interpolation_mode = interpolation_mode
 

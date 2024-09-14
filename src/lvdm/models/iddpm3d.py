@@ -977,9 +977,10 @@ class LatentDiffusion(SpacedDiffusion):
     def apply_model(self, x_noisy, t, cond, **kwargs):
         if self.model.conditioning_key == 'crossattn_stdit':
             key = 'c_crossattn_stdit'
-
-            cond = {key: [cond['c_crossattn'][0]['y']], 'mask': [cond['c_crossattn'][0]['mask']]}
-            # cond = {key: [cond['y']], 'mask': [cond['mask']]} # support mask for T5 
+            try:
+                cond = {key: [cond['c_crossattn'][0]['y']], 'mask': [cond['c_crossattn'][0]['mask']]}
+            except:
+                cond = {key: [cond['y']], 'mask': [cond['mask']]} # support mask for T5 
         else:
             if isinstance(cond, dict):
                 # hybrid case, cond is exptected to be a dict
