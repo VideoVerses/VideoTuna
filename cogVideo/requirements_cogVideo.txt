@@ -16,7 +16,7 @@ omegaconf==2.3.0
 pytorch_lightning==2.3.3
 kornia==0.7.3
 beartype==0.18.5
-numpy==2.0.1
+numpy==1.23.5
 fsspec==2024.5.0
 safetensors==0.4.3
 scipy==1.14.0

@@ -43,14 +43,6 @@ unzip vae.zip
 rm vae.zip
 ```
 
-#### Clone the T5 model
-```
-git clone https://huggingface.co/THUDM/CogVideoX-2b.git
-mkdir t5-v1_1-xxl
-mv CogVideoX-2b/text_encoder/* CogVideoX-2b/tokenizer/* t5-v1_1-xxl
-rm -r CogVideoX-2b
-```
-
 #### CogVideoX-2b
 Use the following command to clone the repository and download the checkpoints. 
 Or access the [Hugging Face](https://huggingface.co/THUDM/CogVideoX-2b) to download the checkpoints.
@@ -66,6 +58,21 @@ git lfs install
 git clone https://huggingface.co/THUDM/CogVideoX-5b
 ```
 
+#### Clone the T5 model
+- If you already downloaded the CogVideoX-2b, please use the following command to clone the T5 model.
+```
+mkdir t5-v1_1-xxl
+cp CogVideoX-2b/text_encoder/* CogVideoX-2b/tokenizer/* t5-v1_1-xxl
+```
+
+- If you use CogVideoX-5b, please use the following command to clone the T5 model.
+```
+git clone https://huggingface.co/THUDM/CogVideoX-2b.git
+mkdir t5-v1_1-xxl
+mv CogVideoX-2b/text_encoder/* CogVideoX-2b/tokenizer/* t5-v1_1-xxl
+rm -r CogVideoX-2b
+```
+
 #### CogVideoX-2b-sat
 
 ```
@@ -78,35 +85,54 @@ rm transformer.zip
 ```
 
 #### CogVideoX-5b-sat
-Use the following command to clone the repository and download the checkpoints.
-Or access the [Hugging Face](https://huggingface.co/THUDM/CogVideoX-5b) to download the checkpoints.
 ```
 mkdir CogVideoX-5b-sat
 cd CogVideoX-5b-sat
 wget "https://cloud.tsinghua.edu.cn/d/fcef5b3904294a6885e5/files/?p=%2F1%2FCogVideoX-5B-transformer.tar.gz&dl=1"
 mv 'index.html?p=%2F1%2FCogVideoX-5B-transformer.tar.gz&dl=1' transformer.tar.gz
 tar -xzvf transformer.tar.gz
+mv 'CogVideoX-5B-transformer' transformer
 rm transformer.tar.gz
+wget "https://cloud.tsinghua.edu.cn/d/fcef5b3904294a6885e5/files/?p=%2Flatest&dl=1"
+mv 'index.html?p=%2Flatest&dl=1' latest
 ```
-The model structure should be as follows:
-```
-.
-├── vae
-├── t5-v1_1-xxl
-├── CogVideoX-2b
-├── CogVideoX-5b
-├── CogVideoX-2b-sat
-│   └── transformer
-│       └── 1000 (or 1)
-│           └── mp_rank_00_model_states.pt
-│       └── latest
-├── CogVideoX-5b-sat
-│   └── transformer
-│       └── 1000 (or 1)
-│           └── mp_rank_00_model_states.pt
-│       └── latest
 
-```
+[//]: # (The model structure should be as follows:)
+
+[//]: # (```)
+
+[//]: # (.)
+
+[//]: # (├── vae)
+
+[//]: # (├── t5-v1_1-xxl)
+
+[//]: # (├── CogVideoX-2b)
+
+[//]: # (├── CogVideoX-5b)
+
+[//]: # (├── CogVideoX-2b-sat)
+
+[//]: # (│   └── transformer)
+
+[//]: # (│       └── 1000 &#40;or 1&#41;)
+
+[//]: # (│           └── mp_rank_00_model_states.pt)
+
+[//]: # (│       └── latest)
+
+[//]: # (├── CogVideoX-5b-sat)
+
+[//]: # (│   └── transformer)
+
+[//]: # (│       └── 1000 &#40;or 1&#41;)
+
+[//]: # (│           └── mp_rank_00_model_states.pt)
+
+[//]: # (│       └── latest)
+
+[//]: # ()
+[//]: # (```)
 
 ### Generate video
 Parameters:
@@ -127,7 +153,7 @@ OR
 ```
 bash ./shscripts/inference_cogVideo_diffusers.sh
 ```
-It will generate a video of a cat playing with a ball and save it to the file cogVideo/output.mp4, with the model CogVideoX-2b.
+It will generate a video of a cat playing with a ball and save it to the file ./output.mp4, with the model CogVideoX-2b.
 
 # SAT Inference
 * Single GPU Inference for 2b version (FP16), the model need 18GB GPU memory. 
@@ -152,6 +178,11 @@ ckpt_path: "{absolute_path/to/your/t5-v1_1-xxl}/CogVideoX-2b-sat/vae/3d-vae.pt" 
 load: "{absolute_path/to/your}/transformer" # Absolute path to the CogVideoX-2b-sat/transformer folder
 ```
 
+### Modify the file in ```./src/sat/inference.sh```.
+```
+run_cmd="$environs python sample_video.py --base configs/cogvideox_2b.yaml configs/inference.yaml --seed $RANDOM"
+```
+
 ## For 5b version
 ### Modify the file in ```./src/sat/configs/cogvideox_5b.yaml```.
 - Change the model path: 
@@ -169,6 +200,12 @@ ckpt_path: "{absolute_path/to/your/t5-v1_1-xxl}/CogVideoX-5b-sat/vae/3d-vae.pt"
 ```
 load: "{absolute_path/to/your}/transformer" # Absolute path to the CogVideoX-5b-sat/transformer folder
 ```
+
+### Modify the file in ```./src/sat/inference.sh```.
+```
+run_cmd="$environs python sample_video.py --base configs/cogvideox_5b.yaml configs/inference.yaml --seed $RANDOM"
+```
+
 
 
 #### Remarks
@@ -216,13 +253,13 @@ which contains the description of the video.
 with similar styles.
 
 ### Change the configs file
-1. Modify the file in ```/path/to/src/sat/configs/sft.yaml```**(For LoRA and SFT)**.
+1. Modify the file in ```./src/sat/configs/sft.yaml```**(For LoRA and SFT)**.
 ```
   # checkpoint_activations: True ## Using gradient checkpointing (Both checkpoint_activations in the config file need to be set to True)
   model_parallel_size: 1 # Model parallel size
   experiment_name: lora-disney  # Experiment name (do not modify)
   mode: finetune # Mode (do not modify)
-  load: "{your_CogVideoX-2b-sat_path}/transformer" ## Transformer model path
+  load: "{your_CogVideoX-<model_parameters>-sat_path}/transformer" ## Transformer model path
   no_load_rng: True # Whether to load random seed
   train_iters: 1000 # Training iterations
   eval_iters: 1 # Evaluation iterations
@@ -260,9 +297,14 @@ model:
 ```
 
 ### Modify the Run Script
-Modify the file in ```./src/sat/finetune_single_gpu.sh```
+Modify the file in ```./src/sat/finetune_single_gpu.sh``` **(For LoRA 2b version)**.
 ```
-run_cmd="torchrun --standalone --nproc_per_node=1 train_video.py --base configs/cogvideox_2b_lora.yaml configs/sft.yaml --seed $RANDOM"
+run_cmd="torchrun --standalone --nproc_per_node=1 train_video.py --base configs/cogvideox_<model_parameters>_lora.yaml configs/sft.yaml --seed $RANDOM"
+```
+
+Modify the file in ```./src/sat/finetune_single_gpu.sh``` **(For SFT 2b version)**.
+```
+run_cmd="torchrun --standalone --nproc_per_node=1 train_video.py --base configs/cogvideox_<model_parameters>.yaml configs/sft.yaml --seed $RANDOM"
 ```
 
 ### Start Finetune
