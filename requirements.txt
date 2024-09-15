@@ -12,7 +12,6 @@ imwatermark==0.0.2
 kornia==0.7.3
 mmengine==0.10.4
 omegaconf==2.3.0
-open_clip_torch==2.12.0
 opencv_python==4.10.0.84
 packaging==24.1
 pandas==2.2.2
@@ -38,3 +37,4 @@ numpy==1.*
 https://github.com/Dao-AILab/flash-attention/releases/download/v2.6.3/flash_attn-2.6.3+cu123torch2.2cxx11abiFALSE-cp310-cp310-linux_x86_64.whl
 git+https://github.com/huggingface/diffusers
 apex
+open_clip_torch==2.12.0
