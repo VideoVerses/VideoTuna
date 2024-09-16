@@ -176,14 +176,29 @@ bash configs/train/000_videocrafter2ft/run.sh
 ```
 
 ### 5. Evaluation
-
+We support VBench evaluation to evaluate the T2V generation performance. 
+Please check [eval/README.md](eval/README.md) for details.
 
 ### 6. Alignment
+We support video alignment post-training to align human perference for video diffusion models. Please check [configs/train/004_rlhf_vc2/README.md](configs/train/004_rlhf_vc2/README.md) for details.
 
+
+
+## Acknowledgement
+We thank the following repos for sharing their awsome models and codes!
+* [VideoCrafter2](https://github.com/AILab-CVC/VideoCrafter): Overcoming Data Limitations for High-Quality Video Diffusion Models
+* [VideoCrafter1](https://github.com/AILab-CVC/VideoCrafter): Open Diffusion Models for High-Quality Video Generation
+* [DynamiCrafter](https://github.com/Doubiiu/DynamiCrafter): Animating Open-domain Images with Video Diffusion Priors
+* [Open-Sora](https://github.com/hpcaitech/Open-Sora): Democratizing Efficient Video Production for All
+* [CogVideoX](https://github.com/THUDM/CogVideo): Text-to-Video Diffusion Models with An Expert Transformer
+* [VADER](https://github.com/mihirp1998/VADER): Video Diffusion Alignment via Reward Gradients
+* [VBench](https://github.com/Vchitect/VBench): Comprehensive Benchmark Suite for Video Generative Models
 
 ## 🍻 Contributors
 
 ## 📋 License
 
 ## 😊 Citation
-
+```
+To be updated...
+```
