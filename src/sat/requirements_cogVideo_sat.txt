@@ -10,7 +10,7 @@ fsspec==2024.5.0
 safetensors==0.4.3
 imageio-ffmpeg==0.5.1
 imageio==2.34.2
-scipy==1.14.0
+#scipy==1.14.0
 decord==0.6.0
 wandb==0.17.5
 deepspeed==0.14.4

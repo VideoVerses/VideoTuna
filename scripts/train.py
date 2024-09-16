@@ -35,11 +35,19 @@ def get_parser(**parser_kwargs):
 
     parser.add_argument("--sdckpt", type=str, default=None, help="pretrained stable diffusion checkpoint")
     parser.add_argument("--ckpt", type=str, default=None, help="pretrained current model checkpoint")
+    parser.add_argument("--lorackpt", type=str, default=None, help="pretrained current model checkpoint")
     return parser
     
 def get_nondefault_trainer_args(args):
     parser = argparse.ArgumentParser()
-    parser = Trainer.add_argparse_args(parser)
+    try:
+        parser = Trainer.add_argparse_args(parser)
+    except:
+        parser = add_trainer_args_to_parser(Trainer, parser)
+    try:
+        parser = Trainer.add_argparse_args(parser)
+    except:
+        parser = add_trainer_args_to_parser(Trainer, parser)
     default_trainer_args = parser.parse_args([])
     return sorted(k for k in vars(default_trainer_args) if getattr(args, k) != getattr(default_trainer_args, k))
 
@@ -75,6 +83,8 @@ if __name__ == "__main__":
         config["model"]["sd_checkpoint"] = args.sdckpt
     if args.ckpt is not None:
         config["model"]["pretrained_checkpoint"] = args.ckpt
+    if args.lorackpt is not None:
+        config["model"]["params"]["lora_args"]["lora_ckpt"] = args.lorackpt
     
     lightning_config = config.pop("lightning", OmegaConf.create())
     trainer_config = lightning_config.get("trainer", OmegaConf.create()) 
@@ -87,7 +97,10 @@ if __name__ == "__main__":
     ## MODEL CONFIG >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     logger.info("***** Configing Model *****")
     config.model.params.logdir = workdir
+    
+    
     model = instantiate_from_config(config.model)
+    # import pdb; pdb.set_trace()
     if args.auto_resume:
         ## the saved checkpoint must be: full-info checkpoint
         resume_ckpt_path = get_autoresume_path(workdir)
@@ -102,7 +115,8 @@ if __name__ == "__main__":
             logger.warning("Auto-resuming skipped as No checkpoit found!")
     else:
         model = load_checkpoints(model, config.model)
-        
+    if len(model.lora_args)!=0:
+        model.inject_lora()
     ## update trainer config
     for k in get_nondefault_trainer_args(args):
         trainer_config[k] = getattr(args, k)
@@ -139,7 +153,7 @@ if __name__ == "__main__":
     trainer_kwargs["num_sanity_val_steps"] = 0
     logger_cfg = get_trainer_logger(lightning_config, workdir, args.debug)
     trainer_kwargs["logger"] = instantiate_from_config(logger_cfg)
-    
+    print(trainer_kwargs['logger'].save_dir)
     ## setup callbacks
     callbacks_cfg = get_trainer_callbacks(lightning_config, config, workdir, ckptdir, logger)
     callbacks_cfg['image_logger']['params']['save_dir'] = workdir
@@ -162,7 +176,7 @@ if __name__ == "__main__":
     # merge args for trainer
     trainer_args = argparse.Namespace(**trainer_config)
     trainer = Trainer.from_argparse_args(trainer_args, **trainer_kwargs)
-
+    print(trainer_args,trainer_kwargs)
     ## allow checkpointing via USR1
     def melk(*args, **kwargs):
         ## run all checkpoint hooks

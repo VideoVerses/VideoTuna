@@ -13,6 +13,7 @@ import torch
 from pytorch_lightning import seed_everything
 
 sys.path.insert(0, os.getcwd())
+sys.path.insert(1, f'{os.getcwd()}/src')
 from src.lvdm.samplers.ddim import DDIMSampler
 from utils.common_utils import instantiate_from_config
 from src.lvdm.samplers.ddim_multiplecond import DDIMSampler as DDIMSampler_multicond
@@ -59,6 +60,8 @@ def get_parser():
     parser.add_argument("--guidance_rescale", type=float, default=0.0, help="guidance rescale in [Common Diffusion Noise Schedules and Sample Steps are Flawed](https://huggingface.co/papers/2305.08891)")
     parser.add_argument("--loop", action='store_true', default=False, help="generate looping videos or not")
     parser.add_argument("--gfi", action='store_true', default=False, help="generate generative frame interpolation (gfi) or not")
+    # lora args 
+    parser.add_argument("--lorackpt", type=str, default=None, help="[Optional] checkpoint path for lora model. ")
     #
     parser.add_argument("--savefps", type=str, default=10, help="video fps to generate")
     return parser
@@ -70,11 +73,17 @@ def load_model(args, cuda_idx=0):
     # build model
     config = OmegaConf.load(args.config)
     model_config = config.pop("model", OmegaConf.create())
+    if args.lorackpt is not None:
+        model_config["params"]["lora_args"] = {"lora_ckpt": args.lorackpt}
     model = instantiate_from_config(model_config)
     model = model.cuda(cuda_idx)
     # load weights
     assert os.path.exists(args.ckpt_path), f"Error: checkpoint [{args.ckpt_path}] Not Found!"
     model = load_model_checkpoint(model, args.ckpt_path)
+    # load lora weights 
+    if len(model.lora_args)!=0:
+        model.inject_lora()
+    
     model.eval()
     return model
 

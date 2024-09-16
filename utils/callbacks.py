@@ -15,7 +15,27 @@ from pytorch_lightning.utilities import rank_zero_only
 from pytorch_lightning.utilities import rank_zero_info
 from utils.save_video import log_local, prepare_to_log
 
+class LoraModelCheckpoint(pl.callbacks.ModelCheckpoint):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
+    def on_save_checkpoint(self, trainer, pl_module,checkpoint):
+        
+        """
+        the hook in pl.module and ModelCheckpoint is slight different. 
+        pl.Module: https://lightning.ai/docs/pytorch/stable/common/lightning_module.html#on-save-checkpoint
+        ModelCheckpoint: https://pytorch-lightning.readthedocs.io/en/1.5.10/extensions/generated/pytorch_lightning.callbacks.ModelCheckpoint.html"""
+        # only save lora 
+        state_dict =  checkpoint['state_dict']
+        for k in list(state_dict.keys()):
+            if 'lora' not in k:
+                del state_dict[k]
+        checkpoint['state_dict'] = state_dict
+        checkpoint = super().on_save_checkpoint(trainer, pl_module, checkpoint)
+        return checkpoint
+
+        
+        
 class ImageLogger(Callback):
     def __init__(self, 
                  batch_frequency, 

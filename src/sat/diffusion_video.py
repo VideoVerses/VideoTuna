@@ -9,6 +9,9 @@ from sat.helpers import print_rank0
 import torch
 from torch import nn
 
+import sys
+# This is a work around to import the modules from the src folder.
+sys.path.append('src/sat')
 from sgm.modules import UNCONDITIONAL_CONFIG
 from sgm.modules.autoencoding.temporal_ae import VideoDecoder
 from sgm.modules.diffusionmodules.wrappers import OPENAIUNETWRAPPER
@@ -23,12 +26,12 @@ import gc
 from sat import mpu
 import random
 
-
-class SATVideoDiffusionEngine(nn.Module):
-    def __init__(self, args, **kwargs):
+### modfictation to Pl.Trainer 
+import pytorch_lightning as pl 
+class SATVideoDiffusionEngine(pl.LightningModule):
+    def __init__(self, model_config,**kwargs):
         super().__init__()
-
-        model_config = args.model_config
+        print(kwargs)
         # model args preprocess
         log_keys = model_config.get("log_keys", None)
         input_key = model_config.get("input_key", "mp4")
@@ -59,22 +62,25 @@ class SATVideoDiffusionEngine(nn.Module):
         self.noised_image_input = model_config.get("noised_image_input", False)
         self.noised_image_all_concat = model_config.get("noised_image_all_concat", False)
         self.noised_image_dropout = model_config.get("noised_image_dropout", 0.0)
-        if args.fp16:
-            dtype = torch.float16
-            dtype_str = "fp16"
-        elif args.bf16:
-            dtype = torch.bfloat16
-            dtype_str = "bf16"
-        else:
-            dtype = torch.float32
-            dtype_str = "fp32"
-        self.dtype = dtype
+        # if args.fp16:
+        #     dtype = torch.float16
+        #     dtype_str = "fp16"
+        # elif args.bf16:
+        #     dtype = torch.bfloat16
+        #     dtype_str = "bf16"
+        # else:
+        #     dtype = torch.float32
+        #     dtype_str = "fp32"
+        # Haoyu TODO: fix data type 
+        dtype1 = torch.float32
+        dtype_str = "fp32"
+        self.dtype1 = dtype1
         self.dtype_str = dtype_str
 
         network_config["params"]["dtype"] = dtype_str
         model = instantiate_from_config(network_config)
         self.model = get_obj_from_str(default(network_wrapper, OPENAIUNETWRAPPER))(
-            model, compile_model=compile_model, dtype=dtype
+            model, compile_model=compile_model, dtype=dtype1
         )
 
         self.denoiser = instantiate_from_config(denoiser_config)
@@ -89,8 +95,9 @@ class SATVideoDiffusionEngine(nn.Module):
         self.scale_factor = scale_factor
         self.disable_first_stage_autocast = disable_first_stage_autocast
         self.no_cond_log = no_cond_log
-        self.device = args.device
-
+        # haoyu TODO: fix device
+        # self.device = args.device
+        self.logdir ="/home/liurt/liurt_data/haoyu/VideoTuna/log_image/"
     def disable_untrainable_params(self):
         total_trainable = 0
         for n, p in self.named_parameters():
@@ -316,3 +323,41 @@ class SATVideoDiffusionEngine(nn.Module):
             samples = samples.permute(0, 2, 1, 3, 4).contiguous()
             log["samples"] = samples
         return log
+    # align sat.train_video.py forward_step() and ddpm3d.ddpm.training_step 
+    
+    def training_step(self, batch, batch_idx):
+        
+        # cogvideo batch = {"mp4": None, "fps": None, "num_frames": None, "txt": None}
+        loss, loss_dict = self.shared_step(batch)
+
+        self.log_dict(loss_dict, prog_bar=True,
+                      logger=True, on_step=True, on_epoch=True)
+
+        self.log("global_step", self.global_step,
+                 prog_bar=True, logger=True, on_step=True, on_epoch=False)
+
+        # if self.use_scheduler:
+        #     lr = self.optimizers().param_groups[0]['lr']
+        #     self.log('lr_abs', lr, prog_bar=True, logger=True, on_step=True, on_epoch=False)
+        # if self.use_scheduler:
+        #     lr = self.optimizers().param_groups[0]['lr']
+        #     self.log('lr_abs', lr, prog_bar=True, logger=True, on_step=True, on_epoch=False)
+
+        return loss
+    # align sat.train_video.py forward_step_eval() and ddpm3d.ddpm.validation_step 
+    # TODO: implement ema_scope context manager
+    @torch.no_grad()
+    def validation_step(self, batch, batch_idx):
+        _, loss_dict_no_ema = self.shared_step(batch)
+        # with self.ema_scope():
+        #     _, loss_dict_ema = self.shared_step(batch)
+        #     loss_dict_ema = {key + '_ema': loss_dict_ema[key] for key in loss_dict_ema}
+        self.log_dict(loss_dict_no_ema, prog_bar=False, logger=True, on_step=False, on_epoch=True)
+        # self.log_dict(loss_dict_ema, prog_bar=False, logger=True, on_step=False, on_epoch=True)
+    def configure_optimizers(self):
+        lr = self.learning_rate
+        params = list(self.model.parameters())
+        # if self.learn_logvar:
+        #     params = params + [self.logvar]
+        opt = torch.optim.AdamW(params, lr=lr)
+        return opt
