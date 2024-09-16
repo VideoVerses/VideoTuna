@@ -7,13 +7,17 @@ python -m pip install 'git+https://github.com/facebookresearch/detectron2.git'
 If you encounter errors during installing the [detectron2](https://github.com/facebookresearch/detectron2), you can check [here](https://detectron2.readthedocs.io/en/latest/tutorials/install.html) for detailed suggestions.
 
 ## Usage
-Firstly, a json file for mapping the video name to prompt is necessary. Its format is as follows:
+Firstly, if you already have video samples, please export a json file for mapping the video file name to prompt. The format is as follows:
 ```json
 {
     "sample1.mp4": "sample1's prompt",
     "sample2.mp4": "sample2's prompt",
     ...
 }
+```
+If you do not have video samples, please firstly sample videos for evaluation via:
+```
+bash configs/train/001_opensorav10/inference.sh
 ```
 
 **standard evaluation**
