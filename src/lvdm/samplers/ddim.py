@@ -149,7 +149,7 @@ class DDIMSampler(object):
                       precision=None,fs=None,guidance_rescale=0.0,
                       **kwargs):
         device = self.model.betas.device        
-        print('ddim device', device)
+        
         b = shape[0]
         if x_T is None:
             img = torch.randn(shape, device=device)

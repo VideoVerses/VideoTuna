@@ -188,7 +188,8 @@ def run_inference(args, gpu_num=1, rank=0, **kwargs):
             #     raise NotImplementedError
 
             ## inference
-            noise_shape = [args.bs, channels, frames, h, w]
+            bs = args.bs if args.bs == len(prompts) else len(prompts)
+            noise_shape = [bs, channels, frames, h, w]
             if args.mode == 't2v':
                 batch_samples = sample_batch_t2v(model, ddim_sampler, prompts, noise_shape, args.fps,
                                         args.n_samples_prompt, args.ddim_steps, args.ddim_eta,
