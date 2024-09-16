@@ -136,19 +136,24 @@ after these commands, the model checkpoints should be placed as [Checkpoint Stru
 
 ### 3.Inference state-of-the-art T2V/I2V models
 
-- Inference a set of target models in one command:
+- Inference a set of models **in one command**:
 
-    ```bash todo.sh```
+    <!-- ```bash todo.sh``` -->
+
+|Task|Commands|
+|:---------|:---------|
+|T2V|`bash todo.sh`|
+|I2V|`bash todo.sh`|
 
 
 
-- Inference a specific model:
+- Inference one specific model:
 
 Task|Models|Commands|
 |:---------|:---------|:---------|
 |T2V|cogvideo|`bash shscripts/inference_cogVideo_diffusers.sh`|
 |T2V|open-sora||
-|T2V|videocrafter-v2-320x512|`bash shscripts/inference_t2v_vc2.sh`
+|T2V|videocrafter-v2-320x512|`bash shscripts/inference_t2v_vc2.sh`|
 |I2V|dynamicrafter|`bash shscripts/inference_dc_i2v_576x1024.sh`|
 |I2V|videocrafter1|`bash shscripts/inference_vc1_i2v_320x512.sh`|
 |T2I|flux|`bash shscripts/inference_flux_schnell.sh`|
@@ -156,10 +161,9 @@ Task|Models|Commands|
 For detailed inference settings please check [docs/inference.md](docs/inference.md).
 
 ### 4. Finetune T2V models
-#### Lora finetuning for 
-specific domains 
+#### Lora finetuning for concepts/characters/styles
 
-#### Finetuning for enhanced langugage understanding 
+#### Finetuning for enhanced langugage understanding
 
 
 
