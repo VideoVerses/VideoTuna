@@ -1,4 +1,5 @@
-# RLHF-Readme
+# Alignment post-training
+We use `hpsv2` as the aesthetic reward model following [VADER](https://github.com/mihirp1998/VADER).
 
 # TODO
 
@@ -9,14 +10,13 @@
 - [ ] Visual results comparison
 - [ ] More reward models
 
-# Reward Based Alignment
+<!-- # Reward Based Alignment
 
-We follow VADER to use "hpsv2" as aesthetic reward model to finetune. 
+We follow VADER to use "hpsv2" as aesthetic reward model to finetune.  -->
 
-# VideoTuna Support 
-
-Environment configuration follow official VADER
-Base on videocrafter environment,please add the following dependencies. 
+# Start
+## Installation
+Please add the following dependencies to support alignment post-training based on the existing videotuna environment. 
 ```shell
 git clone https://github.com/tgxs002/HPSv2.git
 cd HPSv2/
@@ -28,23 +28,16 @@ pip install kornia==0.7.3
 pip install inflect==7.3.0
 ```
 
-## Train VADER with VideoTuna
+## Train
 
 ```shell
-bash configs/configs/train/004_rlhf_vc2/run.sh
+bash configs/train/004_rlhf_vc2/run.sh
 ```
 
-## Inference VADER with VideoTuna
+## Inference
 
 ```
-bash configs/configs/train/004_rlhf_vc2/inference.sh
+bash configs/train/004_rlhf_vc2/inference.sh
 ```
 
-## Implementation Illustration
-
-`lvdm/models/rlhf_utils` contains sources from [VADER](https://github.com/mihirp1998/VADER).
-
-customized training code is in `lvdm/models/ddpm3d.RewardLVDMTrainer`。 
-
-
-
+# Documentation
