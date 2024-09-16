@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import argparse
+import json
 import numpy as np
 from functools import partial
 from tqdm import trange, tqdm
@@ -24,6 +25,7 @@ from scripts.inference_utils import (
     sample_batch_t2v, 
     sample_batch_i2v,
     save_videos,
+    save_videos_vbench,
 )
 
 def get_parser():
@@ -35,6 +37,7 @@ def get_parser():
     parser.add_argument("--prompt_file", type=str, default=None, help="a text file containing many prompts for text-to-video")
     parser.add_argument("--prompt_dir", type=str, default=None, help="a input dir containing images and prompts for image-to-video/interpolation")
     parser.add_argument("--savedir", type=str, default=None, help="results saving path")
+    parser.add_argument("--standard_vbench", action='store_true', default=False, help="inference standard vbench prompts")
     #
     parser.add_argument("--seed", type=int, default=123, help="random seed")
     #
@@ -145,14 +148,16 @@ def run_inference(args, gpu_num=1, rank=0, **kwargs):
     
     # -----------------------------------------------------------------
     # inference
+    format_file = {}
     start = time.time()
     n_iters = len(prompt_list_rank) // args.bs + (1 if len(prompt_list_rank) % args.bs else 0)
-    with torch.no_grad(), torch.cuda.amp.autocast():
+    with torch.no_grad():
         for idx in trange(0, n_iters, desc="Sample Iters"):
             # print(f'[rank:{rank}] batch {idx}: prompt bs {args.bs}) x nsamples_per_prompt {args.n_samples_prompt} ...')
 
             prompts = prompt_list_rank[idx*args.bs:(idx+1)*args.bs]
             filenames = filename_list_rank[idx*args.bs:(idx+1)*args.bs]
+
             if args.mode == 'i2v':
                 images = image_list_rank[idx*args.bs:(idx+1)*args.bs]
                 if isinstance(images, list):
@@ -199,7 +204,17 @@ def run_inference(args, gpu_num=1, rank=0, **kwargs):
                                         )
             else:
                 raise ValueError
-            save_videos(batch_samples, args.savedir, filenames, fps=args.savefps)
+            
+            if args.standard_vbench:
+                save_videos_vbench(batch_samples, args.savedir, prompts, format_file, fps=args.savefps)
+                print('test')
+            else:
+                save_videos(batch_samples, args.savedir, filenames, fps=args.savefps)
+
+    if args.standard_vbench:
+        with open(os.path.join(args.savedir, 'info.json'), 'w') as f:
+            json.dump(format_file, f)
+            
     print(f"Saved in {args.savedir}. Time used: {(time.time() - start):.2f} seconds")
 
 
