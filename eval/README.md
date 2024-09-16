@@ -2,8 +2,9 @@
 If you have installed the environment for the model training and inference, you can simply install some extra packages for evaluation.
 ```shell
 pip install -r requirements_vbench.txt
+python -m pip install 'git+https://github.com/facebookresearch/detectron2.git'
 ```
-If you encounter some error during installing the [detectron2](https://github.com/facebookresearch/detectron2), you can check [here](https://detectron2.readthedocs.io/en/latest/tutorials/install.html).
+If you encounter errors during installing the [detectron2](https://github.com/facebookresearch/detectron2), you can check [here](https://detectron2.readthedocs.io/en/latest/tutorials/install.html) for detailed suggestions.
 
 ## Usage
 Firstly, a json file for mapping the video name to prompt is necessary. Its format is as follows:
