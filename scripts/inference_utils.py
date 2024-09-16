@@ -305,3 +305,23 @@ def save_videos(batch_tensors, savedir, filenames, fps=10):
         torchvision.io.write_video(savepath, grid, fps=fps, video_codec='h264', options={'crf': '10'})
 
 
+def save_videos_vbench(batch_tensors, savedir, prompts, format_file, fps=10):
+    # b,samples,c,t,h,w
+    b = batch_tensors.shape[0]
+    n_samples = batch_tensors.shape[1]
+
+    sub_savedir = os.path.join(savedir, 'videos')
+    os.makedirs(sub_savedir, exist_ok=True)
+    
+    for idx in range(b):
+        prompt = prompts[idx]
+        for n in range(n_samples):
+            filename = f"{prompt}-{n}.mp4"
+            format_file[filename] = prompt
+            video = batch_tensors[idx, n].detach().cpu()
+            video = torch.clamp(video.float(), -1., 1.)
+            video = video.permute(1, 0, 2, 3)  # t,c,h,w
+            video = (video + 1.0) / 2.0
+            video = (video * 255).to(torch.uint8).permute(0, 2, 3, 1)
+            savepath = os.path.join(sub_savedir, filename)
+            torchvision.io.write_video(savepath, video, fps=fps, video_codec='h264', options={'crf': '10'})
