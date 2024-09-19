@@ -175,7 +175,7 @@ after these commands, the model checkpoints should be placed as [Checkpoint Stru
 Task|Models|Commands|
 |:---------|:---------|:---------|
 |T2V|cogvideo|`bash shscripts/inference_cogVideo_diffusers.sh`|
-|T2V|open-sora||
+|T2V|open-sora|@yazhou|
 |T2V|videocrafter-v2-320x512|`bash shscripts/inference_vc2_t2v_320x512.sh`|
 |(not working) T2V|videocrafter-v1-576x1024|`bash shscripts/inference_vc1_t2v_576x1024.sh`|
 |I2V|dynamicrafter|`bash shscripts/inference_dc_i2v_576x1024.sh`|
