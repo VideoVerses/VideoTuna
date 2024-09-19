@@ -12,3 +12,14 @@ imageio==2.34.2 # For diffusers inference export video
 imageio-ffmpeg==0.5.1 # For diffusers inference export video
 openai==1.40.6 # For prompt refiner
 moviepy==1.0.3 # For export video
+omegaconf==2.3.0
+pytorch_lightning==2.3.3
+kornia==0.7.3
+beartype==0.18.5
+numpy==1.23.5
+fsspec==2024.5.0
+safetensors==0.4.3
+scipy==1.14.0
+decord==0.6.0
+wandb==0.17.5
+deepspeed==0.14.4
