@@ -12,10 +12,10 @@ Let's finetune video generation models!
 - [x] opensora-train, inference  
 - [x] flux inference, fine-tune  
 - [x] cogvideo inference, fine-tune  
-- [ ] merge diffusion parts
+- [x] merge diffusion parts
+- [x] add peft lora 
+- [x] add RL for alignment 
 - [ ] refactor vc, opensora, cogvideo and flux 
-- [ ] add peft lora 
-- [ ] add RL for alignment 
 - [ ] add documents 
 - [ ] add unit test support 
 - [ ] svd, open-sora-plan
