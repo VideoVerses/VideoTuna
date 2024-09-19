@@ -115,24 +115,38 @@ rm -rf SwissArmyTransformer
 
 ### 2.Prepare checkpoints
 ```
+mkdir checkpoints
+
 # ---- T2V ----
 # cogvideo
 
 # open-sora
 
 # videocrafter
-wget https://huggingface.co/VideoCrafter/VideoCrafter2/resolve/main/model.ckpt   # videocrafter2-t2v-512
-wget https://huggingface.co/VideoCrafter/Text2Video-1024/resolve/main/model.ckpt # videocrafter1-t2v-1024
+mkdir checkpoints/videocrafter/
+
+mkdir checkpoints/videocrafter/t2v_v2_512
+wget https://huggingface.co/VideoCrafter/VideoCrafter2/resolve/main/model.ckpt -P checkpoints/videocrafter/t2v_v2_512  # videocrafter2-t2v-512
+
+mkdir checkpoints/videocrafter/t2v_v1_1024
+wget https://huggingface.co/VideoCrafter/Text2Video-1024/resolve/main/model.ckpt -P checkpoints/videocrafter/t2v_v1_1024 # videocrafter1-t2v-1024
+
 
 # ---- I2V ----
 # dynamicrafter
-wget https://huggingface.co/Doubiiu/DynamiCrafter_1024/resolve/main/model.ckpt   # dynamicrafter-i2v-1024
+mkdir checkpoints/dynamicrafter/
+mkdir checkpoints/dynamicrafter/i2v_576x1024
+
+wget https://huggingface.co/Doubiiu/DynamiCrafter_1024/resolve/main/model.ckpt -P checkpoints/dynamicrafter/i2v_576x1024  # dynamicrafter-i2v-1024
 
 # videocrafter
-wget https://huggingface.co/VideoCrafter/Image2Video-512/resolve/main/model.ckpt # videocrafter1-i2v-512
+mkdir checkpoints/videocrafter/
+mkdir checkpoints/videocrafter/i2v_v1_512
+
+wget https://huggingface.co/VideoCrafter/Image2Video-512/resolve/main/model.ckpt -P checkpoints/videocrafter/i2v_v1_512 # videocrafter1-i2v-512
 
 ```
-after these commands, the model checkpoints should be placed as [Checkpoint Structure]().
+after these commands, the model checkpoints should be placed as [Checkpoint Structure](https://github.com/VideoVerses/VideoTuna/tree/main?tab=readme-ov-file#checkpoint-structure).
 
 ### 3.Inference state-of-the-art T2V/I2V models
 
