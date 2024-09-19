@@ -111,6 +111,9 @@ pip install -r requirements.txt
 git clone https://github.com/JingyeChen/SwissArmyTransformer
 pip install -e SwissArmyTransformer/
 rm -rf SwissArmyTransformer
+git clone https://github.com/tgxs002/HPSv2.git
+pip install -e HPSv2/
+rm -rf HPSv2
 ```
 
 ### 2.Prepare checkpoints
@@ -167,7 +170,8 @@ Task|Models|Commands|
 |:---------|:---------|:---------|
 |T2V|cogvideo|`bash shscripts/inference_cogVideo_diffusers.sh`|
 |T2V|open-sora||
-|T2V|videocrafter-v2-320x512|`bash shscripts/inference_t2v_vc2.sh`|
+|T2V|videocrafter-v2-320x512|`bash shscripts/inference_vc2_t2v_320x512.sh`|
+|T2V|videocrafter-v1-576x1024|`bash shscripts/inference_vc1_t2v_576x1024.sh`|
 |I2V|dynamicrafter|`bash shscripts/inference_dc_i2v_576x1024.sh`|
 |I2V|videocrafter1|`bash shscripts/inference_vc1_i2v_320x512.sh`|
 |T2I|flux|`bash shscripts/inference_flux_schnell.sh`|

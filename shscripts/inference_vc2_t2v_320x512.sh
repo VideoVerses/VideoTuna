@@ -1,4 +1,4 @@
-ckpt='checkpoints/videocrafter/base_512_v2/model.ckpt'
+ckpt='checkpoints/videocrafter/t2v_v2_512/model.ckpt'
 # config='configs/inference/inference_t2v_512_v2.0.yaml'
 config='configs/inference/vc2_t2v_512.yaml'
 prompt_file="inputs/t2v/prompts.txt"
