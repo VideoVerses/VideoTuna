@@ -5,7 +5,7 @@ model:
   scale_factor: 1.15258426
   disable_first_stage_autocast: true
 
-  target: src.sat.diffusion_video.SATVideoDiffusionEngine
+  target: src.cogvideo.diffusion_video.SATVideoDiffusionEngine
   params:
     model_config:
       log_keys:
@@ -81,7 +81,7 @@ model:
               ucg_rate: 0.1
               target: sgm.modules.encoders.modules.FrozenT5Embedder
               params:
-                model_dir: "/home/liurt/liurt_data/haoyu/VideoTuna/cogVideo/CogVideoX-2b-sat/t5-v1_1-xxl" # Absolute path to the t5-v1_1-xxl weights folder
+                model_dir: "/home/liurt/liurt_data/haoyu/VideoTuna/cogVideo/CogVideoX-2b-cogvideo/t5-v1_1-xxl" # Absolute path to the t5-v1_1-xxl weights folder
                 max_length: 226
 
       first_stage_config:
@@ -89,7 +89,7 @@ model:
         params:
           cp_size: 1
           # context_parallel_size: 1 
-          ckpt_path: "/home/liurt/liurt_data/haoyu/VideoTuna/cogVideo/CogVideoX-2b-sat/vae/3d-vae.pt" # Absolute path to the CogVideoX-2b-sat/vae/3d-vae.pt folder
+          ckpt_path: "/home/liurt/liurt_data/haoyu/VideoTuna/cogVideo/CogVideoX-2b-cogvideo/vae/3d-vae.pt" # Absolute path to the CogVideoX-2b-cogvideo/vae/3d-vae.pt folder
           ignore_keys: [ 'loss' ]
 
           loss_config:
@@ -164,10 +164,10 @@ model:
 args:
   latent_channels: 16
   mode: inference
-  ckpt_path: "/home/liurt/liurt_data/haoyu/VideoTuna/cogVideo/CogVideoX-2b-sat/transformer/1000/mp_rank_00_model_states.pt"
+  ckpt_path: "/home/liurt/liurt_data/haoyu/VideoTuna/cogVideo/CogVideoX-2b-cogvideo/transformer/1000/mp_rank_00_model_states.pt"
   batch_size: 1
   input_type: txt
-  input_file: /home/liurt/liurt_data/haoyu/VideoTuna/src/sat/configs/test.txt
+  input_file: /home/liurt/liurt_data/haoyu/VideoTuna/src/cogvideo/configs/test.txt
   sampling_num_frames: 13  # Must be 13, 11 or 9
   sampling_fps: 8
   force_inference: True

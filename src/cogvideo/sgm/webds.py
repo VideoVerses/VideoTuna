@@ -66,7 +66,7 @@ class ConfiguredResampledShards(ResampledShards):
 
             try:
                 group = get_data_parallel_group()
-                print_rank0("Using sat data parallel group.")
+                print_rank0("Using cogvideo data parallel group.")
             except AssertionError:
                 group = None
                 print_rank0("No data parallel group is specified!")

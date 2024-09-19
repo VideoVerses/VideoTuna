@@ -55,7 +55,7 @@ model:
             width_interpolation: 1.875
 
         lora_config:
-            target: sat.model.finetune.lora2.LoraMixin
+            target: cogvideo.model.finetune.lora2.LoraMixin
             params:
                 r: 128
 
@@ -88,7 +88,7 @@ model:
     target: vae_modules.autoencoder.VideoAutoencoderInferenceWrapper
     params:
       cp_size: 1
-      ckpt_path: "cogvideox-2b-sat/vae/3d-vae.pt"
+      ckpt_path: "cogvideox-2b-cogvideo/vae/3d-vae.pt"
       ignore_keys: [ 'loss' ]
 
       loss_config:

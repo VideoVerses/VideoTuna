@@ -21,8 +21,8 @@ pip install -r requirements.txt
 首先，前往 SAT 镜像下载依赖。
 
 ```shell
-mkdir CogVideoX-2b-sat
-cd CogVideoX-2b-sat
+mkdir CogVideoX-2b-cogvideo
+cd CogVideoX-2b-cogvideo
 wget https://cloud.tsinghua.edu.cn/f/fdba7608a49c463ba754/?dl=1
 mv 'index.html?dl=1' vae.zip
 unzip vae.zip
@@ -160,7 +160,7 @@ model:
     target: vae_modules.autoencoder.VideoAutoencoderInferenceWrapper
     params:
       cp_size: 1
-      ckpt_path: "{absolute_path/to/your/t5-v1_1-xxl}/CogVideoX-2b-sat/vae/3d-vae.pt" # CogVideoX-2b-sat/vae/3d-vae.pt文件夹的绝对路径
+      ckpt_path: "{absolute_path/to/your/t5-v1_1-xxl}/CogVideoX-2b-cogvideo/vae/3d-vae.pt" # CogVideoX-2b-cogvideo/vae/3d-vae.pt文件夹的绝对路径
       ignore_keys: [ 'loss' ]
 
       loss_config:
@@ -238,7 +238,7 @@ model:
 args:
   latent_channels: 16
   mode: inference
-  load: "{absolute_path/to/your}/transformer" # CogVideoX-2b-sat/transformer文件夹的绝对路径
+  load: "{absolute_path/to/your}/transformer" # CogVideoX-2b-cogvideo/transformer文件夹的绝对路径
   # load: "{your lora folder} such as zRzRzRzRzRzRzR/lora-disney-08-20-13-28" # This is for Full model without lora adapter
 
   batch_size: 1
@@ -344,7 +344,7 @@ model:
     - txt'
 
   lora_config: ##  解除注释
-    target: sat.model.finetune.lora2.LoraMixin
+    target: cogvideo.model.finetune.lora2.LoraMixin
     params:
       r: 256
 ```

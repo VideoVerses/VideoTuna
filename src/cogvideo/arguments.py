@@ -12,7 +12,7 @@ from sat.arguments import add_training_args, add_evaluation_args, add_data_args
 import torch.distributed
 import sys
 # This is a work around to import the modules from the src folder.
-sys.path.append('src/sat')
+sys.path.append('src/cogvideo')
 
 def add_model_config_args(parser):
     """Model arguments"""
@@ -56,7 +56,7 @@ def add_sampling_config_args(parser):
 def get_args(args_list=None, parser=None):
     """Parse all the args."""
     if parser is None:
-        parser = argparse.ArgumentParser(description="sat")
+        parser = argparse.ArgumentParser(description="cogvideo")
     else:
         assert isinstance(parser, argparse.ArgumentParser)
     parser = add_model_config_args(parser)

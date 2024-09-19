@@ -11,7 +11,7 @@ from torch import nn
 
 import sys
 # This is a work around to import the modules from the src folder.
-sys.path.append('src/sat')
+sys.path.append('src/cogvideo')
 from sgm.modules import UNCONDITIONAL_CONFIG
 from sgm.modules.autoencoding.temporal_ae import VideoDecoder
 from sgm.modules.diffusionmodules.wrappers import OPENAIUNETWRAPPER
@@ -95,9 +95,9 @@ class SATVideoDiffusionEngine(pl.LightningModule):
         self.scale_factor = scale_factor
         self.disable_first_stage_autocast = disable_first_stage_autocast
         self.no_cond_log = no_cond_log
-        # haoyu TODO: fix device
+        # haoyu TODO: fix device and log dir
         # self.device = args.device
-        self.logdir ="/home/liurt/liurt_data/haoyu/VideoTuna/log_image/"
+        self.logdir ="log_image"
     def disable_untrainable_params(self):
         total_trainable = 0
         for n, p in self.named_parameters():
@@ -323,7 +323,7 @@ class SATVideoDiffusionEngine(pl.LightningModule):
             samples = samples.permute(0, 2, 1, 3, 4).contiguous()
             log["samples"] = samples
         return log
-    # align sat.train_video.py forward_step() and ddpm3d.ddpm.training_step 
+    # align cogvideo.train_video.py forward_step() and ddpm3d.ddpm.training_step
     
     def training_step(self, batch, batch_idx):
         
@@ -344,7 +344,7 @@ class SATVideoDiffusionEngine(pl.LightningModule):
         #     self.log('lr_abs', lr, prog_bar=True, logger=True, on_step=True, on_epoch=False)
 
         return loss
-    # align sat.train_video.py forward_step_eval() and ddpm3d.ddpm.validation_step 
+    # align cogvideo.train_video.py forward_step_eval() and ddpm3d.ddpm.validation_step
     # TODO: implement ema_scope context manager
     @torch.no_grad()
     def validation_step(self, batch, batch_idx):
