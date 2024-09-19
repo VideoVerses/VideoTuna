@@ -44,10 +44,7 @@ def get_nondefault_trainer_args(args):
         parser = Trainer.add_argparse_args(parser)
     except:
         parser = add_trainer_args_to_parser(Trainer, parser)
-    try:
-        parser = Trainer.add_argparse_args(parser)
-    except:
-        parser = add_trainer_args_to_parser(Trainer, parser)
+
     default_trainer_args = parser.parse_args([])
     return sorted(k for k in vars(default_trainer_args) if getattr(args, k) != getattr(default_trainer_args, k))
 

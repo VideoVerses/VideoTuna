@@ -3,7 +3,7 @@ export TOKENIZERS_PARALLELISM=false
 
 # dependencies
 SDCKPT="checkpoints/stablediffusion/v2-1_512-ema/model.ckpt"
-VC2CKPT="checkpoints/videocrafter/base_512_v2/model.ckpt"
+VC2CKPT="checkpoints/videocrafter/t2v_v2_512/model.ckpt"
 
 # exp settings
 EXPNAME="train_t2v_512"                            # experiment name 
