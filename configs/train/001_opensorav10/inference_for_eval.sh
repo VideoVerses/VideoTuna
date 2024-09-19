@@ -14,7 +14,7 @@ python3 scripts/inference.py \
 --savedir $res_dir \
 --n_samples 3 \
 --bs 2 --height 256 --width 256 \
---unconditional_guidance_scale 7 \
+--unconditional_guidance_scale 7.0 \
 --ddim_steps 50 \
 --ddim_eta 1.0 \
 --prompt_file $prompt_file \
