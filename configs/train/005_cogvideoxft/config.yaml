@@ -61,7 +61,7 @@ model:
                 width_interpolation: 1.875
 
             lora_config:
-                target: cogvideo.model.finetune.lora2.LoraMixin
+                target: sat.model.finetune.lora2.LoraMixin
                 params:
                     r: 16
 
@@ -87,7 +87,7 @@ model:
               ucg_rate: 0.1
               target: sgm.modules.encoders.modules.FrozenT5Embedder
               params:
-                model_dir: "checkpoints/cogvideo/CogVideoX-2b-cogvideo/t5-v1_1-xxl" # Absolute path to the t5-v1_1-xxl weights folder
+                model_dir: "checkpoints/cogvideo/CogVideoX-2b-sat/t5-v1_1-xxl" #  path to the t5-v1_1-xxl weights folder
                 max_length: 226
 
       first_stage_config:
@@ -95,7 +95,7 @@ model:
         params:
           cp_size: 1
           # context_parallel_size: 1 
-          ckpt_path: "checkpoints/cogvideo/CogVideoX-2b-cogvideo/vae/3d-vae.pt" # Absolute path to the CogVideoX-2b-cogvideo/vae/3d-vae.pt folder
+          ckpt_path: "checkpoints/cogvideo/CogVideoX-2b-sat/vae/3d-vae.pt" # path to the CogVideoX-2b-sat/vae/3d-vae.pt folder
           ignore_keys: [ 'loss' ]
 
           loss_config:

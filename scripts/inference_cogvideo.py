@@ -17,7 +17,7 @@ sys.path.insert(0, os.getcwd())
 from src.lvdm.samplers.ddim import DDIMSampler
 from utils.common_utils import instantiate_from_config
 from src.lvdm.samplers.ddim_multiplecond import DDIMSampler as DDIMSampler_multicond
-from src.sat.arguments import get_args
+from src.cogvideo.arguments import get_args
 from scripts.inference_utils import (
     load_model_checkpoint, 
     load_prompts, 
