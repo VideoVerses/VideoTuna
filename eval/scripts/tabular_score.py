@@ -123,11 +123,11 @@ def main(args):
         formated_score = format(scaled_results[key] * 100, ".2f") + "%"
         formated_scaled_results["items"].append({key: formated_score})
 
-
-    output_file_path = os.path.join(output_dir, "all_results.json")
-    with open(output_file_path, "w") as outfile:
-        json.dump(full_results, outfile, indent=4, sort_keys=True)
-    print(f"results saved to: {output_file_path}")
+    # all_results.json is the same with final_results.json
+    # output_file_path = os.path.join(output_dir, "all_results.json")
+    # with open(output_file_path, "w") as outfile:
+    #     json.dump(full_results, outfile, indent=4, sort_keys=True)
+    # print(f"results saved to: {output_file_path}")
 
     scaled_file_path = os.path.join(output_dir, "scaled_results.json")
     with open(scaled_file_path, "w") as outfile:

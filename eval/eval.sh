@@ -1,24 +1,19 @@
-export video_path="/project/llmsvgen/share/vbench/opensoraV12-vbench/all_dimension"
-export json_path='/project/llmsvgen/share/vbench/opensoraV12-vbench/info.json'
-export output_path="/project/llmsvgen/share/vbench/quan_result/opensoraV12-vbench-256/"
+video_path="/project/llmsvgen/share/vbench/opensoraV12-vbench/all_dimension"
+json_path='/project/llmsvgen/share/vbench/opensoraV12-vbench/info.json'
+output_path="/home/yhebm/code-share/VideoTuna/results/eval/"
 
 # - standard evaluation
-python scripts/evaluation.py  \
---output_path $output_path \
---videos_path $video_path \
---map_json_path $json_path \
+# will save final_results.json
+mkdir -p $output_path
+python eval/scripts/evaluation.py  \
+    --output_path $output_path \
+    --videos_path $video_path \
+    --map_json_path $json_path \
 
 # calculate the final score after standard evaluation
-export result_path="/project/llmsvgen/share/vbench/quan_result/opensoraV12-vbench-256/final_results.json"
-python scripts/tabular_score.py \
---result_path $result_path \
-
-
-# - customed evaluation
-python scripts/evaluation.py  \
---output_path $output_path \
---videos_path $path \
---dimension "aesthetic_quality" "dynamic_degree" \
---mode custom_input
+# will save scaled_results.json
+result_path="$output_path/final_results.json"
+python eval/scripts/tabular_score.py \
+    --result_path $result_path \
 
 echo "Evaluation finished"
