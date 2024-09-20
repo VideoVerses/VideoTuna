@@ -18,7 +18,7 @@ from src.base.ddim import DDIMSampler
 from src.utils.common_utils import instantiate_from_config
 from src.base.ddim_multiplecond import DDIMSampler as DDIMSampler_multicond
 from src.cogvideo.arguments import get_args
-from scripts.inference_utils import (
+from src.utils.inference_utils import (
     load_model_checkpoint, 
     load_prompts, 
     load_inputs_i2v, 
