@@ -4,7 +4,7 @@ import logging
 mainlogger = logging.getLogger('mainlogger')
 
 import torch
-from utils.common_utils import instantiate_from_config
+from src.utils.common_utils import instantiate_from_config
 from torch import nn 
 from collections import OrderedDict
 # from lvdm.personalization.lora import net_load_lora

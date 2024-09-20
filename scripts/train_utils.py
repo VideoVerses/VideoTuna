@@ -8,7 +8,7 @@ mainlogger = logging.getLogger('mainlogger')
 
 import torch
 import pytorch_lightning as pl
-from utils.load_weigths import load_from_pretrainedSD_checkpoint
+from src.utils.load_weigths import load_from_pretrainedSD_checkpoint
 from collections import OrderedDict
 
 def init_workspace(name, logdir, model_config, lightning_config, rank=0):

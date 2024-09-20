@@ -526,7 +526,7 @@ class TemporalRandomCrop(object):
         end_index = min(begin_index + self.sample_length, total_frames)
         assert (
             end_index - begin_index >= self.num_frames
-        ), f"The video has not enough frames. Currnet frames: {len(vframes)}"
+        ), f"The video has not enough frames. Current frames: {len(vframes)}"
         frame_indice = np.linspace(
             begin_index, end_index - 1, self.num_frames, dtype=int
         )
@@ -584,7 +584,7 @@ class CheckVideo:
         w = vframes.shape[3]
         if length <= self.frame_limit:
             raise ValueError(
-                f"The video has not enough frames. Currnet frames: {length}"
+                f"The video has not enough frames. Current frames: {length}"
             )
         if h < self.resolution[0] or w < self.resolution[1]:
             raise ValueError(f"Video resolution is too low: (h, w) = {(h, w)}")

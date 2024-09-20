@@ -6,10 +6,8 @@ from typing import List, Union, Dict, Tuple
 import torch
 from torchvision.transforms import Compose
 from torchvision.datasets.folder import pil_loader
-import sys
-sys.path.append('/home/zraoac/VideoTuna')
-from data.transforms import get_transforms_image, get_transforms_video, CheckVideo
-from data.datasets_utils import (
+from src.data.transforms import get_transforms_image, get_transforms_video, CheckVideo
+from src.data.datasets_utils import (
     read_video,
     read_video_meta,
     read_image_meta,

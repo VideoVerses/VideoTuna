@@ -9,8 +9,8 @@ import argparse, os, sys, glob
 os.chdir(sys.path[0])
 sys.path.append("..")
 
-from data.base import Txt2ImgIterableBaseDataset
-from utils.common_utils import instantiate_from_config
+from src.data.base import Txt2ImgIterableBaseDataset
+from src.utils.common_utils import instantiate_from_config
 
 
 def worker_init_fn(_):

@@ -1,7 +1,7 @@
 model:
   base_learning_rate: 1.0e-05
   scale_lr: False
-  target: src.lvdm.models.ddpm3d.LatentVisualDiffusion
+  target: src.base.ddpm3d.LatentVisualDiffusion
   params:
     rescale_betas_zero_snr: True
     parameterization: "v"
@@ -61,7 +61,7 @@ model:
         fs_condition: true
 
     first_stage_config:
-      target: src.lvdm.models.autoencoder.AutoencoderKL
+      target: src.lvdm.modules.vae.autoencoder.AutoencoderKL
       params:
         embed_dim: 4
         monitor: val/rec_loss
@@ -108,20 +108,20 @@ model:
         video_length: 16
 
 data:
-  target: data.lightning_data.DataModuleFromConfig
+  target: src.data.lightning_data.DataModuleFromConfig
   params:
     batch_size: 1
     num_workers: 16
     wrap: false
     train:
-      target: data.macvid.MaCVid
+      target: src.data.macvid.MaCVid
       params:
         data_root: configs/data/macvid/train_data.yaml
         resolution: [576, 1024]
         video_length: 16
         subset_split: all
     validation:
-      target: data.macvid.MaCVid
+      target: src.data.macvid.MaCVid
       params:
         data_root: configs/data/macvid/val_data.yaml
         resolution: [576, 1024]
@@ -141,7 +141,7 @@ lightning:
     gradient_clip_val: 0.5
   callbacks:
     image_logger:
-      target: utils.callbacks.ImageLogger
+      target: src.utils.callbacks.ImageLogger
       params:
         batch_frequency: 2
         max_images: 6

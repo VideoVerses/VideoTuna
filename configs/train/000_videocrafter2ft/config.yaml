@@ -85,20 +85,20 @@ model:
         layer: penultimate
 
 data:
-  target: data.lightning_data.DataModuleFromConfig
+  target: src.data.lightning_data.DataModuleFromConfig
   params:
     batch_size: 3
     num_workers: 16
     wrap: false
     train:
-      target: data.macvid.MaCVid
+      target: src.data.macvid.MaCVid
       params:
         data_root: configs/data/macvid/train_data.yaml
         resolution: [320, 512]
         video_length: 16
         subset_split: all
     validation:
-      target: data.macvid.MaCVid
+      target: src.data.macvid.MaCVid
       params:
         data_root: configs/data/macvid/val_data.yaml
         resolution: [320, 512]
@@ -116,7 +116,7 @@ lightning:
     precision: 16 # training precision
   callbacks:
     image_logger:
-      target: utils.callbacks.ImageLogger
+      target: src.utils.callbacks.ImageLogger
       params:
         batch_frequency: 2
         max_images: 6

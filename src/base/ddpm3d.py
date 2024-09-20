@@ -31,7 +31,7 @@ from src.base.ema import LitEma
 from src.base.ddim import DDIMSampler
 from src.lvdm.modules.encoders.ip_resampler import ImageProjModel, Resampler
 from src.base.utils_diffusion import make_beta_schedule, rescale_zero_terminal_snr
-from utils.common_utils import instantiate_from_config
+from src.utils.common_utils import instantiate_from_config
 import peft 
 # import rlhf utils 
 from src.lvdm.models.rlhf_utils.batch_ddim import batch_ddim_sampling

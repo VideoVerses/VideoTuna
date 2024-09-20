@@ -12,7 +12,6 @@ from tqdm import tqdm
 
 mainlogger = logging.getLogger('mainlogger')
 
-import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 from pytorch_lightning.utilities import rank_zero_only
@@ -22,11 +21,9 @@ from torchvision.utils import make_grid
 from src.lvdm.modules.utils import disabled_train, default, exists, extract_into_tensor, noise_like
 from src.base.ddpm3d import DDPM
 from src.base.distributions import DiagonalGaussianDistribution, normal_kl
-from src.base.ema import LitEma
 from src.base.ddim import DDIMSampler
-from src.lvdm.modules.encoders.ip_resampler import ImageProjModel, Resampler
 from src.base.utils_diffusion import make_beta_schedule, rescale_zero_terminal_snr, discretized_gaussian_log_likelihood
-from utils.common_utils import instantiate_from_config
+from src.utils.common_utils import instantiate_from_config
 
 
 def mean_flat(tensor: torch.Tensor, mask=None) -> torch.Tensor:
@@ -730,6 +727,10 @@ class LatentDiffusion(SpacedDiffusion):
                         given_betas=given_betas,
                         conditioning_key=conditioning_key,
                         *args, **kwargs)
+
+        # add support for auto gradient checkpointing 
+        from src.opensora.acceleration.checkpoint import set_grad_checkpoint
+        set_grad_checkpoint(self.model)
 
         self.cond_stage_trainable = cond_stage_trainable
         self.cond_stage_key = cond_stage_key

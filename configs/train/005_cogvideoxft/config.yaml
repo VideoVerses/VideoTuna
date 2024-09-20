@@ -193,7 +193,7 @@ lightning:
     precision: 16 # training precision
   callbacks:
     image_logger:
-      target: utils.callbacks.ImageLogger
+      target: src.utils.callbacks.ImageLogger
       params:
         batch_frequency: -1 # set to -1 to disable
         max_images: 6

@@ -2,7 +2,7 @@ model:
   base_learning_rate: 6.0e-06 # 1.5e-04
   scale_lr: False
   pretrained_checkpoint: /home/liurt/liurt_data/haoyu/DPO-videocrafter/init_ckpt/vc2/model.ckpt
-  target: src.lvdm.models.ddpm3d.RewardLVDMTrainer
+  target: src.base.ddpm3d.RewardLVDMTrainer
   params:
     lora_args:
       # lora_ckpt: "/path/to/lora.ckpt" # first time training, no need; this is for resume training. 
@@ -62,7 +62,7 @@ model:
         addition_attention: true
         fps_cond: true # adapt to videocrafter-v2
     first_stage_config:
-      target: src.lvdm.models.autoencoder.AutoencoderKL
+      target: src.lvdm.modules.vae.autoencoder.AutoencoderKL
       params:
         embed_dim: 4
         monitor: val/rec_loss
@@ -90,13 +90,13 @@ model:
         layer: penultimate
         
 data:
-  target: data.lightning_data.DataModuleFromConfig
+  target: src.data.lightning_data.DataModuleFromConfig
   params:
     batch_size: 1
     num_workers: 16
     wrap: false
     train:
-      target: data.rlhf.RLHF_PROMPT
+      target: src.data.rlhf.RLHF_PROMPT
       params:
         data_root: inputs/t2v/rlhf_dataset/chatgpt_custom_instruments.txt
         resolution:  [320, 512]
@@ -114,7 +114,7 @@ lightning:
   # strategy: deepspeed
   callbacks:
     image_logger:
-      target: utils.callbacks.ImageLogger
+      target: src.utils.callbacks.ImageLogger
       params:
         to_local: True
         save_dir: log_image
