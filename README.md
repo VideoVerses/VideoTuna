@@ -19,9 +19,12 @@ Let's finetune video generation models!
 - [ ] add documents 
 - [ ] add unit test support 
 - [ ] svd, open-sora-plan
+- [ ] Finish codebase V1.0.0
+- [ ] Release demo gallery
+- [ ] Release technical report
 
 ## 🔆 Updates
-
+- [2024-09-XX] We make the VideoTuna V1.0.0 public!
 
 
 ## 🔆 Introduction
@@ -37,28 +40,17 @@ Let's finetune video generation models!
 
 ### Code Structure
 ```
-VideoTuna
-├── configs
-│ ├── model_name_inf.yaml
-│ └── model_name_train.yaml
-├── checkpoints
-├── docs
-├── inputs
-├── results
-├── src
-│ ├── dataset
-│ ├── model-1
-│ ├── model-2
-│ └── model-N
-├── scripts
-│ ├── inference_xxx.py
-│ └── train_xxx.py
-├── shscripts
-│ ├── inference_xxx.sh
-│ └── train_xxx.sh
-├── utils
-└── test
-
+VideoTuna/
+    ├── assets
+    ├── checkpoints  # put model checkpoints here
+    ├── configs      # model and experimental configs
+    ├── eval         # evaluation scripts
+    ├── inputs       # input examples for testing 
+    ├── scripts      # train and inference python scripts
+    ├── shsripts     # train and inference shell scripts
+    ├── src          # model-related source code
+    ├── tests        # testing scripts
+    ├── tools        # some tool scripts
 ```
 
 ### Checkpoint Structure
@@ -66,30 +58,37 @@ VideoTuna
 VideoTuna/
     └── checkpoints/
         ├── dynamicrafter/
-        │   └── i2v_576x1024
-        ├── stablediffusion/
-        │   └── v2-1_512-ema
+        │   └── i2v_576x1024/
+        │       └── model.ckpt
         ├── videocrafter/
-        │   ├── t2v_v2_512
-        │   ├── t2v_v1_1024
-        │   └── i2v_v1_512
-        ├── open-sora/
-        │   └── # TODO
-        └── cogvideo/
-            └── # TODO
+        │   ├── t2v_v2_512/
+        │   │   └── model.ckpt
+        │   ├── t2v_v1_1024/
+        │   │   └── model.ckpt
+        │   └── i2v_v1_512/
+        │       └── model.ckpt
+        └── open-sora/
+            ├── t2v_v10/
+            │   ├── OpenSora-v1-16x256x256.pth
+            │   └── OpenSora-v1-HQ-16x512x512.pth
+            ├── t2v_v11/
+            │   ├── OpenSora-STDiT-v2-stage2/
+            │   └── OpenSora-STDiT-v2-stage3/
+            └── t2v_v12/
+                ├── OpenSora-STDiT-v3/
+                └── OpenSora-VAE-v1.2/
 ```
 
 ### Models
 
 |T2V-Models|HxWxL|Checkpoints|
 |:---------|:---------|:--------|
-|CogVideo|TODO|[TODO](https://huggingface.co/VideoCrafter/VideoCrafter2/blob/main/model.ckpt)
-|Open-Sora 1.2|TODO|[TODO](https://huggingface.co/VideoCrafter/VideoCrafter2/blob/main/model.ckpt)
-|Open-Sora 1.1|TODO|[TODO](https://huggingface.co/VideoCrafter/VideoCrafter2/blob/main/model.ckpt)
-|Open-Sora 1.0|TODO|[TODO](https://huggingface.co/VideoCrafter/VideoCrafter2/blob/main/model.ckpt)
-|Open-Sora Plan 1.2.0|TODO|[TODO](https://huggingface.co/VideoCrafter/VideoCrafter2/blob/main/model.ckpt)
-|Open-Sora Plan 1.1.0|TODO|[TODO](https://huggingface.co/VideoCrafter/VideoCrafter2/blob/main/model.ckpt)
-|Open-Sora Plan 1.0.0|TODO|[TODO](https://huggingface.co/VideoCrafter/VideoCrafter2/blob/main/model.ckpt)
+|Open-Sora 1.2|240p to 720p, 2~16s|[STDIT](https://huggingface.co/hpcai-tech/OpenSora-STDiT-v3), [VAE](https://huggingface.co/hpcai-tech/OpenSora-VAE-v1.2)
+|Open-Sora 1.1|144p & 240p & 480p, 0~15s|[Stage 2](https://huggingface.co/hpcai-tech/OpenSora-STDiT-v2-stage2)
+|Open-Sora 1.1|144p to 720p, 0~15s|[Stage 3](https://huggingface.co/hpcai-tech/OpenSora-STDiT-v2-stage3)
+|Open-Sora 1.0|512×512x16|[Hugging Face](https://huggingface.co/hpcai-tech/Open-Sora/blob/main/OpenSora-v1-HQ-16x512x512.pth)
+|Open-Sora 1.0|256×256x16|[Hugging Face](https://huggingface.co/hpcai-tech/Open-Sora/blob/main/OpenSora-v1-HQ-16x256x256.pth)
+|Open-Sora 1.0|256×256x16|[Hugging Face](https://huggingface.co/hpcai-tech/Open-Sora/blob/main/OpenSora-v1-16x256x256.pth)
 |VideoCrafter2|320x512x16|[Hugging Face](https://huggingface.co/VideoCrafter/VideoCrafter2/blob/main/model.ckpt)
 |VideoCrafter1|576x1024x16|[Hugging Face](https://huggingface.co/VideoCrafter/Text2Video-1024/blob/main/model.ckpt)
 |VideoCrafter1|320x512x16|[Hugging Face](https://huggingface.co/VideoCrafter/Text2Video-512/blob/main/model.ckpt)
@@ -120,12 +119,30 @@ rm -rf HPSv2
 ```
 mkdir checkpoints
 
-# ---- T2V ----
-# cogvideo
+# ---------------------------- T2V ----------------------------
 
-# open-sora
+# ---- CogVideo ----
 
-# videocrafter
+
+# ---- Open-Sora ----
+mkdir -p checkpoints/open-sora/t2v_v10
+wget https://huggingface.co/hpcai-tech/Open-Sora/resolve/main/OpenSora-v1-HQ-16x512x512.pth -P checkpoints/open-sora/t2v_v10/
+wget https://huggingface.co/hpcai-tech/Open-Sora/resolve/main/OpenSora-v1-HQ-16x256x256.pth -P checkpoints/open-sora/t2v_v10/
+wget https://huggingface.co/hpcai-tech/Open-Sora/resolve/main/OpenSora-v1-16x256x256.pth -P checkpoints/open-sora/t2v_v10/
+#
+mkdir -p checkpoints/open-sora/t2v_v11
+cd checkpoints/open-sora/t2v_v11
+git clone https://huggingface.co/hpcai-tech/OpenSora-STDiT-v2-stage2
+git clone https://huggingface.co/hpcai-tech/OpenSora-STDiT-v2-stage3
+cd ../../..
+#
+mkdir -p checkpoints/open-sora/t2v_v12/OpenSora-STDiT-v3
+mkdir -p checkpoints/open-sora/t2v_v12/OpenSora-VAE-v1.2
+wget https://huggingface.co/hpcai-tech/OpenSora-VAE-v1.2/resolve/main/model.safetensors -P checkpoints/open-sora/t2v_v12/OpenSora-VAE-v1.2
+wget https://huggingface.co/hpcai-tech/OpenSora-STDiT-v3/resolve/main/model.safetensors -P checkpoints/open-sora/t2v_v12/OpenSora-STDiT-v3
+
+
+# ---- Videocrafter ----
 mkdir checkpoints/videocrafter/
 
 mkdir checkpoints/videocrafter/t2v_v2_512
@@ -135,20 +152,20 @@ mkdir checkpoints/videocrafter/t2v_v1_1024
 wget https://huggingface.co/VideoCrafter/Text2Video-1024/resolve/main/model.ckpt -P checkpoints/videocrafter/t2v_v1_1024 # videocrafter1-t2v-1024
 
 
-# ---- I2V ----
-# dynamicrafter
+# ---------------------------- I2V ----------------------------
+# ---- Dynamicrafter ----
 mkdir checkpoints/dynamicrafter/
 mkdir checkpoints/dynamicrafter/i2v_576x1024
 
 wget https://huggingface.co/Doubiiu/DynamiCrafter_1024/resolve/main/model.ckpt -P checkpoints/dynamicrafter/i2v_576x1024  # dynamicrafter-i2v-1024
 
-# videocrafter
+# ---- Videocrafter ----
 mkdir checkpoints/videocrafter/
 mkdir checkpoints/videocrafter/i2v_v1_512
 
 wget https://huggingface.co/VideoCrafter/Image2Video-512/resolve/main/model.ckpt -P checkpoints/videocrafter/i2v_v1_512 # videocrafter1-i2v-512
 
-# ---- Train VC2 ----
+# ---- Stable Diffusion checkpoint for VC2 Training ----
 mkdir checkpoints/stablediffusion/
 mkdir checkpoints/stablediffusion/v2-1_512-ema
 
@@ -185,11 +202,11 @@ Task|Models|Commands|
 For detailed inference settings please check [docs/inference.md](docs/inference.md).
 
 ### 4. Finetune T2V models
-#### Lora finetuning for concepts/characters/styles
+#### Lora finetuning
 
-#### Finetuning for enhanced langugage understanding
-
-
+We support lora finetuning to make the model to learn new concepts/characters/styles. 
+Please check [configs/train/003_vc2_lora_ft/README.md](configs/train/003_vc2_lora_ft/README.md) for details.
+<!-- 
 
 (1) Prepare data
 
@@ -197,7 +214,10 @@ For detailed inference settings please check [docs/inference.md](docs/inference.
 (2) Finetune  
 ```
 bash configs/train/000_videocrafter2ft/run.sh
-```
+``` -->
+
+#### Finetuning for enhanced langugage understanding
+
 
 ### 5. Evaluation
 We support VBench evaluation to evaluate the T2V generation performance. 
