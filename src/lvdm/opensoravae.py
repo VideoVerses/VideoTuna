@@ -7,7 +7,7 @@ from typing import Optional, Union
 
 import torch.nn.functional as F
 import pytorch_lightning as pl
-from src.lvdm.distributions import DiagonalGaussianDistribution
+from src.base.distributions import DiagonalGaussianDistribution
 
 
 class VideoAutoencoderKL(pl.LightningModule):

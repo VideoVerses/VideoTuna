@@ -1,4 +1,4 @@
-ckpt=checkpoints/dynamicrafter/i2v_576x1024/model.ckpt
+ckpt=checkpoints/dynamicrafter/t2v_v1_1024/model.ckpt
 config=configs/inference/dc_i2v_1024.yaml
 prompt_file=inputs/t2v/prompts.txt
 res_dir="results/t2v/videocrafter1-576x1024"

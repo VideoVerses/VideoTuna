@@ -2,7 +2,7 @@
 import numpy as np
 from tqdm import tqdm
 import torch
-from lvdm.models.utils_diffusion import make_ddim_sampling_parameters, make_ddim_timesteps
+from src.base.utils_diffusion import make_ddim_sampling_parameters, make_ddim_timesteps
 from lvdm.modules.utils import noise_like
 import random
 # import ipdb

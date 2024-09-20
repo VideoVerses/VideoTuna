@@ -26,11 +26,11 @@ from torch.optim.lr_scheduler import CosineAnnealingLR, LambdaLR
 from torchvision.utils import make_grid
 
 from src.lvdm.modules.utils import disabled_train, default, exists, extract_into_tensor, noise_like
-from src.lvdm.distributions import DiagonalGaussianDistribution, normal_kl
-from src.lvdm.ema import LitEma
-from src.lvdm.samplers.ddim import DDIMSampler
+from src.base.distributions import DiagonalGaussianDistribution, normal_kl
+from src.base.ema import LitEma
+from src.base.ddim import DDIMSampler
 from src.lvdm.modules.encoders.ip_resampler import ImageProjModel, Resampler
-from src.lvdm.models.utils_diffusion import make_beta_schedule, rescale_zero_terminal_snr
+from src.base.utils_diffusion import make_beta_schedule, rescale_zero_terminal_snr
 from utils.common_utils import instantiate_from_config
 import peft 
 # import rlhf utils 

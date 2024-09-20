@@ -1,7 +1,7 @@
 import numpy as np
 from tqdm import tqdm
 import torch
-from src.lvdm.models.utils_diffusion import make_ddim_sampling_parameters, make_ddim_timesteps, rescale_noise_cfg
+from src.base.utils_diffusion import make_ddim_sampling_parameters, make_ddim_timesteps, rescale_noise_cfg
 from src.lvdm.modules.utils import noise_like, extract_into_tensor
 import copy
 

@@ -7,7 +7,7 @@ import torch.nn.functional as F
 import pytorch_lightning as pl
 
 from src.lvdm.modules.ae_modules import Encoder, Decoder
-from src.lvdm.distributions import DiagonalGaussianDistribution
+from src.base.distributions import DiagonalGaussianDistribution
 from utils.common_utils import instantiate_from_config
 
 
