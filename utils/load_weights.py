@@ -6,6 +6,7 @@ mainlogger = logging.getLogger('mainlogger')
 import torch
 from utils.common_utils import instantiate_from_config
 from torch import nn 
+from safetensors import safe_open
 from collections import OrderedDict
 # from lvdm.personalization.lora import net_load_lora
 
@@ -211,8 +212,16 @@ def load_autoencoder(model, config_path=None, ckpt_path=None, device=None):
     return model
 
 # ----------------------------------------------------------------
+def load_safetensors(path):    
+    assert (path.endswith(".safetensors"))
+    state_dict = {}
+    with safe_open(path, framework="pt", device="cpu") as f:
+        for key in f.keys():
+            state_dict[key] = f.get_tensor(key)
+    return state_dict
+
+# ----------------------------------------------------------------
 def lora_lora_safetensors(path):    
-    from safetensors import safe_open
     assert (path.endswith(".safetensors"))
     state_dict = {}
     with safe_open(path, framework="pt", device="cpu") as f:
@@ -220,6 +229,8 @@ def lora_lora_safetensors(path):
             state_dict[key] = f.get_tensor(key)
             
     is_lora = all("lora" in k for k in state_dict.keys())
+    print(f"is_lora = {is_lora}")
+
     return state_dict
 
 def convert_lora(model, state_dict, LORA_PREFIX_UNET="lora_unet", LORA_PREFIX_TEXT_ENCODER="lora_te", alpha=0.6):
