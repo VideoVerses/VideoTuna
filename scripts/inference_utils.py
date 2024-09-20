@@ -12,6 +12,7 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 
+from utils.load_weights import load_safetensors
 
 def get_target_filelist(data_dir, ext='*'):
     """
@@ -34,7 +35,12 @@ def load_model_checkpoint(model, ckpt):
                 state_dict = state_dict["state_dict"]
             model.load_state_dict(state_dict, strict=False)
         return model
-    load_checkpoint(model, ckpt, full_strict=True)
+    if ckpt.endswith(".safetensors"):
+        state_dict = load_safetensors(ckpt)
+        model.load_state_dict(state_dict, strict=False)
+        import pdb;pdb.set_trace()
+    else:
+        load_checkpoint(model, ckpt, full_strict=True)
     print('[INFO] model checkpoint loaded.')
     return model
 
