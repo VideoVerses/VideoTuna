@@ -16,3 +16,5 @@ VideoTuna/
 ```
 
 # Instructions
+```
+python scenecut.py --vid_dir <video path> --out_dir <output path> --num_process <number of process>
