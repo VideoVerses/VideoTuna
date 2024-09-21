@@ -8,7 +8,7 @@ mainlogger = logging.getLogger('mainlogger')
 
 import torch
 import pytorch_lightning as pl
-from utils.load_weigths import load_from_pretrainedSD_checkpoint
+from utils.load_weights import load_from_pretrainedSD_checkpoint
 from collections import OrderedDict
 
 def init_workspace(name, logdir, model_config, lightning_config, rank=0):
@@ -133,8 +133,8 @@ def get_trainer_logger(lightning_config, logdir, on_debug):
 
 def get_trainer_strategy(lightning_config):
     default_strategy_dict = {
-        "target": "pytorch_lightning.strategies.DDPShardedStrategy"
-        # "target": "pytorch_lightning.strategies.DDPStrategy"
+        # "target": "pytorch_lightning.strategies.DDPShardedStrategy"
+        "target": "pytorch_lightning.strategies.DDPStrategy"
     }
     if "strategy" in lightning_config:
         strategy_cfg = lightning_config.strategy

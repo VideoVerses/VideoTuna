@@ -12,6 +12,7 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 
+from utils.load_weights import load_safetensors
 
 def get_target_filelist(data_dir, ext='*'):
     """
@@ -32,9 +33,14 @@ def load_model_checkpoint(model, ckpt):
         except:
             if "state_dict" in list(state_dict.keys()):
                 state_dict = state_dict["state_dict"]
-            model.load_state_dict(state_dict, strict=full_strict)
+            model.load_state_dict(state_dict, strict=False)
         return model
-    load_checkpoint(model, ckpt, full_strict=True)
+    if ckpt.endswith(".safetensors"):
+        state_dict = load_safetensors(ckpt)
+        model.load_state_dict(state_dict, strict=False)
+        import pdb;pdb.set_trace()
+    else:
+        load_checkpoint(model, ckpt, full_strict=True)
     print('[INFO] model checkpoint loaded.')
     return model
 
@@ -305,3 +311,23 @@ def save_videos(batch_tensors, savedir, filenames, fps=10):
         torchvision.io.write_video(savepath, grid, fps=fps, video_codec='h264', options={'crf': '10'})
 
 
+def save_videos_vbench(batch_tensors, savedir, prompts, format_file, fps=10):
+    # b,samples,c,t,h,w
+    b = batch_tensors.shape[0]
+    n_samples = batch_tensors.shape[1]
+
+    sub_savedir = os.path.join(savedir, 'videos')
+    os.makedirs(sub_savedir, exist_ok=True)
+    
+    for idx in range(b):
+        prompt = prompts[idx]
+        for n in range(n_samples):
+            filename = f"{prompt}-{n}.mp4"
+            format_file[filename] = prompt
+            video = batch_tensors[idx, n].detach().cpu()
+            video = torch.clamp(video.float(), -1., 1.)
+            video = video.permute(1, 0, 2, 3)  # t,c,h,w
+            video = (video + 1.0) / 2.0
+            video = (video * 255).to(torch.uint8).permute(0, 2, 3, 1)
+            savepath = os.path.join(sub_savedir, filename)
+            torchvision.io.write_video(savepath, video, fps=fps, video_codec='h264', options={'crf': '10'})

@@ -8,10 +8,13 @@ import random
 import json
 import torch
 from torch.utils.data import Dataset
+
+import decord
 from decord import VideoReader, cpu
 import glob
 import pandas as pd
 import yaml
+decord.bridge.set_bridge('torch')
 
 class MaCVid(Dataset):
     """
@@ -42,6 +45,8 @@ class MaCVid(Dataset):
         if isinstance(self.resolution, int):
             self.resolution = [self.resolution, self.resolution]
         # assert(isinstance(self.resolution, list) and len(self.resolution) == 2)
+            
+        decord.bridge.set_bridge('torch')
 
         self._make_dataset()
     
@@ -96,7 +101,6 @@ class MaCVid(Dataset):
 
         # print('frames type: ', type(frames), frames.shape)
 
-        # frames = torch.tensor(frames.asnumpy()).permute(3, 0, 1, 2).float() # [t,h,w,c] -> [c,t,h,w]
         frames = frames.permute(3, 0, 1, 2).float() # [t,h,w,c] -> [c,t,h,w]
         assert(frames.shape[2] == self.resolution[0] and frames.shape[3] == self.resolution[1]), f'frames={frames.shape}, self.resolution={self.resolution}'
         frames = (frames / 255 - 0.5) * 2

@@ -1,0 +1,50 @@
+The dog is wearing a red shirt and eating from a bowl.
+The cat is wearing a blue shirt and playing with yarn.
+The rabbit is wearing a green shirt and reading a book.
+The bear is wearing a yellow shirt and painting a picture.
+The raccoon is wearing a red dress and sliding down a tree.
+The squirrel is wearing a blue dress and holding a nut.
+The monkey is wearing a green dress and climbing a tree.
+The lion is wearing a yellow dress and lying on a rock.
+The fox is wearing a red hat and balancing a ball.
+The panda is wearing a blue hat and looking at flowers.
+The dog is wearing a firefighter hat and holding a hose.
+The cat is wearing a ballet hat and standing on one foot.
+The rabbit is wearing a magician's hat and holding a wand.
+The bear is wearing a cowboy hat and tipping its hat.
+The raccoon is wearing a Santa hat and carrying a gift.
+The squirrel is wearing a knight's hat and holding a toy sword.
+The monkey is wearing a detective hat and looking through a magnifying glass.
+The lion is wearing a wizard's hat and holding a book.
+The fox is wearing a red shirt and splashing water.
+The panda is wearing a blue shirt and blowing bubbles.
+The dog is wearing a green shirt and digging a hole.
+The cat is wearing a yellow shirt and napping on a cushion.
+The rabbit is wearing a red shirt and watering plants.
+The bear is wearing a blue shirt and eating honey.
+The raccoon is wearing a green shirt and building a small fort.
+The squirrel is wearing a yellow shirt and sitting on a branch.
+The monkey is wearing a red shirt and peeling a banana.
+The lion is wearing a blue shirt and looking at the sky.
+The fox is wearing a green shirt and sitting in a garden.
+The panda is wearing a yellow shirt and walking in a forest
+The dog is wearing a red hat and carrying a flower.
+The cat is wearing a blue hat and sitting at a table.
+The rabbit is wearing a green hat and holding a diploma.
+The bear is wearing a yellow hat and holding a pumpkin.
+The raccoon is wearing a red dress and hanging ornaments.
+The squirrel is wearing a blue dress and eating cake.
+The monkey is wearing a green dress and blowing a whistle.
+The lion is wearing a yellow dress and standing next to a cake.
+The fox is wearing a red hat and playing with leaves.
+The panda is wearing a blue hat and holding a balloon.
+The dog is wearing a red coat and sniffing the snow.
+The cat is wearing a blue coat and sunbathing.
+The rabbit is wearing a green coat and picking flowers.
+The bear is wearing a yellow coat and roasting marshmallows.
+The raccoon is wearing a red coat and holding a snowball.
+The squirrel is wearing a blue coat and looking at leaves.
+The monkey is wearing a green coat and eating fruit.
+The lion is wearing a yellow coat and digging in the sand.
+The fox is wearing a red coat and jumping in a pile of leaves.
+The panda is wearing a blue coat and sitting by a fire.

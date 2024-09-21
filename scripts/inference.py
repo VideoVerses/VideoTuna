@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import argparse
+import json
 import numpy as np
 from functools import partial
 from tqdm import trange, tqdm
@@ -12,6 +13,7 @@ import torch
 from pytorch_lightning import seed_everything
 
 sys.path.insert(0, os.getcwd())
+sys.path.insert(1, f'{os.getcwd()}/src')
 from src.lvdm.samplers.ddim import DDIMSampler
 from utils.common_utils import instantiate_from_config
 from src.lvdm.samplers.ddim_multiplecond import DDIMSampler as DDIMSampler_multicond
@@ -23,6 +25,7 @@ from scripts.inference_utils import (
     sample_batch_t2v, 
     sample_batch_i2v,
     save_videos,
+    save_videos_vbench,
 )
 
 def get_parser():
@@ -34,6 +37,7 @@ def get_parser():
     parser.add_argument("--prompt_file", type=str, default=None, help="a text file containing many prompts for text-to-video")
     parser.add_argument("--prompt_dir", type=str, default=None, help="a input dir containing images and prompts for image-to-video/interpolation")
     parser.add_argument("--savedir", type=str, default=None, help="results saving path")
+    parser.add_argument("--standard_vbench", action='store_true', default=False, help="inference standard vbench prompts")
     #
     parser.add_argument("--seed", type=int, default=123, help="random seed")
     #
@@ -56,6 +60,8 @@ def get_parser():
     parser.add_argument("--guidance_rescale", type=float, default=0.0, help="guidance rescale in [Common Diffusion Noise Schedules and Sample Steps are Flawed](https://huggingface.co/papers/2305.08891)")
     parser.add_argument("--loop", action='store_true', default=False, help="generate looping videos or not")
     parser.add_argument("--gfi", action='store_true', default=False, help="generate generative frame interpolation (gfi) or not")
+    # lora args 
+    parser.add_argument("--lorackpt", type=str, default=None, help="[Optional] checkpoint path for lora model. ")
     #
     parser.add_argument("--savefps", type=str, default=10, help="video fps to generate")
     return parser
@@ -67,11 +73,17 @@ def load_model(args, cuda_idx=0):
     # build model
     config = OmegaConf.load(args.config)
     model_config = config.pop("model", OmegaConf.create())
+    if args.lorackpt is not None:
+        model_config["params"]["lora_args"] = {"lora_ckpt": args.lorackpt}
     model = instantiate_from_config(model_config)
     model = model.cuda(cuda_idx)
     # load weights
     assert os.path.exists(args.ckpt_path), f"Error: checkpoint [{args.ckpt_path}] Not Found!"
     model = load_model_checkpoint(model, args.ckpt_path)
+    # load lora weights 
+    if len(model.lora_args)!=0:
+        model.inject_lora()
+    
     model.eval()
     return model
 
@@ -136,14 +148,16 @@ def run_inference(args, gpu_num=1, rank=0, **kwargs):
     
     # -----------------------------------------------------------------
     # inference
+    format_file = {}
     start = time.time()
     n_iters = len(prompt_list_rank) // args.bs + (1 if len(prompt_list_rank) % args.bs else 0)
-    with torch.no_grad(), torch.cuda.amp.autocast():
+    with torch.no_grad():
         for idx in trange(0, n_iters, desc="Sample Iters"):
             # print(f'[rank:{rank}] batch {idx}: prompt bs {args.bs}) x nsamples_per_prompt {args.n_samples_prompt} ...')
 
             prompts = prompt_list_rank[idx*args.bs:(idx+1)*args.bs]
             filenames = filename_list_rank[idx*args.bs:(idx+1)*args.bs]
+
             if args.mode == 'i2v':
                 images = image_list_rank[idx*args.bs:(idx+1)*args.bs]
                 if isinstance(images, list):
@@ -174,7 +188,8 @@ def run_inference(args, gpu_num=1, rank=0, **kwargs):
             #     raise NotImplementedError
 
             ## inference
-            noise_shape = [args.bs, channels, frames, h, w]
+            bs = args.bs if args.bs == len(prompts) else len(prompts)
+            noise_shape = [bs, channels, frames, h, w]
             if args.mode == 't2v':
                 batch_samples = sample_batch_t2v(model, ddim_sampler, prompts, noise_shape, args.fps,
                                         args.n_samples_prompt, args.ddim_steps, args.ddim_eta,
@@ -190,7 +205,17 @@ def run_inference(args, gpu_num=1, rank=0, **kwargs):
                                         )
             else:
                 raise ValueError
-            save_videos(batch_samples, args.savedir, filenames, fps=args.savefps)
+            
+            if args.standard_vbench:
+                save_videos_vbench(batch_samples, args.savedir, prompts, format_file, fps=args.savefps)
+                print('test')
+            else:
+                save_videos(batch_samples, args.savedir, filenames, fps=args.savefps)
+
+    if args.standard_vbench:
+        with open(os.path.join(args.savedir, 'info.json'), 'w') as f:
+            json.dump(format_file, f)
+            
     print(f"Saved in {args.savedir}. Time used: {(time.time() - start):.2f} seconds")
 
 

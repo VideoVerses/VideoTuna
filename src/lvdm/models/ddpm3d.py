@@ -32,7 +32,10 @@ from src.lvdm.samplers.ddim import DDIMSampler
 from src.lvdm.modules.encoders.ip_resampler import ImageProjModel, Resampler
 from src.lvdm.models.utils_diffusion import make_beta_schedule, rescale_zero_terminal_snr
 from utils.common_utils import instantiate_from_config
-
+import peft 
+# import rlhf utils 
+from src.lvdm.models.rlhf_utils.batch_ddim import batch_ddim_sampling
+from src.lvdm.models.rlhf_utils.reward_fn import aesthetic_loss_fn
 __conditioning_keys__ = {'concat': 'c_concat',
                          'crossattn': 'c_crossattn',
                          'adm': 'y'}
@@ -68,6 +71,7 @@ class DDPM(pl.LightningModule):
                  learn_logvar=False,
                  logvar_init=0.,
                  rescale_betas_zero_snr=False,
+                 lora_args=[],
                  ):
         super().__init__()
         assert parameterization in ["eps", "x0", "v"], 'currently only supporting "eps" and "x0" and "v"'
@@ -84,6 +88,23 @@ class DDPM(pl.LightningModule):
             self.image_size = [self.image_size, self.image_size]
         self.use_positional_encodings = use_positional_encodings
         self.model = DiffusionWrapper(unet_config, conditioning_key)
+        # load lora models 
+        # peft lora config. The arg name is algned with peft. 
+        self.lora_args = lora_args        
+        if len(lora_args) > 0:
+            self.lora_ckpt_path = getattr(lora_args,"lora_ckpt", None)
+            self.lora_rank = getattr(lora_args, "lora_rank", 4)
+            self.lora_alpha =getattr(lora_args, "lora_alpha", 1)
+            self.lora_dropout =getattr(lora_args, "lora_dropout", 0.0)
+            self.target_modules = getattr(lora_args, "target_modules", ["to_k", "to_v", "to_q"]) 
+            # peft set other paramtere requires_grad to False 
+            self.lora_config = peft.LoraConfig(
+                r=self.lora_rank,
+                lora_alpha=self.lora_alpha,
+                target_modules=self.target_modules,        # only diffusion_model has these modules
+                lora_dropout=self.lora_dropout,
+            )
+
         #count_params(self.model, verbose=True)
         self.use_ema = use_ema
         self.rescale_betas_zero_snr = rescale_betas_zero_snr
@@ -113,7 +134,7 @@ class DDPM(pl.LightningModule):
         self.logvar = torch.full(fill_value=logvar_init, size=(self.num_timesteps,))
         if self.learn_logvar:
             self.logvar = nn.Parameter(self.logvar, requires_grad=True)
-
+        
     def register_schedule(self, given_betas=None, beta_schedule="linear", timesteps=1000,
                           linear_start=1e-4, linear_end=2e-2, cosine_s=8e-3):
         if exists(given_betas):
@@ -458,7 +479,43 @@ class DDPM(pl.LightningModule):
             params = params + [self.logvar]
         opt = torch.optim.AdamW(params, lr=lr)
         return opt
+    def load_lora_from_ckpt(self,model,path):
+        lora_state_dict = torch.load(path)['state_dict']
+        copy_tracker = {key: False for key in lora_state_dict}    
+        for n, p in model.named_parameters():
+            if "lora" in n : 
+                lora_n = f"model.{n}"
+            else: 
+                continue
+            if lora_n in lora_state_dict:
+                if copy_tracker[lora_n]:
+                    raise RuntimeError(f"Parameter {lora_n} has already been copied once.")
+                print(f"Copying parameter {lora_n}")
+                with torch.no_grad():
+                    p.copy_(lora_state_dict[lora_n])
+                copy_tracker[lora_n] = True
+            else:
+                raise RuntimeError(f"Parameter {lora_n} not found in lora_state_dict.")
+        #check parameter load intergrity
+        for key, copied in copy_tracker.items():
+            if not copied:
+                raise RuntimeError(f"Parameter {key} from lora_state_dict was not copied to the model.")
+                # print(f"Parameter {key} from lora_state_dict was not copied to the model.")
+        print(f"All Parameters was copied successfully.")
 
+    def inject_lora(self):
+        """inject lora into the denoising module. 
+        The self.model should be a instance of pl.LightningModule or nn.Module.
+        """
+        # TODO: we can support inistantiate from config in the future. Now we test correctness.
+        # for simplicity, we just inject denoising model. not injecting condition model. 
+        self.model = peft.get_peft_model(self.model, self.lora_config)
+
+        self.model.print_trainable_parameters()
+        
+        if self.lora_ckpt_path is not None:
+            self.load_lora_from_ckpt(self.model, self.lora_ckpt_path)
+        
 
 class LatentDiffusion(DDPM):
     """main class"""
@@ -496,6 +553,7 @@ class LatentDiffusion(DDPM):
         ckpt_path = kwargs.pop("ckpt_path", None)
         ignore_keys = kwargs.pop("ignore_keys", [])
         conditioning_key = default(conditioning_key, 'crossattn')
+        
         super().__init__(conditioning_key=conditioning_key, *args, **kwargs)
 
         self.cond_stage_trainable = cond_stage_trainable
@@ -1061,6 +1119,12 @@ class LatentDiffusion(DDPM):
                 if n not in self.empty_paras:
                     p.requires_grad = False
             mainlogger.info(f"@Training [{len(params)}] Empty Paramters ONLY.")
+        elif len(self.lora_args) > 0:
+            # if there is lora_args, but haven't injected lora, it would also work. 
+            # but the trainable params will be significantly more than the lora_params
+            # filter out the non lora parameters. 
+            params =[p for n,p in self.model.named_parameters() if p.requires_grad and "lora" in n]
+            mainlogger.info(f"@Training [{len(params)}] Lora Paramters.")
         else:
             params = list(self.model.parameters())
             mainlogger.info(f"@Training [{len(params)}] Full Paramters.")
@@ -1107,6 +1171,107 @@ class LatentDiffusion(DDPM):
         else:
             raise NotImplementedError
         return lr_scheduler
+
+
+
+class RewardLVDMTrainer(LatentDiffusion):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Reward Gradient Training Using LoRA as a default
+        # TODO: use config and getattr to set default values
+        # sampling configs for DDIM
+        self.ddim_eta = 1.0 
+        self.ddim_steps = 20 # reduce some steps to speed up sampling process 
+        self.n_samples = 1
+        self.fps = 24 # default 24 following VADER 
+        # rlhf configs  
+        self.backprop_mode = "last" #m"backpropagation mode: 'last', 'rand', 'specific'"
+        self.decode_frame = -1  # it could also be any number str like '3', '10'. alt: alternate frames, fml: first, middle, last frames, all: all frames. '-1': random frame
+        self.reward_loss_type = "aesthetic" 
+        # self.configure_reward_loss()    
+        
+    def configure_reward_loss(self,loss_type=None):
+        if loss_type is None:
+            loss_type = self.reward_loss_type
+            
+        if loss_type == "aesthetic":
+            self.loss_fn = aesthetic_loss_fn(grad_scale=0.1,
+                                        aesthetic_target=10,
+                                        torch_dtype = self.model.dtype,
+                                        device = self.device)
+        else:
+            raise NotImplementedError(f"loss type {loss_type} not implemented")
+        
+    def on_train_batch_start(self, batch, batch_idx, dataloader_idx=None):
+        # the reason why configure here is to wait the model transfered to target device
+        # otherwise, the loss_fn will be on cpu if configure in __init__
+        self.configure_reward_loss()
+    def training_step(self, batch, batch_idx):
+        """training_step for Reward Model Feedback"""
+        # in reward model training, we just need shape of video frames
+        # default cond is text prompt
+        prompts = batch[self.cond_stage_key]
+        # print(prompts) #  Elon mask is talking
+        x, c = self.get_batch_input(
+            batch, random_uncond=self.classifier_free_guidance, is_imgbatch=False
+        ) # x is latent image ; c is text embedding(tensor)
+        kwargs ={}
+        batch_size = x.shape[0]
+        noise_shape = (batch_size, self.channels, self.temporal_length//4, *self.image_size)# (1, 4, 4, 40, 64)
+        # print("noise shape",noise_shape)
+        fps = torch.tensor([self.fps]*batch_size).to(self.device).long()
+        cond = {"c_crossattn": [c], "fps": fps}
+        # Notice: VADER has modified ddim for training 
+        # input cond = {"c_crossattn": [text_emb], "fps": fps}
+        batch_samples = batch_ddim_sampling(self, cond, noise_shape, self.n_samples, \
+                                            self.ddim_steps, self.ddim_eta, self.classifier_free_guidance,\
+                                            None, backprop_mode=self.backprop_mode, decode_frame=self.decode_frame,\
+                                            **kwargs)
+
+        video_frames_ = batch_samples.permute(1,0,3,2,4,5)      # batch,samples,channels,frames,height,width >> s,b,f,c,h,w
+        # print("video_frames shape",batch_samples.shape,video_frames_.requires_grad)
+        s_, bs, nf, c_, h_, w_ = video_frames_.shape
+        assert s_ == 1                                  # samples should only be on single sample in training mode
+        video_frames_ = video_frames_.squeeze(0)        # s,b,f,c,h,w >> b,f,c,h,w
+        assert nf == 1                                  # reward should only be on single frame
+        video_frames_ = video_frames_.squeeze(1)        # b,f,c,h,w >> b,c,h,w
+        video_frames_ = video_frames_.to(x.dtype)
+
+        # some reward fn may require prompts as input. 
+        loss, rewards = self.loss_fn(video_frames_)  # rewards is for logging only. 
+        loss_dict = {"reward_train_loss": loss.detach().item(), "step_reward": rewards.detach().item()}
+        self.log_dict(
+            loss_dict,
+            prog_bar=True,
+            logger=True,
+            on_step=True,
+            on_epoch=True,
+            sync_dist=False,
+        )
+        self.log(
+            "global_step",
+            self.global_step,
+            prog_bar=True,
+            logger=True,
+            on_step=True,
+            on_epoch=False,
+        )
+        if (batch_idx + 1) % self.log_every_t == 0:
+            mainlogger.info(
+                f"batch:{batch_idx}|epoch:{self.current_epoch} [globalstep:{self.global_step}]: loss={loss} reward={rewards}"
+            )
+        return loss
+
+    def configure_optimizers(self):
+        lr = self.learning_rate
+        opt = torch.optim.AdamW(self.model.parameters(), lr=lr)
+        # the training steps count is short no need for scheduler as default 
+        if self.use_scheduler:
+            lr_scheduler = self.configure_schedulers(opt)
+            return [opt], [lr_scheduler]
+        return opt
+
+
 
 class LatentVisualDiffusion(LatentDiffusion):
     def __init__(self, 
