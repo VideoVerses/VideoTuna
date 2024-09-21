@@ -16,5 +16,17 @@ VideoTuna/
 ```
 
 # Instructions
+**Scnencut**
 ```
-python scenecut.py --vid_dir <video path> --out_dir <output path> --num_process <number of process>
+python scenecut.py --vid_dir <videos path> --out_dir <output path> --num_process <number of process>
+```
+**Caption**
+```
+python caption.py \
+--model_path <model path> \
+--vid_dir <videos path> \
+--out_dir <output path> \
+--num_frame <number of sample frames> \
+--num_process <number of processes> \
+--mp_no <process NO.>
+```
