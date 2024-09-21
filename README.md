@@ -57,6 +57,8 @@ VideoTuna/
 ```
 VideoTuna/
     └── checkpoints/
+        ├── cogvideo/
+        │   └── CogVideoX-2b/        
         ├── dynamicrafter/
         │   └── i2v_576x1024/
         │       └── model.ckpt
@@ -83,6 +85,8 @@ VideoTuna/
 
 |T2V-Models|HxWxL|Checkpoints|
 |:---------|:---------|:--------|
+|CogVideoX-2B|720x480, 6s|[Hugging Face](https://huggingface.co/THUDM/CogVideoX-2b)
+|CogVideoX-5B|720x480, 6s|[Hugging Face](https://huggingface.co/THUDM/CogVideoX-5b)
 |Open-Sora 1.2|240p to 720p, 2~16s|[STDIT](https://huggingface.co/hpcai-tech/OpenSora-STDiT-v3), [VAE](https://huggingface.co/hpcai-tech/OpenSora-VAE-v1.2)
 |Open-Sora 1.1|144p & 240p & 480p, 0~15s|[Stage 2](https://huggingface.co/hpcai-tech/OpenSora-STDiT-v2-stage2)
 |Open-Sora 1.1|144p to 720p, 0~15s|[Stage 3](https://huggingface.co/hpcai-tech/OpenSora-STDiT-v2-stage3)
@@ -95,6 +99,7 @@ VideoTuna/
 
 |I2V-Models|HxWxL|Checkpoints|
 |:---------|:---------|:--------|
+|CogVideoX-5B-I2V|720x480, 6s|[Hugging Face](https://huggingface.co/THUDM/CogVideoX-5b-I2V)
 |DynamiCrafter|576x1024x16|[Hugging Face](https://huggingface.co/Doubiiu/DynamiCrafter_1024/blob/main/model.ckpt)|
 |VideoCrafter1|320x512x16|[Hugging Face](https://huggingface.co/VideoCrafter/Image2Video-512/blob/main/model.ckpt)|
 
@@ -121,7 +126,11 @@ mkdir checkpoints
 
 # ---------------------------- T2V ----------------------------
 
-# ---- CogVideo ----
+# ---- CogVideo (diffusers) ----
+cd checkpoints/cogvideo
+git clone https://huggingface.co/THUDM/CogVideoX-2b
+git clone https://huggingface.co/THUDM/CogVideoX-5b
+git clone https://huggingface.co/THUDM/CogVideoX-5b-I2V
 
 
 # ---- Open-Sora ----
@@ -182,7 +191,7 @@ after these commands, the model checkpoints should be placed as [Checkpoint Stru
 
 |Task|Commands|
 |:---------|:---------|
-|T2V|`bash todo.sh`|
+|T2V|`bash tools/video_comparison/compare.sh`|
 |I2V|`bash todo.sh`|
 
 
@@ -204,8 +213,12 @@ For detailed inference settings please check [docs/inference.md](docs/inference.
 ### 4. Finetune T2V models
 #### Lora finetuning
 
-We support lora finetuning to make the model to learn new concepts/characters/styles. 
-Please check [configs/train/003_vc2_lora_ft/README.md](configs/train/003_vc2_lora_ft/README.md) for details.
+We support lora finetuning to make the model to learn new concepts/characters/styles.   
+- Example config file: `configs/train/003_vc2_lora_ft/config.yaml`  
+- Training lora based on VideoCrafter2: `bash scripts/train/003_vc2_lora_ft/run.sh`  
+- Inference the trained models: `bash scripts/train/003_vc2_lora_ft/inference.sh`   
+
+Please check [configs/train/003_vc2_lora_ft/README.md](configs/train/003_vc2_lora_ft/README.md) for details.   
 <!-- 
 
 (1) Prepare data
