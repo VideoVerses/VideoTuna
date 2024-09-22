@@ -137,19 +137,20 @@ class CUDACallback(Callback):
     def on_train_epoch_start(self, trainer, pl_module):
         # Reset the memory use counter
         # lightning update
-        if int((pl.__version__).split('.')[1])>=7:
+        if int(pl.__version__.split('.')[1])>=7:
             gpu_index = trainer.strategy.root_device.index
         else:
-            gpu_index = trainer.root_gpu
+            gpu_index = trainer.device_ids
+        print(f'gpu_index: {gpu_index}')
         torch.cuda.reset_peak_memory_stats(gpu_index)
         torch.cuda.synchronize(gpu_index)
         self.start_time = time.time()
 
     def on_train_epoch_end(self, trainer, pl_module):
-        if int((pl.__version__).split('.')[1])>=7:
+        if int(pl.__version__.split('.')[1])>=7:
             gpu_index = trainer.strategy.root_device.index
         else:
-            gpu_index = trainer.root_gpu
+            gpu_index = trainer.device_ids
         torch.cuda.synchronize(gpu_index)
         max_memory = torch.cuda.max_memory_allocated(gpu_index) / 2 ** 20
         epoch_time = time.time() - self.start_time

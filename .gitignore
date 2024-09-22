@@ -4,6 +4,7 @@ __pycache__/
 .vscode
 .DS_Store
 .idea
+.git
 *.egg-info
 *.ckpt
 
@@ -11,3 +12,5 @@ results
 checkpoints
 pretrained_models/
 samples/
+HPSv2/
+SwissArmyTransformer/
