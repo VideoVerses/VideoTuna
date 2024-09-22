@@ -16,10 +16,10 @@ Let's finetune video generation models!
 - [x] add peft lora 
 - [x] add RL for alignment 
 - [ ] refactor vc, opensora, cogvideo and flux 
-- [ ] add documents 
+- [x] add documents 
 - [ ] add unit test support 
 - [ ] svd, open-sora-plan
-- [ ] Finish codebase V1.0.0
+- [ ] Finish codebase V0.1.0
 - [ ] Release demo gallery
 - [ ] Release technical report
 
