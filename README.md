@@ -24,7 +24,7 @@ Let's finetune video generation models!
 - [ ] Release technical report
 
 ## 🔆 Updates
-- [2024-09-XX] We make the VideoTuna V1.0.0 public!
+- [2024-09-XX] We make the VideoTuna V0.1.0 public!
 
 
 ## 🔆 Introduction
