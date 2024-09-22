@@ -522,7 +522,6 @@ class LatentDiffusion(DDPM):
     def __init__(self,
                  first_stage_config,
                  cond_stage_config,
-                 num_timesteps_cond=None,
                  cond_stage_key="caption",
                  cond_stage_trainable=False,
                  cond_stage_forward=None,
@@ -546,9 +545,7 @@ class LatentDiffusion(DDPM):
                  rand_cond_frame=False,
                  empty_params_only=False,
                  *args, **kwargs):
-        self.num_timesteps_cond = default(num_timesteps_cond, 1)
         self.scale_by_std = scale_by_std
-        assert self.num_timesteps_cond <= kwargs['timesteps']
         # for backwards compatibility after implementation of DiffusionWrapper
         ckpt_path = kwargs.pop("ckpt_path", None)
         ignore_keys = kwargs.pop("ignore_keys", [])
@@ -623,11 +620,6 @@ class LatentDiffusion(DDPM):
         self.rand_cond_frame = rand_cond_frame
         self.interp_mode = interp_mode
 
-    def make_cond_schedule(self, ):
-        self.cond_ids = torch.full(size=(self.num_timesteps,), fill_value=self.num_timesteps - 1, dtype=torch.long)
-        ids = torch.round(torch.linspace(0, self.num_timesteps - 1, self.num_timesteps_cond)).long()
-        self.cond_ids[:self.num_timesteps_cond] = ids
-
     def q_sample(self, x_start, t, noise=None):
         noise = default(noise, lambda: torch.randn_like(x_start))
         return (extract_into_tensor(self.sqrt_alphas_cumprod, t, x_start.shape) * x_start +
@@ -659,10 +651,6 @@ class LatentDiffusion(DDPM):
     def register_schedule(self, given_betas=None, beta_schedule="linear", timesteps=1000,
                           linear_start=1e-4, linear_end=2e-2, cosine_s=8e-3):
         super().register_schedule(given_betas, beta_schedule, timesteps, linear_start, linear_end, cosine_s)
-
-        self.shorten_cond_schedule = self.num_timesteps_cond > 1
-        if self.shorten_cond_schedule:
-            self.make_cond_schedule()
 
     def instantiate_first_stage(self, config):
         model = instantiate_from_config(config)
@@ -1060,10 +1048,6 @@ class LatentDiffusion(DDPM):
 
         for i in iterator:
             ts = torch.full((b,), i, device=device, dtype=torch.long)
-            if self.shorten_cond_schedule:
-                assert self.model.conditioning_key != 'hybrid'
-                tc = self.cond_ids[ts].to(cond.device)
-                cond = self.q_sample(x_start=cond, t=tc, noise=torch.randn_like(cond))
 
             img = self.p_sample(img, cond, ts, clip_denoised=self.clip_denoised, **kwargs)
             if mask is not None:
