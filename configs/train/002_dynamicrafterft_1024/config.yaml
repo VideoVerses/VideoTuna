@@ -144,7 +144,6 @@ lightning:
       target: utils.callbacks.ImageLogger
       params:
         batch_frequency: 2
-        save_dir: 'outputs/samples'
         max_images: 6
         to_local: True # save videos into files
         log_images_kwargs:

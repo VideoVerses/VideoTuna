@@ -178,7 +178,7 @@ wget https://huggingface.co/VideoCrafter/Image2Video-512/resolve/main/model.ckpt
 mkdir checkpoints/stablediffusion/
 mkdir checkpoints/stablediffusion/v2-1_512-ema
 
-wget https://huggingface.co/stabilityai/stable-diffusion-2-1-base/resolve/main/v2-1_512-ema-pruned.ckpt -P checkpoints/stablediffusion/v2-1_512-ema
+wget https://huggingface.co/stabilityai/stable-diffusion-2-1-base/blob/main/v2-1_512-ema-pruned.ckpt -P checkpoints/stablediffusion/v2-1_512-ema
 
 ```
 after these commands, the model checkpoints should be placed as [Checkpoint Structure](https://github.com/VideoVerses/VideoTuna/tree/main?tab=readme-ov-file#checkpoint-structure).
