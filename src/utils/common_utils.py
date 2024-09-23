@@ -31,6 +31,9 @@ def instantiate_from_config(config):
         elif config == "__is_unconditional__":
             return None
         raise KeyError("Expected key `target` to instantiate.")
+    if "diffusers" in config['target']:
+        # print("in diffusers >>>>>>>",config['params'])
+        return get_obj_from_str(config["target"]).from_pretrained(**config.get("params", dict()))
     return get_obj_from_str(config["target"])(**config.get("params", dict()))
 
 
