@@ -16,7 +16,9 @@ $ python cli_demo.py --prompt "A girl riding a bike." --model_path THUDM/CogVide
 
 Additional options are available to specify the model path, guidance scale, number of inference steps, video generation type, and output paths.
 """
-
+import os
+import sys
+import glob
 import argparse
 from typing import Literal
 
@@ -28,12 +30,18 @@ from diffusers import (
     CogVideoXImageToVideoPipeline,
     CogVideoXVideoToVideoPipeline,
 )
-
+sys.path.insert(0, os.getcwd())
 from diffusers.utils import export_to_video, load_image, load_video
+from scripts.inference_utils import get_target_filelist
 
+def load_prompt_file(prompt_file: str):
+    with open(prompt_file, "r") as f:
+        prompts = f.readlines()
+    prompts = [prompt.strip() for prompt in prompts]
+    return prompts
 
 def generate_video(
-    prompt: str,
+    model_input: str,
     model_path: str,
     lora_path: str = None,
     lora_rank: int = 128,
@@ -47,14 +55,14 @@ def generate_video(
     seed: int = 42,
 ):
     """
-    Generates a video based on the given prompt and saves it to the specified path.
+    Generates a video based on the given input and saves it to the specified path.
 
     Parameters:
-    - prompt (str): The description of the video to be generated.
+    - model_input (str): can be a string prompt or a path to a prompt file for t2v, or a directory containing images or videos for i2v and v2v.
     - model_path (str): The path of the pre-trained model to be used.
     - lora_path (str): The path of the LoRA weights to be used.
     - lora_rank (int): The rank of the LoRA weights.
-    - output_path (str): The path where the generated video will be saved.
+    - output_path (str): The path or directory where the generated video will be saved.
     - num_inference_steps (int): Number of steps for the inference process. More steps can result in better quality.
     - guidance_scale (float): The scale for classifier-free guidance. Higher values can lead to better alignment with the prompt.
     - num_videos_per_prompt (int): Number of videos to generate per prompt.
@@ -62,22 +70,41 @@ def generate_video(
     - generate_type (str): The type of video generation (e.g., 't2v', 'i2v', 'v2v').·
     - seed (int): The seed for reproducibility.
     """
-
+    if not output_path.endswith(".mp4"): # output_path is a directory
+        os.makedirs(output_path, exist_ok=True)
+    
+    if model_input.endswith(".txt"):
+        # model_input is a file for t2v
+        prompts = load_prompt_file(prompt_file=model_input)
+        image_or_video_paths = [None] * len(prompts)
+    elif os.path.isdir(model_input):
+        if generate_type == "i2v":
+            # model_input is a directory for i2v
+            prompt_file = glob.glob(os.path.join(model_input, "*.txt"))[0]
+            prompts = load_prompt_file(prompt_file=prompt_file)
+            images = get_target_filelist(model_input, ext='[mpj][pn][4gj]')
+            image_or_video_paths = images
+        elif generate_type == "v2v":
+            # model_input is a directory for v2v
+            prompt_file = glob.glob(os.path.join(model_input, "*.txt"))[0]
+            prompts = load_prompt_file(prompt_file=prompt_file)
+            videos = [os.path.join(model_input, f) for f in os.listdir(model_input) if f.endswith(".mp4")]
+            image_or_video_paths = videos
+    else:
+        assert isinstance(model_input, str)
+        prompts = [model_input]
+        image_or_video_paths = [None]
+    
     # 1.  Load the pre-trained CogVideoX pipeline with the specified precision (bfloat16).
     # add device_map="balanced" in the from_pretrained function and remove the enable_model_cpu_offload()
     # function to use Multi GPUs.
 
-    image = None
-    video = None
-
     if generate_type == "i2v":
         pipe = CogVideoXImageToVideoPipeline.from_pretrained(model_path, torch_dtype=dtype)
-        image = load_image(image=image_or_video_path)
     elif generate_type == "t2v":
         pipe = CogVideoXPipeline.from_pretrained(model_path, torch_dtype=dtype)
     else:
         pipe = CogVideoXVideoToVideoPipeline.from_pretrained(model_path, torch_dtype=dtype)
-        video = load_video(image_or_video_path)
 
     # If you're using with lora, add this code
     if lora_path:
@@ -106,45 +133,55 @@ def generate_video(
     # 4. Generate the video frames based on the prompt.
     # `num_frames` is the Number of frames to generate.
     # This is the default value for 6 seconds video and 8 fps and will plus 1 frame for the first frame and 49 frames.
-    if generate_type == "i2v":
-        video_generate = pipe(
-            prompt=prompt,
-            image=image,  # The path of the image to be used as the background of the video
-            num_videos_per_prompt=num_videos_per_prompt,  # Number of videos to generate per prompt
-            num_inference_steps=num_inference_steps,  # Number of inference steps
-            num_frames=49,  # Number of frames to generate，changed to 49 for diffusers version `0.30.3` and after.
-            use_dynamic_cfg=True,  # This id used for DPM Sechduler, for DDIM scheduler, it should be False
-            guidance_scale=guidance_scale,
-            generator=torch.Generator().manual_seed(seed),  # Set the seed for reproducibility
-        ).frames[0]
-    elif generate_type == "t2v":
-        video_generate = pipe(
-            prompt=prompt,
-            num_videos_per_prompt=num_videos_per_prompt,
-            num_inference_steps=num_inference_steps,
-            num_frames=49,
-            use_dynamic_cfg=True,
-            guidance_scale=guidance_scale,
-            generator=torch.Generator().manual_seed(seed),
-        ).frames[0]
-    else:
-        video_generate = pipe(
-            prompt=prompt,
-            video=video,  # The path of the video to be used as the background of the video
-            num_videos_per_prompt=num_videos_per_prompt,
-            num_inference_steps=num_inference_steps,
-            num_frames=49,
-            use_dynamic_cfg=True,
-            guidance_scale=guidance_scale,
-            generator=torch.Generator().manual_seed(seed),  # Set the seed for reproducibility
-        ).frames[0]
-    # 5. Export the generated frames to a video file. fps must be 8 for original video.
-    export_to_video(video_generate, output_path, fps=8)
+    for i, (prompt, image_or_video_path) in enumerate(zip(prompts, image_or_video_paths)):
+        # import pdb; pdb.set_trace()
+        output_path_ = os.path.join(output_path, f"{i:03d}-{prompt}.mp4") if os.path.isdir(output_path) else output_path
+        if generate_type == "i2v":
+            image = load_image(image=image_or_video_path)
+            video_generate = pipe(
+                prompt=prompt,
+                image=image,  # The path of the image to be used as the background of the video
+                num_videos_per_prompt=num_videos_per_prompt,  # Number of videos to generate per prompt
+                num_inference_steps=num_inference_steps,  # Number of inference steps
+                num_frames=49,  # Number of frames to generate，changed to 49 for diffusers version `0.30.3` and after.
+                use_dynamic_cfg=True,  # This id used for DPM Sechduler, for DDIM scheduler, it should be False
+                guidance_scale=guidance_scale,
+                generator=torch.Generator().manual_seed(seed),  # Set the seed for reproducibility
+            ).frames[0]
+        elif generate_type == "t2v":
+            video_generate = pipe(
+                prompt=prompt,
+                num_videos_per_prompt=num_videos_per_prompt,
+                num_inference_steps=num_inference_steps,
+                num_frames=49,
+                use_dynamic_cfg=True,
+                guidance_scale=guidance_scale,
+                generator=torch.Generator().manual_seed(seed),
+            ).frames[0]
+        else:
+            # v2v
+            video = load_video(image_or_video_path)
+            video_generate = pipe(
+                prompt=prompt,
+                video=video,  # The path of the video to be used as the background of the video
+                num_videos_per_prompt=num_videos_per_prompt,
+                num_inference_steps=num_inference_steps,
+                # num_frames=49,
+                use_dynamic_cfg=True,
+                guidance_scale=guidance_scale,
+                generator=torch.Generator().manual_seed(seed),  # Set the seed for reproducibility
+            ).frames[0]
+        # 5. Export the generated frames to a video file. fps must be 8 for original video.
+        export_to_video(video_generate, output_path_, fps=8)
+
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate a video from a text prompt using CogVideoX")
-    parser.add_argument("--prompt", type=str, required=True, help="The description of the video to be generated")
+    parser.add_argument(
+        "--generate_type", type=str, default="t2v", help="The type of video generation (e.g., 't2v', 'i2v', 'v2v')"
+    )
+    parser.add_argument("--model_input", type=str, default="", help="The description of the video to be generated")
     parser.add_argument(
         "--image_or_video_path",
         type=str,
@@ -164,9 +201,7 @@ if __name__ == "__main__":
         "--num_inference_steps", type=int, default=50, help="Number of steps for the inference process"
     )
     parser.add_argument("--num_videos_per_prompt", type=int, default=1, help="Number of videos to generate per prompt")
-    parser.add_argument(
-        "--generate_type", type=str, default="t2v", help="The type of video generation (e.g., 't2v', 'i2v', 'v2v')"
-    )
+    
     parser.add_argument(
         "--dtype", type=str, default="bfloat16", help="The data type for computation (e.g., 'float16' or 'bfloat16')"
     )
@@ -175,7 +210,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     dtype = torch.float16 if args.dtype == "float16" else torch.bfloat16
     generate_video(
-        prompt=args.prompt,
+        model_input=args.model_input,
         model_path=args.model_path,
         lora_path=args.lora_path,
         lora_rank=args.lora_rank,
