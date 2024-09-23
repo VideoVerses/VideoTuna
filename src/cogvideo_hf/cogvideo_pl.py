@@ -1,10 +1,14 @@
 import torch
+import inspect
 from transformers import T5EncoderModel, T5Tokenizer
 from diffusers import AutoencoderKLCogVideoX, CogVideoXDPMScheduler, CogVideoXTransformer3DModel
 from diffusers.video_processor import VideoProcessor
+from diffusers.utils.torch_utils import randn_tensor
+from diffusers.callbacks import PipelineCallback, MultiPipelineCallbacks
+from diffusers.models.embeddings import get_3d_rotary_pos_embed
 from src.base.ddpm3d import DDPM
 from src.utils.common_utils import instantiate_from_config
-
+from typing import List, Optional, Tuple, Union, Dict, Any, Callable
 # Similar to diffusers.pipelines.hunyuandit.pipeline_hunyuandit.get_resize_crop_region_for_grid
 def get_resize_crop_region_for_grid(src, tgt_width, tgt_height):
     tw = tgt_width
@@ -82,28 +86,25 @@ def retrieve_timesteps(
         scheduler.set_timesteps(num_inference_steps, device=device, **kwargs)
         timesteps = scheduler.timesteps
     return timesteps, num_inference_steps
-class DiffuserSchedulerWrapper(torch.nn.Module):
-    def __init__(self, config):
-        super().__init__()
-        self.config  = config 
-        # scheduler = CogVideoXDPMScheduler.from_pretrained(cfg.pretrained_model_name_or_path, subfolder="scheduler")
-        self.scheduler = CogVideoXDPMScheduler.from_pretrained(cfg.pretrained_model_name_or_path, subfolder="scheduler")
-    def forward(self, t):
-        return self.scheduler(t)
-    
-class CogVideoXWorkflow(DDPM):
+
+import pytorch_lightning as pl 
+class CogVideoXWorkflow(pl.LightningModule):
     def __init__(self, 
-                 config,
-                 *args,
-                 **kwargs):
-        super().__init__(conditioning_key=conditioning_key, *args, **kwargs)
+                first_stage_config,
+                cond_stage_config,
+                denoiser_config,
+                scheduler_config
+                ):
+        super().__init__()
+        # super().__init__(conditioning_key=conditioning_key, *args, **kwargs)
         # Prepare models and scheduler
         # condtion stage use T5 class, which is availale at 
         # lvdm.module.encoders.condtion.FrozenT5Embedder
         # but we need to be aware of the model name and tokenizer name
         # here is the same with DDPM 
-        self.config = config 
-        self.instantiate_first_stage(config.first_stage_config)
+        # self.config = config 
+        print(first_stage_config)
+        self.instantiate_first_stage(first_stage_config)
         # max_sequence_length=226 
         self.instantiate_cond_stage(cond_stage_config)
         
@@ -119,24 +120,25 @@ class CogVideoXWorkflow(DDPM):
 
         # CogVideoX-2b weights are stored in float16
         # CogVideoX-5b and CogVideoX-5b-I2V weights are stored in bfloat16
-        load_dtype = torch.bfloat16 if "5b" in config.pretrained_model_name_or_path.lower() else torch.float16
-        self.model = CogVideoXTransformer3DModel.from_pretrained(
-            config.pretrained_model_name_or_path,
-            subfolder="transformer",
-            torch_dtype=load_dtype,
-            revision=config.revision,
-            variant=config.variant,
-        )
+        # load_dtype = torch.bfloat16 if "5b" in config.pretrained_model_name_or_path.lower() else torch.float16
+        self.model = instantiate_from_config(denoiser_config)
+        # self.model = CogVideoXTransformer3DModel.from_pretrained(
+        #     config.pretrained_model_name_or_path,
+        #     subfolder="transformer",
+        #     torch_dtype=load_dtype,
+        #     revision=config.revision,
+        #     variant=config.variant,
+        # )
         # self.model = DiffusionWrapper(unet_config, conditioning_key)
         # what I notice is : the most code in DDPM that seems different from there,
         # are most schduler 
-        self.scheduler = instantiate_from_config(config.scheduler)
+        self.scheduler = instantiate_from_config(scheduler_config)
     ## VAE is named as first_stage_model 
     ## followed functions are all first stage related. 
     def instantiate_first_stage(self, config):
         model = instantiate_from_config(config)
         self.first_stage_model = model.eval()
-        self.first_stage_model.train = disabled_train
+        # self.first_stage_model.train = disabled_train
         self.first_stage_model.requires_grad_(False)
         
     @torch.no_grad()
@@ -162,15 +164,18 @@ class CogVideoXWorkflow(DDPM):
         return self._decode_core(z, **kwargs)
     ## second stage : text condition and other condtions 
     def instantiate_cond_stage(self, config):
-        if not self.cond_stage_trainable:
-            model = instantiate_from_config(config)
-            self.cond_stage_model = model.eval()
-            self.cond_stage_model.train = disabled_train
-            for param in self.cond_stage_model.parameters():
-                param.requires_grad = False
-        else:
-            model = instantiate_from_config(config)
-            self.cond_stage_model = model
+        model = instantiate_from_config(config)
+        self.cond_stage_model = model.eval()
+        # in finetune cogvideox don't train as defualt
+        # TODO: support train 
+        self.cond_stage_model.requires_grad_(False)
+        # if not self.cond_stage_trainable:
+            # self.cond_stage_model.train = disabled_train
+            # for param in self.cond_stage_model.parameters():
+                # param.requires_grad = False
+        # else:
+            # model = instantiate_from_config(config)
+            # self.cond_stage_model = model
     
     def get_learned_conditioning(self, c):
         if self.cond_stage_forward is None:
@@ -205,12 +210,12 @@ class CogVideoXWorkflow(DDPM):
         if height % 8 != 0 or width % 8 != 0:
             raise ValueError(f"`height` and `width` have to be divisible by 8 but are {height} and {width}.")
 
-        if callback_on_step_end_tensor_inputs is not None and not all(
-            k in self._callback_tensor_inputs for k in callback_on_step_end_tensor_inputs
-        ):
-            raise ValueError(
-                f"`callback_on_step_end_tensor_inputs` has to be in {self._callback_tensor_inputs}, but found {[k for k in callback_on_step_end_tensor_inputs if k not in self._callback_tensor_inputs]}"
-            )
+        # if callback_on_step_end_tensor_inputs is not None and not all(
+        #     k in self._callback_tensor_inputs for k in callback_on_step_end_tensor_inputs
+        # ):
+        #     raise ValueError(
+        #         f"`callback_on_step_end_tensor_inputs` has to be in {self._callback_tensor_inputs}, but found {[k for k in callback_on_step_end_tensor_inputs if k not in self._callback_tensor_inputs]}"
+        #     )
         if prompt is not None and prompt_embeds is not None:
             raise ValueError(
                 f"Cannot forward both `prompt`: {prompt} and `prompt_embeds`: {prompt_embeds}. Please make sure to"
@@ -243,6 +248,49 @@ class CogVideoXWorkflow(DDPM):
                     f" {negative_prompt_embeds.shape}."
                 )
 
+
+    def _get_t5_prompt_embeds(
+        self,
+        prompt: Union[str, List[str]] = None,
+        num_videos_per_prompt: int = 1,
+        max_sequence_length: int = 226,
+        device: Optional[torch.device] = None,
+        dtype: Optional[torch.dtype] = None,
+    ):
+        # TODO: fix data type 
+        device = device or "cuda:0"
+        dtype = dtype or self.cond_stage_model.transformer.dtype
+
+        prompt = [prompt] if isinstance(prompt, str) else prompt
+        batch_size = len(prompt)
+
+        text_inputs = self.cond_stage_model.tokenizer(
+            prompt,
+            padding="max_length",
+            max_length=max_sequence_length,
+            truncation=True,
+            add_special_tokens=True,
+            return_tensors="pt",
+        )
+        text_input_ids = text_inputs.input_ids
+        untruncated_ids = self.cond_stage_model.tokenizer(prompt, padding="longest", return_tensors="pt").input_ids
+
+        if untruncated_ids.shape[-1] >= text_input_ids.shape[-1] and not torch.equal(text_input_ids, untruncated_ids):
+            removed_text = self.cond_stage_model.tokenizer.batch_decode(untruncated_ids[:, max_sequence_length - 1 : -1])
+            logger.warning(
+                "The following part of your input was truncated because `max_sequence_length` is set to "
+                f" {max_sequence_length} tokens: {removed_text}"
+            )
+
+        prompt_embeds = self.cond_stage_model.transformer(text_input_ids.to(device))[0]
+        prompt_embeds = prompt_embeds.to(dtype=dtype, device=device)
+
+        # duplicate text embeddings for each generation per prompt, using mps friendly method
+        _, seq_len, _ = prompt_embeds.shape
+        prompt_embeds = prompt_embeds.repeat(1, num_videos_per_prompt, 1)
+        prompt_embeds = prompt_embeds.view(batch_size * num_videos_per_prompt, seq_len, -1)
+
+        return prompt_embeds
 
     def encode_prompt(
         self,
@@ -351,9 +399,9 @@ class CogVideoXWorkflow(DDPM):
 
     def decode_latents(self, latents: torch.Tensor) -> torch.Tensor:
         latents = latents.permute(0, 2, 1, 3, 4)  # [batch_size, num_channels, num_frames, height, width]
-        latents = 1 / self.vae.config.scaling_factor * latents
-
-        frames = self.vae.decode(latents).sample
+        latents = 1 / self.first_stage_model.config.scaling_factor * latents
+        print(">>>>>>",latents.shape)
+        frames = self.first_stage_model.decode(latents).sample
         return frames
 
     # Copied from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion.StableDiffusionPipeline.prepare_extra_step_kwargs
@@ -382,16 +430,16 @@ class CogVideoXWorkflow(DDPM):
         num_frames: int,
         device: torch.device,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        grid_height = height // (self.vae_scale_factor_spatial * self.transformer.config.patch_size)
-        grid_width = width // (self.vae_scale_factor_spatial * self.transformer.config.patch_size)
-        base_size_width = 720 // (self.vae_scale_factor_spatial * self.transformer.config.patch_size)
-        base_size_height = 480 // (self.vae_scale_factor_spatial * self.transformer.config.patch_size)
+        grid_height = height // (self.vae_scale_factor_spatial * self.model.config.patch_size)
+        grid_width = width // (self.vae_scale_factor_spatial * self.model.config.patch_size)
+        base_size_width = 720 // (self.vae_scale_factor_spatial * self.model.config.patch_size)
+        base_size_height = 480 // (self.vae_scale_factor_spatial * self.model.config.patch_size)
 
         grid_crops_coords = get_resize_crop_region_for_grid(
             (grid_height, grid_width), base_size_width, base_size_height
         )
         freqs_cos, freqs_sin = get_3d_rotary_pos_embed(
-            embed_dim=self.transformer.config.attention_head_dim,
+            embed_dim=self.model.config.attention_head_dim,
             crops_coords=grid_crops_coords,
             grid_size=(grid_height, grid_width),
             temporal_size=num_frames,
@@ -426,7 +474,7 @@ class CogVideoXWorkflow(DDPM):
         ] = None,
         callback_on_step_end_tensor_inputs: List[str] = ["latents"],
         max_sequence_length: int = 226,
-    ) -> Union[CogVideoXPipelineOutput, Tuple]:
+    ) -> Union[Tuple]:
         """
         Function invoked when calling the pipeline for generation.
 
@@ -497,7 +545,7 @@ class CogVideoXWorkflow(DDPM):
                 `._callback_tensor_inputs` attribute of your pipeline class.
             max_sequence_length (`int`, defaults to `226`):
                 Maximum sequence length in encoded prompt. Must be consistent with
-                `self.transformer.config.max_text_seq_length` otherwise may lead to poor results.
+                `self.model.config.max_text_seq_length` otherwise may lead to poor results.
         """
 
         if num_frames > 49:
@@ -508,8 +556,8 @@ class CogVideoXWorkflow(DDPM):
         if isinstance(callback_on_step_end, (PipelineCallback, MultiPipelineCallbacks)):
             callback_on_step_end_tensor_inputs = callback_on_step_end.tensor_inputs
 
-        height = height or self.transformer.config.sample_size * self.vae_scale_factor_spatial
-        width = width or self.transformer.config.sample_size * self.vae_scale_factor_spatial
+        height = height or self.model.config.sample_size * self.vae_scale_factor_spatial
+        width = width or self.model.config.sample_size * self.vae_scale_factor_spatial
         num_videos_per_prompt = 1
 
         # 1. Check inputs. Raise error if not correct
@@ -533,8 +581,8 @@ class CogVideoXWorkflow(DDPM):
             batch_size = len(prompt)
         else:
             batch_size = prompt_embeds.shape[0]
-
-        device = self._execution_device
+        # TODO: fix device
+        device = "cuda:0"
 
         # here `guidance_scale` is defined analog to the guidance weight `w` of equation (2)
         # of the Imagen paper: https://arxiv.org/pdf/2205.11487.pdf . `guidance_scale = 1`
@@ -560,7 +608,7 @@ class CogVideoXWorkflow(DDPM):
         self._num_timesteps = len(timesteps)
 
         # 5. Prepare latents.
-        latent_channels = self.transformer.config.in_channels
+        latent_channels = self.model.config.in_channels
         latents = self.prepare_latents(
             batch_size * num_videos_per_prompt,
             latent_channels,
@@ -579,90 +627,89 @@ class CogVideoXWorkflow(DDPM):
         # 7. Create rotary embeds if required
         image_rotary_emb = (
             self._prepare_rotary_positional_embeddings(height, width, latents.size(1), device)
-            if self.transformer.config.use_rotary_positional_embeddings
+            if self.model.config.use_rotary_positional_embeddings
             else None
         )
 
         # 8. Denoising loop
         num_warmup_steps = max(len(timesteps) - num_inference_steps * self.scheduler.order, 0)
+        self.interrupt = False 
+        # for DPM-solver++
+        self.model.cuda()
+        old_pred_original_sample = None
+        for i, t in enumerate(timesteps):
+            if self.interrupt:
+                continue
 
-        with self.progress_bar(total=num_inference_steps) as progress_bar:
-            # for DPM-solver++
-            old_pred_original_sample = None
-            for i, t in enumerate(timesteps):
-                if self.interrupt:
-                    continue
+            latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
+            latent_model_input = self.scheduler.scale_model_input(latent_model_input, t)
 
-                latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
-                latent_model_input = self.scheduler.scale_model_input(latent_model_input, t)
+            # broadcast to batch dimension in a way that's compatible with ONNX/Core ML
+            timestep = t.expand(latent_model_input.shape[0])
+            print(i,num_inference_steps)
+            # predict noise model_output
+            noise_pred = self.model(
+                hidden_states=latent_model_input,
+                encoder_hidden_states=prompt_embeds,
+                timestep=timestep,
+                image_rotary_emb=image_rotary_emb,
+                # attention_kwargs=attention_kwargs, # None 
+                return_dict=False,
+            )[0]
+            noise_pred = noise_pred.float()
 
-                # broadcast to batch dimension in a way that's compatible with ONNX/Core ML
-                timestep = t.expand(latent_model_input.shape[0])
+            # perform guidance
+            if use_dynamic_cfg:
+                self._guidance_scale = 1 + guidance_scale * (
+                    (1 - math.cos(math.pi * ((num_inference_steps - t.item()) / num_inference_steps) ** 5.0)) / 2
+                )
+            else:
+                self.guidance_scale = guidance_scale
+            if do_classifier_free_guidance:
+                noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+                noise_pred = noise_pred_uncond + self.guidance_scale * (noise_pred_text - noise_pred_uncond)
 
-                # predict noise model_output
-                noise_pred = self.transformer(
-                    hidden_states=latent_model_input,
-                    encoder_hidden_states=prompt_embeds,
-                    timestep=timestep,
-                    image_rotary_emb=image_rotary_emb,
-                    attention_kwargs=attention_kwargs,
+            # compute the previous noisy sample x_t -> x_t-1
+            if not isinstance(self.scheduler, CogVideoXDPMScheduler):
+                latents = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs, return_dict=False)[0]
+            else:
+                latents, old_pred_original_sample = self.scheduler.step(
+                    noise_pred,
+                    old_pred_original_sample,
+                    t,
+                    timesteps[i - 1] if i > 0 else None,
+                    latents,
+                    **extra_step_kwargs,
                     return_dict=False,
-                )[0]
-                noise_pred = noise_pred.float()
+                )
+            latents = latents.to(prompt_embeds.dtype)
 
-                # perform guidance
-                if use_dynamic_cfg:
-                    self._guidance_scale = 1 + guidance_scale * (
-                        (1 - math.cos(math.pi * ((num_inference_steps - t.item()) / num_inference_steps) ** 5.0)) / 2
-                    )
-                if do_classifier_free_guidance:
-                    noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-                    noise_pred = noise_pred_uncond + self.guidance_scale * (noise_pred_text - noise_pred_uncond)
+            # call the callback, if provided
+            if callback_on_step_end is not None:
+                callback_kwargs = {}
+                for k in callback_on_step_end_tensor_inputs:
+                    callback_kwargs[k] = locals()[k]
+                callback_outputs = callback_on_step_end(self, i, t, callback_kwargs)
 
-                # compute the previous noisy sample x_t -> x_t-1
-                if not isinstance(self.scheduler, CogVideoXDPMScheduler):
-                    latents = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs, return_dict=False)[0]
-                else:
-                    latents, old_pred_original_sample = self.scheduler.step(
-                        noise_pred,
-                        old_pred_original_sample,
-                        t,
-                        timesteps[i - 1] if i > 0 else None,
-                        latents,
-                        **extra_step_kwargs,
-                        return_dict=False,
-                    )
-                latents = latents.to(prompt_embeds.dtype)
-
-                # call the callback, if provided
-                if callback_on_step_end is not None:
-                    callback_kwargs = {}
-                    for k in callback_on_step_end_tensor_inputs:
-                        callback_kwargs[k] = locals()[k]
-                    callback_outputs = callback_on_step_end(self, i, t, callback_kwargs)
-
-                    latents = callback_outputs.pop("latents", latents)
-                    prompt_embeds = callback_outputs.pop("prompt_embeds", prompt_embeds)
-                    negative_prompt_embeds = callback_outputs.pop("negative_prompt_embeds", negative_prompt_embeds)
-
-                if i == len(timesteps) - 1 or ((i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0):
-                    progress_bar.update()
-
+                latents = callback_outputs.pop("latents", latents)
+                prompt_embeds = callback_outputs.pop("prompt_embeds", prompt_embeds)
+                negative_prompt_embeds = callback_outputs.pop("negative_prompt_embeds", negative_prompt_embeds)
+            # if i == len(timesteps) - 1 or ((i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0):
+            #     progress_bar.update()
+        
+        self.model.cpu()
+        print("latent shape ",latents.shape)
+        print(type(latents))
         if not output_type == "latent":
             video = self.decode_latents(latents)
-            video = self.video_processor.postprocess_video(video=video, output_type=output_type)
+            # video = self.video_processor.postprocess_video(video=video, output_type=output_type)
         else:
             video = latents
 
-        # Offload all models
-        self.maybe_free_model_hooks()
-
+        # # Offload all models
+        # self.maybe_free_model_hooks()
+        video = video[None,...]
+        video = video.cpu()
+        torch.cuda.empty_cache()
+        print(type(video),len(video),type(video[0]),video.shape)
         return video 
-
-if __name__=="__main__":
-    # test inference 
-    prompt = "a car is driving on the road"
-    # load config 
-    pipe = CogVideoXWorkflow()
-    pipe.sample(prompt=prompt)
-
