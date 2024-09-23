@@ -1,0 +1,35 @@
+# TODO: fill the params 
+model:
+  target: src.cogvideo_hf.cogvideo_pl.CogVideoXWorkflow
+  params: 
+    # first stage model; cond stage model ; denoising model ; scheduler 
+    first_stage_config:
+      # target: src.cogvideo_hf.cogvideo_pl.AutoencoderKLWrapper
+      target: diffusers.AutoencoderKLCogVideoX
+      params:
+        pretrained_model_name_or_path: THUDM/CogVideoX-2b 
+        subfolder: "vae"
+        # revision: None 
+        # variant: None
+    cond_stage_config:
+      target: src.lvdm.modules.encoders.condition.FrozenT5Embedder
+      params:
+        version: "checkpoints/cogvideo/t5-v1_1-xxl"
+        device: "cuda"
+        max_length: 226 
+        freeze: True
+    # denosier config equal to unet config in vc 
+    denoiser_config:
+      target: diffusers.CogVideoXTransformer3DModel
+      params:
+        pretrained_model_name_or_path: THUDM/CogVideoX-2b 
+        subfolder: "transformer"
+        load_dtype: fp16 # bf16 5b fp16 2B 
+        # revision: None 
+        # variant: None
+    # sampler config. Wrap it.       
+    scheduler_config:
+      target: diffusers.CogVideoXDPMScheduler
+      params:
+        pretrained_model_name_or_path: THUDM/CogVideoX-2b 
+        subfolder: scheduler
