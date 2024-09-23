@@ -44,6 +44,8 @@ VideoTuna/
     ├── assets
     ├── checkpoints  # put model checkpoints here
     ├── configs      # model and experimental configs
+    ├── data         # data processing scripts and dataset files
+    ├── docs         # documentations
     ├── eval         # evaluation scripts
     ├── inputs       # input examples for testing 
     ├── scripts      # train and inference python scripts
@@ -95,8 +97,8 @@ rm -rf HPSv2
 ```
 
 ### 2.Prepare checkpoints
-Please follow [docs/CHECKPOINTS.md]() to download model checkpoints.  
-After downloading, the model checkpoints should be placed as [Checkpoint Structure](https://github.com/VideoVerses/VideoTuna/tree/main?tab=readme-ov-file#checkpoint-structure).
+Please follow [docs/CHECKPOINTS.md](https://github.com/VideoVerses/VideoTuna/blob/main/docs/CHECKPOINTS.md) to download model checkpoints.  
+After downloading, the model checkpoints should be placed as [Checkpoint Structure](https://github.com/VideoVerses/VideoTuna/blob/main/docs/CHECKPOINTS.md#checkpoint-orgnization-structure).
 
 ### 3.Inference state-of-the-art T2V/I2V models
 
@@ -107,7 +109,7 @@ After downloading, the model checkpoints should be placed as [Checkpoint Structu
 |Task|Commands|
 |:---------|:---------|
 |T2V|`bash tools/video_comparison/compare.sh`|
-|I2V|`bash todo.sh`|
+|I2V|`TODO`|
 
 
 
