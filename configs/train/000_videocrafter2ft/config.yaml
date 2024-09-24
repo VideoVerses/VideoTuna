@@ -6,10 +6,6 @@ model:
   params:
     loss_type: l1
     log_every_t: 200
-    linear_start: 0.00085
-    linear_end: 0.012
-    num_timesteps_cond: 1
-    timesteps: 1000
     first_stage_key: video
     cond_stage_key: caption
     cond_stage_trainable: false
@@ -26,6 +22,13 @@ model:
     encoder_type: 2d
     use_scale: true
     scale_b: 0.7 # adapt to videocrafter-v2
+
+    diffusion_scheduler_config:
+      target: src.base.diffusion_schedulers.LDMScheduler
+      params: 
+        timesteps: 1000
+        linear_start: 0.00085
+        linear_end: 0.012
 
     unet_config:
       target: src.lvdm.modules.networks.openaimodel3d.UNetModel

@@ -25,13 +25,13 @@ class DDIMSampler(object):
                                                   num_ddpm_timesteps=self.ddpm_num_timesteps,
                                                   verbose=verbose,
                                                   )
-        alphas_cumprod = self.model.alphas_cumprod
+        alphas_cumprod = self.model.diffusion_scheduler.alphas_cumprod
         assert alphas_cumprod.shape[0] == self.ddpm_num_timesteps, 'alphas have to be defined for each timestep'
         to_torch = lambda x: x.clone().detach().to(torch.float32).to(self.model.device)
 
-        self.register_buffer('betas', to_torch(self.model.betas))
+        self.register_buffer('betas', to_torch(self.model.diffusion_scheduler.betas))
         self.register_buffer('alphas_cumprod', to_torch(alphas_cumprod))
-        self.register_buffer('alphas_cumprod_prev', to_torch(self.model.alphas_cumprod_prev))
+        self.register_buffer('alphas_cumprod_prev', to_torch(self.model.diffusion_scheduler.alphas_cumprod_prev))
         self.use_scale = self.model.use_scale
         # print('DDIM scale', self.use_scale)
 
@@ -148,7 +148,7 @@ class DDIMSampler(object):
                       cond_tau=1., target_size=None, start_timesteps=None,
                       precision=None,fs=None,guidance_rescale=0.0,
                       **kwargs):
-        device = self.model.betas.device        
+        device = self.model.diffusion_scheduler.betas.device        
         
         b = shape[0]
         if x_T is None:
@@ -188,7 +188,7 @@ class DDIMSampler(object):
                 if step > start_timesteps*time_range[0]:
                     continue
                 elif not init_x0:
-                    img = self.model.q_sample(x0, ts) 
+                    img = self.model.diffusion_scheduler.q_sample(x0, ts) 
                     init_x0 = True
 
             # use mask to blend noised original latent img_orig (xt_known) 
@@ -199,7 +199,7 @@ class DDIMSampler(object):
                 if clean_cond: # blend using x0_known, rather than xt_known
                     img_orig = x0
                 else:
-                    img_orig = self.model.q_sample(x0, ts)  # TODO: deterministic forward pass? <ddim inversion>
+                    img_orig = self.model.diffusion_scheduler.q_sample(x0, ts)  # TODO: deterministic forward pass? <ddim inversion>
                 img = img_orig * mask + (1. - mask) * img # keep original & modify use img
             
             index_clip =  int((1 - cond_tau) * total_steps)
@@ -281,15 +281,15 @@ class DDIMSampler(object):
             model_output = e_t
         
         if self.model.parameterization == "v":
-            e_t = self.model.predict_eps_from_z_and_v(x, t, e_t)
+            e_t = self.model.diffusion_scheduler.predict_eps_from_z_and_v(x, t, e_t)
             
         if score_corrector is not None:
             assert self.model.parameterization == "eps"
             e_t = score_corrector.modify_score(self.model, e_t, x, t, c, **corrector_kwargs)
 
-        alphas = self.model.alphas_cumprod if use_original_steps else self.ddim_alphas
-        alphas_prev = self.model.alphas_cumprod_prev if use_original_steps else self.ddim_alphas_prev
-        sqrt_one_minus_alphas = self.model.sqrt_one_minus_alphas_cumprod if use_original_steps else self.ddim_sqrt_one_minus_alphas
+        alphas = self.model.diffusion_scheduler.alphas_cumprod if use_original_steps else self.ddim_alphas
+        alphas_prev = self.model.diffusion_scheduler.alphas_cumprod_prev if use_original_steps else self.ddim_alphas_prev
+        sqrt_one_minus_alphas = self.model.diffusion_scheduler.sqrt_one_minus_alphas_cumprod if use_original_steps else self.ddim_sqrt_one_minus_alphas
         sigmas = self.model.ddim_sigmas_for_original_num_steps if use_original_steps else self.ddim_sigmas
         # select parameters corresponding to the currently considered timestep
         
@@ -309,7 +309,7 @@ class DDIMSampler(object):
         if self.model.parameterization != "v":
             pred_x0 = (x - sqrt_one_minus_at * e_t) / a_t.sqrt()
         else:
-            pred_x0 = self.model.predict_start_from_z_and_v(x, t, model_output)
+            pred_x0 = self.model.diffusion_scheduler.predict_start_from_z_and_v(x, t, model_output)
 
 
         if quantize_denoised:
@@ -321,7 +321,7 @@ class DDIMSampler(object):
         if noise_dropout > 0.:
             noise = torch.nn.functional.dropout(noise, p=noise_dropout)
         
-        alphas = self.model.alphas_cumprod if use_original_steps else self.ddim_alphas
+        alphas = self.model.diffusion_scheduler.alphas_cumprod if use_original_steps else self.ddim_alphas
         if self.use_scale:
             scale_arr = self.model.scale_arr if use_original_steps else self.ddim_scale_arr
             scale_t = torch.full(size, scale_arr[index], device=device)

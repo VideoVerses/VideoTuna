@@ -40,12 +40,12 @@ __conditioning_keys__ = {'concat': 'c_concat',
                          'crossattn': 'c_crossattn',
                          'adm': 'y'}
 
+
 class DDPM(pl.LightningModule):
     # classic DDPM with Gaussian diffusion, in image space
     def __init__(self,
                  unet_config,
-                 timesteps=1000,
-                 beta_schedule="linear",
+                 diffusion_scheduler_config,
                  loss_type="l2",
                  ckpt_path=None,
                  ignore_keys=[],
@@ -57,30 +57,25 @@ class DDPM(pl.LightningModule):
                  channels=3,
                  log_every_t=100,
                  clip_denoised=True,
-                 linear_start=1e-4,
-                 linear_end=2e-2,
-                 cosine_s=8e-3,
-                 given_betas=None,
                  original_elbo_weight=0.,
-                 v_posterior=0.,  # weight for choosing posterior variance as sigma = (1-v) * beta_tilde + v * beta
                  l_simple_weight=1.,
                  conditioning_key=None,
-                 parameterization="eps",  # all assuming fixed variance schedules
-                 scheduler_config=None,
+                 parameterization="eps",  # all assuming fixed variance schedules 
+                 scheduler_config=None, # learning rate scheduler config 
                  use_positional_encodings=False,
-                 learn_logvar=False,
-                 logvar_init=0.,
-                 rescale_betas_zero_snr=False,
                  lora_args=[],
                  ):
         super().__init__()
         assert parameterization in ["eps", "x0", "v"], 'currently only supporting "eps" and "x0" and "v"'
         self.parameterization = parameterization
         mainlogger.info(f"{self.__class__.__name__}: Running in {self.parameterization}-prediction mode")
-        self.cond_stage_model = None
+        
         self.clip_denoised = clip_denoised
         self.log_every_t = log_every_t
+
+        # model related 
         self.first_stage_key = first_stage_key
+        self.cond_stage_model = None
         self.channels = channels
         self.temporal_length = unet_config.params.get('temporal_length', 16)
         self.image_size = image_size  # try conv?
@@ -107,97 +102,46 @@ class DDPM(pl.LightningModule):
 
         #count_params(self.model, verbose=True)
         self.use_ema = use_ema
-        self.rescale_betas_zero_snr = rescale_betas_zero_snr
         if self.use_ema:
             self.model_ema = LitEma(self.model)
             mainlogger.info(f"Keeping EMAs of {len(list(self.model_ema.buffers()))}.")
 
+        # this is learning rate scheduler.. 
         self.use_scheduler = scheduler_config is not None
         if self.use_scheduler:
             self.scheduler_config = scheduler_config
 
-        self.v_posterior = v_posterior
         self.original_elbo_weight = original_elbo_weight
         self.l_simple_weight = l_simple_weight
 
+        # TODO to be implemented 
+        print('scheduler config type: ', type(diffusion_scheduler_config))
+        diffusion_scheduler_config.parameterization = self.parameterization
+        self.diffusion_scheduler = instantiate_from_config(diffusion_scheduler_config)
+        self.num_timesteps = self.diffusion_scheduler.num_timesteps
+        
+
+        # # this can be used to initiate schedulers 
+        # self.v_posterior = v_posterior
+        # self.original_elbo_weight = original_elbo_weight
+        # self.l_simple_weight = l_simple_weight
+
+        # self.register_schedule(given_betas=given_betas, beta_schedule=beta_schedule, timesteps=timesteps,
+        #                        linear_start=linear_start, linear_end=linear_end, cosine_s=cosine_s)
+        
+        # self.learn_logvar = learn_logvar
+        # self.logvar = torch.full(fill_value=logvar_init, size=(self.num_timesteps,))
+        # if self.learn_logvar:
+        #     self.logvar = nn.Parameter(self.logvar, requires_grad=True)
+        
+        # others 
         if monitor is not None:
             self.monitor = monitor
         if ckpt_path is not None:
             self.init_from_ckpt(ckpt_path, ignore_keys=ignore_keys, only_model=load_only_unet)
-
-        self.register_schedule(given_betas=given_betas, beta_schedule=beta_schedule, timesteps=timesteps,
-                               linear_start=linear_start, linear_end=linear_end, cosine_s=cosine_s)
-
+        
         self.loss_type = loss_type
 
-        self.learn_logvar = learn_logvar
-        self.logvar = torch.full(fill_value=logvar_init, size=(self.num_timesteps,))
-        if self.learn_logvar:
-            self.logvar = nn.Parameter(self.logvar, requires_grad=True)
-        
-    def register_schedule(self, given_betas=None, beta_schedule="linear", timesteps=1000,
-                          linear_start=1e-4, linear_end=2e-2, cosine_s=8e-3):
-        if exists(given_betas):
-            betas = given_betas
-        else:
-            betas = make_beta_schedule(beta_schedule, timesteps, linear_start=linear_start, linear_end=linear_end,
-                                       cosine_s=cosine_s)
-        if self.rescale_betas_zero_snr:
-            betas = rescale_zero_terminal_snr(betas)
-        
-        alphas = 1. - betas
-        alphas_cumprod = np.cumprod(alphas, axis=0)
-        alphas_cumprod_prev = np.append(1., alphas_cumprod[:-1])
-
-        timesteps, = betas.shape
-        self.num_timesteps = int(timesteps)
-        self.linear_start = linear_start
-        self.linear_end = linear_end
-        assert alphas_cumprod.shape[0] == self.num_timesteps, 'alphas have to be defined for each timestep'
-
-        to_torch = partial(torch.tensor, dtype=torch.float32)
-
-        self.register_buffer('betas', to_torch(betas))
-        self.register_buffer('alphas_cumprod', to_torch(alphas_cumprod))
-        self.register_buffer('alphas_cumprod_prev', to_torch(alphas_cumprod_prev))
-
-        # calculations for diffusion q(x_t | x_{t-1}) and others
-        self.register_buffer('sqrt_alphas_cumprod', to_torch(np.sqrt(alphas_cumprod)))
-        self.register_buffer('sqrt_one_minus_alphas_cumprod', to_torch(np.sqrt(1. - alphas_cumprod)))
-        self.register_buffer('log_one_minus_alphas_cumprod', to_torch(np.log(1. - alphas_cumprod)))
-        if self.parameterization == "v":
-            self.register_buffer('sqrt_recip_alphas_cumprod', torch.zeros_like(to_torch(alphas_cumprod)))
-            self.register_buffer('sqrt_recipm1_alphas_cumprod', torch.zeros_like(to_torch(alphas_cumprod)))
-        else:
-            self.register_buffer('sqrt_recip_alphas_cumprod', to_torch(np.sqrt(1. / alphas_cumprod)))
-            self.register_buffer('sqrt_recipm1_alphas_cumprod', to_torch(np.sqrt(1. / alphas_cumprod - 1)))
-
-        # calculations for posterior q(x_{t-1} | x_t, x_0)
-        posterior_variance = (1 - self.v_posterior) * betas * (1. - alphas_cumprod_prev) / (
-                    1. - alphas_cumprod) + self.v_posterior * betas
-        # above: equal to 1. / (1. / (1. - alpha_cumprod_tm1) + alpha_t / beta_t)
-        self.register_buffer('posterior_variance', to_torch(posterior_variance))
-        # below: log calculation clipped because the posterior variance is 0 at the beginning of the diffusion chain
-        self.register_buffer('posterior_log_variance_clipped', to_torch(np.log(np.maximum(posterior_variance, 1e-20))))
-        self.register_buffer('posterior_mean_coef1', to_torch(
-            betas * np.sqrt(alphas_cumprod_prev) / (1. - alphas_cumprod)))
-        self.register_buffer('posterior_mean_coef2', to_torch(
-            (1. - alphas_cumprod_prev) * np.sqrt(alphas) / (1. - alphas_cumprod)))
-
-        if self.parameterization == "eps":
-            lvlb_weights = self.betas ** 2 / (
-                        2 * self.posterior_variance * to_torch(alphas) * (1 - self.alphas_cumprod))
-        elif self.parameterization == "x0":
-            lvlb_weights = 0.5 * np.sqrt(torch.Tensor(alphas_cumprod)) / (2. * 1 - torch.Tensor(alphas_cumprod))
-        elif self.parameterization == "v":
-            lvlb_weights = torch.ones_like(self.betas ** 2 / (
-                    2 * self.posterior_variance * to_torch(alphas) * (1 - self.alphas_cumprod)))
-        else:
-            raise NotImplementedError("mu not supported")
-        # TODO how to choose this term
-        lvlb_weights[0] = lvlb_weights[1]
-        self.register_buffer('lvlb_weights', lvlb_weights, persistent=False)
-        assert not torch.isnan(self.lvlb_weights).all()
 
     @contextmanager
     def ema_scope(self, context=None):
@@ -215,6 +159,7 @@ class DDPM(pl.LightningModule):
                     mainlogger.info(f"{context}: Restored training weights")
 
     def init_from_ckpt(self, path, ignore_keys=list(), only_model=False):
+        # TODO logvar keys 
         sd = torch.load(path, map_location="cpu")
         if "state_dict" in list(sd.keys()):
             sd = sd["state_dict"]
@@ -232,76 +177,15 @@ class DDPM(pl.LightningModule):
         if len(unexpected) > 0:
             mainlogger.info(f"Unexpected Keys: {unexpected}")
 
-    def q_mean_variance(self, x_start, t):
-        """
-        Get the distribution q(x_t | x_0).
-        :param x_start: the [N x C x ...] tensor of noiseless inputs.
-        :param t: the number of diffusion steps (minus 1). Here, 0 means one step.
-        :return: A tuple (mean, variance, log_variance), all of x_start's shape.
-        """
-        mean = (extract_into_tensor(self.sqrt_alphas_cumprod, t, x_start.shape) * x_start)
-        variance = extract_into_tensor(1.0 - self.alphas_cumprod, t, x_start.shape)
-        log_variance = extract_into_tensor(self.log_one_minus_alphas_cumprod, t, x_start.shape)
-        return mean, variance, log_variance
-
-    def predict_start_from_noise(self, x_t, t, noise):
-        return (
-                extract_into_tensor(self.sqrt_recip_alphas_cumprod, t, x_t.shape) * x_t -
-                extract_into_tensor(self.sqrt_recipm1_alphas_cumprod, t, x_t.shape) * noise
-        )
-
-    def predict_start_from_z_and_v(self, x_t, t, v):
-        # self.register_buffer('sqrt_alphas_cumprod', to_torch(np.sqrt(alphas_cumprod)))
-        # self.register_buffer('sqrt_one_minus_alphas_cumprod', to_torch(np.sqrt(1. - alphas_cumprod)))
-        return (
-                extract_into_tensor(self.sqrt_alphas_cumprod, t, x_t.shape) * x_t -
-                extract_into_tensor(self.sqrt_one_minus_alphas_cumprod, t, x_t.shape) * v
-        )
-
-    def predict_eps_from_z_and_v(self, x_t, t, v):
-        return (
-                extract_into_tensor(self.sqrt_alphas_cumprod, t, x_t.shape) * v +
-                extract_into_tensor(self.sqrt_one_minus_alphas_cumprod, t, x_t.shape) * x_t
-        )
-
-    def q_posterior(self, x_start, x_t, t):
-        posterior_mean = (
-                extract_into_tensor(self.posterior_mean_coef1, t, x_t.shape) * x_start +
-                extract_into_tensor(self.posterior_mean_coef2, t, x_t.shape) * x_t
-        )
-        posterior_variance = extract_into_tensor(self.posterior_variance, t, x_t.shape)
-        posterior_log_variance_clipped = extract_into_tensor(self.posterior_log_variance_clipped, t, x_t.shape)
-        return posterior_mean, posterior_variance, posterior_log_variance_clipped
-
-    def p_mean_variance(self, x, t, clip_denoised: bool):
-        model_out = self.model(x, t)
-        if self.parameterization == "eps":
-            x_recon = self.predict_start_from_noise(x, t=t, noise=model_out)
-        elif self.parameterization == "x0":
-            x_recon = model_out
-        if clip_denoised:
-            x_recon.clamp_(-1., 1.)
-
-        model_mean, posterior_variance, posterior_log_variance = self.q_posterior(x_start=x_recon, x_t=x, t=t)
-        return model_mean, posterior_variance, posterior_log_variance
-
-    @torch.no_grad()
-    def p_sample(self, x, t, clip_denoised=True, repeat_noise=False):
-        b, *_, device = *x.shape, x.device
-        model_mean, _, model_log_variance = self.p_mean_variance(x=x, t=t, clip_denoised=clip_denoised)
-        noise = noise_like(x.shape, device, repeat_noise)
-        # no noise when t == 0
-        nonzero_mask = (1 - (t == 0).float()).reshape(b, *((1,) * (len(x.shape) - 1)))
-        return model_mean + nonzero_mask * (0.5 * model_log_variance).exp() * noise
 
     @torch.no_grad()
     def p_sample_loop(self, shape, return_intermediates=False):
-        device = self.betas.device
+        device = self.diffusion_scheduler.betas.device
         b = shape[0]
         img = torch.randn(shape, device=device)
         intermediates = [img]
         for i in tqdm(reversed(range(0, self.num_timesteps)), desc='Sampling t', total=self.num_timesteps):
-            img = self.p_sample(img, torch.full((b,), i, device=device, dtype=torch.long),
+            img = self.diffusion_scheduler.p_sample(img, torch.full((b,), i, device=device, dtype=torch.long),
                                 clip_denoised=self.clip_denoised)
             if i % self.log_every_t == 0 or i == self.num_timesteps - 1:
                 intermediates.append(img)
@@ -316,17 +200,7 @@ class DDPM(pl.LightningModule):
         return self.p_sample_loop((batch_size, channels, image_size, image_size),
                                   return_intermediates=return_intermediates)
 
-    def q_sample(self, x_start, t, noise=None):
-        noise = default(noise, lambda: torch.randn_like(x_start))
-        return (extract_into_tensor(self.sqrt_alphas_cumprod, t, x_start.shape) * x_start +
-                extract_into_tensor(self.sqrt_one_minus_alphas_cumprod, t, x_start.shape) * noise)
-
-    def get_v(self, x, noise, t):
-        return (
-                extract_into_tensor(self.sqrt_alphas_cumprod, t, x.shape) * noise -
-                extract_into_tensor(self.sqrt_one_minus_alphas_cumprod, t, x.shape) * x
-        )
-
+    
     def get_loss(self, pred, target, mean=True):
         
         if target.size()[1] != pred.size()[1]:
@@ -347,9 +221,10 @@ class DDPM(pl.LightningModule):
 
         return loss
 
+    
     def p_losses(self, x_start, t, noise=None):
         noise = default(noise, lambda: torch.randn_like(x_start))
-        x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
+        x_noisy = self.diffusion_scheduler.q_sample(x_start=x_start, t=t, noise=noise)
         model_out = self.model(x_noisy, t)
 
         loss_dict = {}
@@ -358,7 +233,7 @@ class DDPM(pl.LightningModule):
         elif self.parameterization == "x0":
             target = x_start
         elif self.parameterization == "v":
-            target = self.get_v(x_start, noise, t)
+            target = self.diffusion_scheduler.get_v(x_start, noise, t)
         else:
             raise NotImplementedError(f"Paramterization {self.parameterization} not yet supported")
 
@@ -369,7 +244,7 @@ class DDPM(pl.LightningModule):
         loss_dict.update({f'{log_prefix}/loss_simple': loss.mean()})
         loss_simple = loss.mean() * self.l_simple_weight
 
-        loss_vlb = (self.lvlb_weights[t] * loss).mean()
+        loss_vlb = (self.diffusion_scheduler.lvlb_weights[t] * loss).mean()
         loss_dict.update({f'{log_prefix}/loss_vlb': loss_vlb})
 
         loss = loss_simple + self.original_elbo_weight * loss_vlb
@@ -475,10 +350,12 @@ class DDPM(pl.LightningModule):
     def configure_optimizers(self):
         lr = self.learning_rate
         params = list(self.model.parameters())
-        if self.learn_logvar:
+        if self.diffusion_scheduler.learn_logvar:
             params = params + [self.logvar]
         opt = torch.optim.AdamW(params, lr=lr)
         return opt
+    
+
     def load_lora_from_ckpt(self,model,path):
         lora_state_dict = torch.load(path)['state_dict']
         copy_tracker = {key: False for key in lora_state_dict}    
@@ -522,7 +399,7 @@ class LatentDiffusion(DDPM):
     def __init__(self,
                  first_stage_config,
                  cond_stage_config,
-                 num_timesteps_cond=None,
+                 diffusion_scheduler_config,
                  cond_stage_key="caption",
                  cond_stage_trainable=False,
                  cond_stage_forward=None,
@@ -546,15 +423,16 @@ class LatentDiffusion(DDPM):
                  rand_cond_frame=False,
                  empty_params_only=False,
                  *args, **kwargs):
-        self.num_timesteps_cond = default(num_timesteps_cond, 1)
         self.scale_by_std = scale_by_std
-        assert self.num_timesteps_cond <= kwargs['timesteps']
         # for backwards compatibility after implementation of DiffusionWrapper
         ckpt_path = kwargs.pop("ckpt_path", None)
         ignore_keys = kwargs.pop("ignore_keys", [])
         conditioning_key = default(conditioning_key, 'crossattn')
         
-        super().__init__(conditioning_key=conditioning_key, *args, **kwargs)
+        # the init func of the base class will initiate a diffusion_scheduler 
+        super().__init__(conditioning_key=conditioning_key, diffusion_scheduler_config=diffusion_scheduler_config, *args, **kwargs)
+
+        # self.diffusion_scheduler = instantiate_from_config(diffusion_scheduler_config)
 
         self.cond_stage_trainable = cond_stage_trainable
         self.cond_stage_key = cond_stage_key
@@ -623,15 +501,6 @@ class LatentDiffusion(DDPM):
         self.rand_cond_frame = rand_cond_frame
         self.interp_mode = interp_mode
 
-    def make_cond_schedule(self, ):
-        self.cond_ids = torch.full(size=(self.num_timesteps,), fill_value=self.num_timesteps - 1, dtype=torch.long)
-        ids = torch.round(torch.linspace(0, self.num_timesteps - 1, self.num_timesteps_cond)).long()
-        self.cond_ids[:self.num_timesteps_cond] = ids
-
-    def q_sample(self, x_start, t, noise=None):
-        noise = default(noise, lambda: torch.randn_like(x_start))
-        return (extract_into_tensor(self.sqrt_alphas_cumprod, t, x_start.shape) * x_start +
-            extract_into_tensor(self.sqrt_one_minus_alphas_cumprod, t, x_start.shape) * noise)
 
     def _freeze_model(self):
         for name, para in self.model.diffusion_model.named_parameters():
@@ -655,14 +524,6 @@ class LatentDiffusion(DDPM):
             mainlogger.info(f"setting self.scale_factor to {self.scale_factor}")
             mainlogger.info("### USING STD-RESCALING ###")
             mainlogger.info(f"std={z.flatten().std()}")
-
-    def register_schedule(self, given_betas=None, beta_schedule="linear", timesteps=1000,
-                          linear_start=1e-4, linear_end=2e-2, cosine_s=8e-3):
-        super().register_schedule(given_betas, beta_schedule, timesteps, linear_start, linear_end, cosine_s)
-
-        self.shorten_cond_schedule = self.num_timesteps_cond > 1
-        if self.shorten_cond_schedule:
-            self.make_cond_schedule()
 
     def instantiate_first_stage(self, config):
         model = instantiate_from_config(config)
@@ -828,7 +689,7 @@ class LatentDiffusion(DDPM):
 
     def p_losses(self, x_start, cond, t, noise=None, **kwargs):
         noise = default(noise, lambda: torch.randn_like(x_start))
-        x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
+        x_noisy = self.diffusion_scheduler.q_sample(x_start=x_start, t=t, noise=noise)
         if self.frame_cond:
             if self.cond_mask.device is not self.device:
                 self.cond_mask = self.cond_mask.to(self.device)
@@ -844,7 +705,7 @@ class LatentDiffusion(DDPM):
         elif self.parameterization == "eps":
             target = noise
         elif self.parameterization == "v":
-            target = self.get_v(x_start, noise, t)
+            target = self.diffusion_scheduler.get_v(x_start, noise, t)
         else:
             raise NotImplementedError()
         
@@ -864,15 +725,15 @@ class LatentDiffusion(DDPM):
 
         loss_dict.update({f'{prefix}/loss_simple': loss_simple.mean()})
 
-        if self.logvar.device is not self.device:
-            self.logvar = self.logvar.to(self.device)
-        logvar_t = self.logvar[t]
+        if self.diffusion_scheduler.logvar.device is not self.device:
+            self.diffusion_scheduler.logvar = self.diffusion_scheduler.logvar.to(self.device)
+        logvar_t = self.diffusion_scheduler.logvar[t]
         # logvar_t = self.logvar[t.item()].to(self.device) # device conflict when ddp shared
         loss = loss_simple / torch.exp(logvar_t) + logvar_t
         # loss = loss_simple / torch.exp(self.logvar) + self.logvar
-        if self.learn_logvar:
+        if self.diffusion_scheduler.learn_logvar:
             loss_dict.update({f'{prefix}/loss_gamma': loss.mean()})
-            loss_dict.update({'logvar': self.logvar.data.mean()})
+            loss_dict.update({'logvar': self.diffusion_scheduler.logvar.data.mean()})
 
         loss = self.l_simple_weight * loss.mean()
 
@@ -985,52 +846,6 @@ class LatentDiffusion(DDPM):
         return log
     
 
-    def p_mean_variance(self, x, c, t, clip_denoised: bool, return_x0=False, score_corrector=None, corrector_kwargs=None, **kwargs):
-        t_in = t
-        model_out = self.apply_model(x, t_in, c, **kwargs)
-
-        if score_corrector is not None:
-            assert self.parameterization == "eps"
-            model_out = score_corrector.modify_score(self, model_out, x, t, c, **corrector_kwargs)
-
-        if self.parameterization == "eps":
-            x_recon = self.predict_start_from_noise(x, t=t, noise=model_out)
-        elif self.parameterization == "x0":
-            x_recon = model_out
-        else:
-            raise NotImplementedError()
-
-        if clip_denoised:
-            x_recon.clamp_(-1., 1.)
-
-        model_mean, posterior_variance, posterior_log_variance = self.q_posterior(x_start=x_recon, x_t=x, t=t)
-
-        if return_x0:
-            return model_mean, posterior_variance, posterior_log_variance, x_recon
-        else:
-            return model_mean, posterior_variance, posterior_log_variance
-
-    @torch.no_grad()
-    def p_sample(self, x, c, t, clip_denoised=False, repeat_noise=False, return_x0=False, \
-                 temperature=1., noise_dropout=0., score_corrector=None, corrector_kwargs=None, **kwargs):
-        b, *_, device = *x.shape, x.device
-        outputs = self.p_mean_variance(x=x, c=c, t=t, clip_denoised=clip_denoised, return_x0=return_x0, \
-                                       score_corrector=score_corrector, corrector_kwargs=corrector_kwargs, **kwargs)
-        if return_x0:
-            model_mean, _, model_log_variance, x0 = outputs
-        else:
-            model_mean, _, model_log_variance = outputs
-
-        noise = noise_like(x.shape, device, repeat_noise) * temperature
-        if noise_dropout > 0.:
-            noise = torch.nn.functional.dropout(noise, p=noise_dropout)
-        # no noise when t == 0
-        nonzero_mask = (1 - (t == 0).float()).reshape(b, *((1,) * (len(x.shape) - 1)))
-
-        if return_x0:
-            return model_mean + nonzero_mask * (0.5 * model_log_variance).exp() * noise, x0
-        else:
-            return model_mean + nonzero_mask * (0.5 * model_log_variance).exp() * noise
 
     @torch.no_grad()
     def p_sample_loop(self, cond, shape, return_intermediates=False, x_T=None, verbose=True, callback=None, \
@@ -1038,7 +853,7 @@ class LatentDiffusion(DDPM):
 
         if not log_every_t:
             log_every_t = self.log_every_t
-        device = self.betas.device
+        device = self.diffusion_scheduler.betas.device
         b = shape[0]        
         # sample an initial noise
         if x_T is None:
@@ -1060,14 +875,14 @@ class LatentDiffusion(DDPM):
 
         for i in iterator:
             ts = torch.full((b,), i, device=device, dtype=torch.long)
-            if self.shorten_cond_schedule:
+            if self.diffusion_scheduler.shorten_cond_schedule:
                 assert self.model.conditioning_key != 'hybrid'
                 tc = self.cond_ids[ts].to(cond.device)
-                cond = self.q_sample(x_start=cond, t=tc, noise=torch.randn_like(cond))
+                cond = self.diffusion_scheduler.q_sample(x_start=cond, t=tc, noise=torch.randn_like(cond))
 
-            img = self.p_sample(img, cond, ts, clip_denoised=self.clip_denoised, **kwargs)
+            img = self.diffusion_scheduler.p_sample(img, cond, ts, clip_denoised=self.clip_denoised, **kwargs)
             if mask is not None:
-                img_orig = self.q_sample(x0, ts)
+                img_orig = self.diffusion_scheduler.q_sample(x0, ts)
                 img = img_orig * mask + (1. - mask) * img
 
             if i % log_every_t == 0 or i == timesteps - 1:
@@ -1129,7 +944,7 @@ class LatentDiffusion(DDPM):
             params = list(self.model.parameters())
             mainlogger.info(f"@Training [{len(params)}] Full Paramters.")
                
-        if self.learn_logvar:
+        if self.diffusion_scheduler.learn_logvar:
             mainlogger.info('Diffusion model optimizing logvar')
             if isinstance(params[0], dict):
                 params.append({"params": [self.logvar]})
@@ -1171,7 +986,6 @@ class LatentDiffusion(DDPM):
         else:
             raise NotImplementedError
         return lr_scheduler
-
 
 
 class RewardLVDMTrainer(LatentDiffusion):
@@ -1494,7 +1308,7 @@ class LatentVisualDiffusion(LatentDiffusion):
             mainlogger.info(f"@Training [{len(list(self.image_proj_model.parameters()))}] Paramters for Image_proj_model.")
             params.extend(list(self.image_proj_model.parameters()))   
 
-        if self.learn_logvar:
+        if self.diffusion_scheduler.learn_logvar:
             mainlogger.info('Diffusion model optimizing logvar')
             if isinstance(params[0], dict):
                 params.append({"params": [self.logvar]})
