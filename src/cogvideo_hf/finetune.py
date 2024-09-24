@@ -1069,7 +1069,7 @@ def main(args):
         init_lora_weights=True,
         target_modules=["to_k", "to_q", "to_v", "to_out.0"],
     )
-    transformer.add_adapter(transformer_lora_config)
+    ƒ.add_adapter(transformer_lora_config)
 
     def unwrap_model(model):
         model = accelerator.unwrap_model(model)
