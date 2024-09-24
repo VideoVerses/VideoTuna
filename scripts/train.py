@@ -194,10 +194,15 @@ if __name__ == "__main__":
         try:
             # Strategy is automatically managed, no need to manually check it here
             logger.info(f"<Training in {trainer.strategy.__class__.__name__} Mode>")
-            trainer.fit(model, data)
+            # Please refer to https://lightning.ai/docs/pytorch/stable/api/lightning.pytorch.plugins.precision.MixedPrecision.html for Automatic Mixed Precision (AMP) training
+            if trainer.strategy == 'deepspeed':
+                with torch.cuda.amp.autocast():
+                    trainer.fit(model, data)
+            else:
+                trainer.fit(model, data)
         except Exception as e:
             logger.error(f"Training failed: {str(e)}")
-            raise  # Raising the error will help in debugging
+            raise
 
     if args.val:
         # Directly call validation
