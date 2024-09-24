@@ -107,9 +107,8 @@ data:
 lightning:
   trainer:
     benchmark: True
-    batch_size: 3
-    num_workers: 38
     num_nodes: 1
+    devices: 0
     accumulate_grad_batches: 2
     max_epochs: 2000
     precision: 16 # training precision
@@ -134,4 +133,3 @@ lightning:
         save_weights_only: False
         every_n_epochs: 300
         every_n_train_steps: null
-    
