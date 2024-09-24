@@ -12,5 +12,8 @@ results
 checkpoints
 pretrained_models/
 samples/
+
 HPSv2/
 SwissArmyTransformer/
+
+trainingdata

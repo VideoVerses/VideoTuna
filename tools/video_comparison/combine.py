@@ -24,7 +24,7 @@ def add_text_to_frame(frame, text='hi', position=(0,0)):
     # print(f'index {index}')
     img = Image.fromarray(frame)
     draw = ImageDraw.Draw(img)    
-    font = ImageFont.truetype("./Arial.ttf", size=24)
+    font = ImageFont.truetype("tools/video_comparison/Arial.ttf", size=24)
     draw.text(position, text, font=font, fill="white")   
     return np.array(img)
 
