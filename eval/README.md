@@ -33,12 +33,14 @@ If you encounter errors during installing the [detectron2](https://github.com/fa
         --videos_path $video_path \
         --map_json_path $json_path
     ```
+    The final score of all dimensions are saved in the file `final_results.json`. If you want to submit your result to the VBench Leaderboard, you can zip the files `results_eval_results.json` and `results_full_info.json` and upload it to the [Leaderboard](https://huggingface.co/spaces/Vchitect/VBench_Leaderboard).
 
-    After this, you can caluate the final score including *overall score*, *quality score* and *sementic score* by running:
+    Besides, you also can caluate the ***overall score***, ***quality score*** and ***sementic score*** in the VBench Leaderboard by yourself:
     ```shell
     python scripts/tabular_score.py \
         --result_path $result_json_path
     ```
+    The result will be saved in the file `scaled_results.json`.
 
     (2) Customized evaluation  
 
@@ -69,3 +71,4 @@ If you encounter errors during installing the [detectron2](https://github.com/fa
         --dimension $dim1 $dim2 ... \
         --mode custom_input
     ```
+    The final score of each dimension is saved in the file `final_results.json`.

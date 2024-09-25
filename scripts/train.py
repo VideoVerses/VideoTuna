@@ -97,7 +97,6 @@ if __name__ == "__main__":
     
     
     model = instantiate_from_config(config.model)
-    # import pdb; pdb.set_trace()
     if args.auto_resume:
         ## the saved checkpoint must be: full-info checkpoint
         resume_ckpt_path = get_autoresume_path(workdir)
@@ -112,7 +111,7 @@ if __name__ == "__main__":
             logger.warning("Auto-resuming skipped as No checkpoit found!")
     else:
         model = load_checkpoints(model, config.model)
-    if len(model.lora_args)!=0:
+    if hasattr(model,"lora_args") and len(model.lora_args)!=0:
         model.inject_lora()
     ## update trainer config
     for k in get_nondefault_trainer_args(args):

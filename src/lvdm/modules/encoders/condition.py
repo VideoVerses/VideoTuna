@@ -5,7 +5,7 @@ import kornia
 import open_clip
 from transformers import T5Tokenizer, T5EncoderModel, CLIPTokenizer, CLIPTextModel
 from src.lvdm.modules.utils import autocast
-from utils.common_utils import count_params
+from src.utils.common_utils import count_params
 
 class AbstractEncoder(nn.Module):
     def __init__(self):

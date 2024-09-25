@@ -51,7 +51,7 @@ def get_trainer_callbacks(lightning_config, config, logdir, ckptdir, logger):
             }
         },
         "batch_logger": {
-            "target": "utils.callbacks.ImageLogger",
+            "target": "src.utils.callbacks.ImageLogger",
             "params": {
                 "save_dir": logdir,
                 "batch_frequency": 1000,
@@ -67,7 +67,7 @@ def get_trainer_callbacks(lightning_config, config, logdir, ckptdir, logger):
             }
         },
         "cuda_callback": {
-            "target": "utils.callbacks.CUDACallback"
+            "target": "src.utils.callbacks.CUDACallback"
         },
     }
 
