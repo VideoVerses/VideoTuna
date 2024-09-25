@@ -97,7 +97,6 @@ if __name__ == "__main__":
     
     
     model = instantiate_from_config(config.model)
-    # import pdb; pdb.set_trace()
     if args.auto_resume:
         ## the saved checkpoint must be: full-info checkpoint
         resume_ckpt_path = get_autoresume_path(workdir)
