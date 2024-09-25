@@ -1,4 +1,3 @@
-# TODO: fill the params 
 model:
   # there might be differet to load from hf and resume from pl 
   # pretrained_checkpoint: "THUDM/CogVideoX-2b"
@@ -20,6 +19,21 @@ model:
         device: "cuda"
         max_length: 226 
         freeze: True
+    # cond_stage_config:
+    #   target: src.cogvideo_hf.cogvideo_pl.FrozenT5CondModel
+    #   params:
+    #     tokenizer_config:
+    #       target: transformers.AutoTokenizer
+    #       params:
+    #         pretrained_model_name_or_path: THUDM/CogVideoX-2b 
+    #         subfolder: "tokenizer"
+    #     encoder_config:
+    #       target: transformers.T5EncoderModel
+    #       params:
+    #         subfolder: "text_encoder"
+    #         pretrained_model_name_or_path: THUDM/CogVideoX-2b 
+    #       # max_length: 226 
+    #     freeze: True
     # denosier config equal to unet config in vc 
     denoiser_config:
       target: diffusers.CogVideoXTransformer3DModel
@@ -75,7 +89,7 @@ lightning:
     num_nodes: 1
     accumulate_grad_batches: 2
     max_epochs: 2000
-    precision: 16 # training precision
+    precision: 32 # training precision
   callbacks:
     image_logger:
       target: src.utils.callbacks.ImageLogger
@@ -86,7 +100,7 @@ lightning:
         log_images_kwargs:
           unconditional_guidance_scale: 12 # need this, otherwise it is grey
     modelcheckpoint:
-      # target: pytorch_lightning.callbacks.ModelCheckpoint
+      # target: pytorch_lightning.callbacks.ModelCheckpoin
       target: pytorch_lightning.callbacks.ModelCheckpoint
       params:
         every_n_epochs: 1
