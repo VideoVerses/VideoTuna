@@ -41,7 +41,7 @@ __conditioning_keys__ = {'concat': 'c_concat',
                          'adm': 'y'}
 
 
-class DDPM(pl.LightningModule):
+class DDPMFlow(pl.LightningModule):
     # classic DDPM with Gaussian diffusion, in image space
     def __init__(self,
                  unet_config,
@@ -394,7 +394,7 @@ class DDPM(pl.LightningModule):
             self.load_lora_from_ckpt(self.model, self.lora_ckpt_path)
         
 
-class LatentDiffusion(DDPM):
+class LVDMFlow(DDPMFlow):
     """main class"""
     def __init__(self,
                  first_stage_config,
@@ -988,7 +988,7 @@ class LatentDiffusion(DDPM):
         return lr_scheduler
 
 
-class RewardLVDMTrainer(LatentDiffusion):
+class RewardLVDMTrainer(LVDMFlow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Reward Gradient Training Using LoRA as a default
@@ -1087,7 +1087,7 @@ class RewardLVDMTrainer(LatentDiffusion):
 
 
 
-class LatentVisualDiffusion(LatentDiffusion):
+class LatentVisualDiffusionFlow(LVDMFlow):
     def __init__(self, 
                  img_cond_stage_config,
                  finegrained=False,               # vc1-i2v

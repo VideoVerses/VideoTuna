@@ -1,15 +1,10 @@
 model:
   base_learning_rate: 1.0e-05
   scale_lr: False
-  target: src.base.ddpm3d.LatentVisualDiffusion
+  target: src.base.ddpm3d.LatentVisualDiffusionFlow
   params:
-    rescale_betas_zero_snr: True
     parameterization: "v"
-    linear_start: 0.00085
-    linear_end: 0.012
-    num_timesteps_cond: 1
     log_every_t: 200
-    timesteps: 1000
     first_stage_key: video
     cond_stage_key: caption
     cond_stage_trainable: False
@@ -26,6 +21,14 @@ model:
     use_scale: true
     scale_b: 0.3
     fps_condition_type: 'fps'
+
+    diffusion_scheduler_config:
+      target: src.base.diffusion_schedulers.LDMScheduler
+      params: 
+        timesteps: 1000
+        linear_start: 0.00085
+        linear_end: 0.012
+        rescale_betas_zero_snr: True
 
     unet_config:
       target: src.lvdm.modules.networks.openaimodel3d_dc.UNetModel

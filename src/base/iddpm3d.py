@@ -217,6 +217,7 @@ class IDDPM(DDPM):
         assert noise.shape == x_t.shape
         return super().predict_start_from_noise(x_t, t, noise)
 
+
     def predict_start_from_prev(self, x_t, t, x_prev):
         assert x_prev.shape == x_t.shape
         return (  # (x_prev - coef2 * x_t) / coef1

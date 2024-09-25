@@ -2,7 +2,7 @@ model:
   base_learning_rate: 6.0e-06 # 1.5e-04
   scale_lr: False
   # empty_params_only: True # disable this means finetuning all parameters
-  target: src.base.ddpm3d.LatentDiffusion
+  target: src.base.ddpm3d.LVDMFlow
   params:
     lora_args:
       # lora_ckpt: "/path/to/lora.ckpt" # first time training, no need; this is for resume training. 
@@ -12,10 +12,6 @@ model:
       lora_dropout: 0.0
     loss_type: l1
     log_every_t: 200
-    linear_start: 0.00085
-    linear_end: 0.012
-    num_timesteps_cond: 1
-    timesteps: 1000
     first_stage_key: video
     cond_stage_key: caption
     cond_stage_trainable: false
@@ -32,6 +28,13 @@ model:
     encoder_type: 2d
     use_scale: true
     scale_b: 0.7 # adapt to videocrafter-v2
+
+    diffusion_scheduler_config:
+      target: src.base.diffusion_schedulers.LDMScheduler
+      params: 
+        timesteps: 1000
+        linear_start: 0.00085
+        linear_end: 0.012
 
     unet_config:
       target: src.lvdm.modules.networks.openaimodel3d.UNetModel
