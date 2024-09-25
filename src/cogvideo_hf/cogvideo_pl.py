@@ -11,6 +11,8 @@ import pytorch_lightning as pl
 from src.utils.common_utils import instantiate_from_config
 from typing import List, Optional, Tuple, Union, Dict, Any, Callable
 from peft import LoraConfig, get_peft_model_state_dict, set_peft_model_state_dict,get_peft_model
+def has_nan(tensor):
+    return torch.isnan(tensor).any()
 # Similar to diffusers.pipelines.hunyuandit.pipeline_hunyuandit.get_resize_crop_region_for_grid
 def get_resize_crop_region_for_grid(src, tgt_width, tgt_height):
     tw = tgt_width
