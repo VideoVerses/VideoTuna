@@ -43,11 +43,20 @@ model:
         load_dtype: fp16 # bf16 5b fp16 2B 
         # revision: null 
         # variant: null
-    lora_config: # the whole dict is remoable 
-        r: 4
-        lora_alpha: 1.0 
-        init_lora_weights: True
+    adapter_config: # the whole dict is remoable 
+      target: peft.HRAConfig
+      params:
+        r: 8
+        init_weights: True
         target_modules: ["to_k", "to_q", "to_v", "to_out.0"]
+
+    # adapter_config: # the whole dict is remoable 
+        # target: peft.HRAConfig
+        # params:
+    #     r: 4
+    #     lora_alpha: 1.0 
+    #     init_lora_weights: True
+    #     target_modules: ["to_k", "to_q", "to_v", "to_out.0"]
     # sampler config. Wrap it.       
     scheduler_config:
       target: diffusers.CogVideoXDPMScheduler

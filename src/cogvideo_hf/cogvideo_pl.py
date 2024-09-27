@@ -98,7 +98,7 @@ class CogVideoXWorkflow(pl.LightningModule):
                 denoiser_config,
                 scheduler_config,
                 learning_rate: float = 6e-6,
-                lora_config=None, 
+                adapter_config=None, 
                 logdir=None,# notice: this is not configured in config.yaml but configured in train.py 
                 ):
         super().__init__()
@@ -128,14 +128,16 @@ class CogVideoXWorkflow(pl.LightningModule):
         # what I notice is : the most code in DDPM that seems different from there,
         # are most schduler 
         self.scheduler = instantiate_from_config(scheduler_config)
-        # add lora config 
-        if lora_config is not None:
-            self.inject_lora(lora_config)
-    def inject_lora(self, lora_config):
+        # add adapter config (Support Lora and HRA ) 
+        if adapter_config is not None:
+            self.inject_adapter(adapter_config)
+    def inject_adapter(self, adapter_config):
         self.model.requires_grad_(False)
         self.model.enable_gradient_checkpointing()
-        transformer_lora_config = LoraConfig(**lora_config)    
-        self.model = get_peft_model(self.model, transformer_lora_config)
+        print("Injecting adapter")
+        transformer_adapter_config = instantiate_from_config(adapter_config)   
+        print(transformer_adapter_config)
+        self.model = get_peft_model(self.model, transformer_adapter_config)
         self.model.print_trainable_parameters()
     
     ## VAE is named as first_stage_model 
