@@ -1,6 +1,8 @@
+import os
 import torch
 from diffusers import FluxPipeline
 import argparse
+from inference_utils import load_prompt_file
 
 def inference(args):
     pipe = FluxPipeline.from_pretrained("black-forest-labs/FLUX.1-schnell", torch_dtype=torch.bfloat16)
@@ -9,15 +11,24 @@ def inference(args):
     pipe.vae.enable_slicing()
     pipe.vae.enable_tiling()
     pipe.to(torch.float16) 
-    out = pipe(
-        prompt=args.prompt,
-        guidance_scale=args.guidance_scale,
-        height=args.height,
-        width=args.width,
-        num_inference_steps=args.num_inference_steps,
-        max_sequence_length=256,
-    ).images[0]
-    out.save(args.out_path)
+    if args.prompt.endswith(".txt"):
+        # model_input is a file for t2i
+        prompts = load_prompt_file(prompt_file=args.prompt)
+        os.makedirs(args.out_path, exist_ok=True)
+        out_paths = [os.path.join(args.out_path, f"{i:05d}_{prompts[i]}.jpg") for i in range(len(prompts))]
+    else:
+        prompts = [prompt]
+        out_paths = [args.out_path]
+    for prompt, out_path in zip(prompts, out_paths):
+        out = pipe(
+            prompt=prompt,
+            guidance_scale=args.guidance_scale,
+            height=args.height,
+            width=args.width,
+            num_inference_steps=args.num_inference_steps,
+            max_sequence_length=256,
+        ).images[0]
+        out.save(out_path)
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser()

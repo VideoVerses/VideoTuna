@@ -14,6 +14,12 @@ import torchvision.transforms as transforms
 
 from utils.load_weights import load_safetensors
 
+def load_prompt_file(prompt_file: str):
+    with open(prompt_file, "r") as f:
+        prompts = f.readlines()
+    prompts = [prompt.strip() for prompt in prompts]
+    return prompts
+
 def get_target_filelist(data_dir, ext='*'):
     """
     Generate a sorted filepath list with target extensions.
