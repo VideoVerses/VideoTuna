@@ -64,7 +64,7 @@ class DDPMFlow(pl.LightningModule):
                  scheduler_config=None, # learning rate scheduler config 
                  use_positional_encodings=False,
                  lora_args=[],
-                 ):
+                 *args, **kwargs):
         super().__init__()
         assert parameterization in ["eps", "x0", "v"], 'currently only supporting "eps" and "x0" and "v"'
         self.parameterization = parameterization

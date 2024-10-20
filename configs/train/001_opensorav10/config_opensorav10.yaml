@@ -61,7 +61,7 @@ model:
 data:
   target: src.data.lightning_data.DataModuleFromConfig
   params:
-    batch_size: 32
+    batch_size: 4
     num_workers: 16
     wrap: false
     train:
