@@ -19,11 +19,12 @@ from torch.optim.lr_scheduler import CosineAnnealingLR, LambdaLR
 from torchvision.utils import make_grid
 
 from src.lvdm.modules.utils import disabled_train, default, exists, extract_into_tensor, noise_like
-from src.base.ddpm3d import DDPM
+from src.base.ddpm3d import DDPMFlow
 from src.base.distributions import DiagonalGaussianDistribution, normal_kl
 from src.base.ddim import DDIMSampler
 from src.base.utils_diffusion import make_beta_schedule, rescale_zero_terminal_snr, discretized_gaussian_log_likelihood
 from src.utils.common_utils import instantiate_from_config
+from src.base.diffusion_schedulers import DDPMScheduler
 
 
 def mean_flat(tensor: torch.Tensor, mask=None) -> torch.Tensor:
@@ -158,17 +159,12 @@ class LossType(enum.Enum):
         return self == LossType.KL or self == LossType.RESCALED_KL
 
 
-
-class IDDPM(DDPM):
+class IDDPMScheduler(DDPMScheduler):
     def __init__(self,
-                model_mean_type=ModelMeanType.EPSILON,
-                model_var_type=ModelVarType.LEARNED_RANGE,
-                loss_type=LossType.MSE,
-                *args, **kwargs):
+                 *args, **kwargs
+                 ):
         super().__init__(*args, **kwargs)
-        self.model_mean_type = model_mean_type
-        self.model_var_type = model_var_type
-        self.loss_type = loss_type
+        
     
     def register_schedule(self, given_betas, *args, **kwargs):
         if exists(given_betas):
@@ -212,11 +208,78 @@ class IDDPM(DDPM):
             betas * np.sqrt(alphas_cumprod_prev) / (1. - alphas_cumprod)))
         self.register_buffer('posterior_mean_coef2', to_torch(
             (1. - alphas_cumprod_prev) * np.sqrt(alphas) / (1. - alphas_cumprod)))
+
+
+    @torch.no_grad()
+    def p_sample(
+        self,
+        x,
+        t,
+        clip_denoised=True,
+        denoised_fn=None,
+        cond_fn=None,
+        model_kwargs=None,
+        mask=None,
+    ):
+        """
+        Sample x_{t-1} from the model at the given timestep.
+        :param x: the current tensor at x_{t-1}.
+        :param t: the value of t, starting at 0 for the first diffusion step.
+        :param clip_denoised: if True, clip the x_start prediction to [-1, 1].
+        :param denoised_fn: if not None, a function which applies to the
+            x_start prediction before it is used to sample.
+        :param cond_fn: if not None, this is a gradient function that acts
+                        similarly to the model.
+        :param model_kwargs: if not None, a dict of extra keyword arguments to
+            pass to the model. This can be used for conditioning.
+        :return: a dict containing the following keys:
+                 - 'sample': a random sample from the model.
+                 - 'pred_xstart': a prediction of x_0.
+        """
+        if mask is not None:
+            if mask.shape[0] != x.shape[0]:
+                mask = mask.repeat(2, 1)  # HACK
+            mask_t = (mask * len(self.betas)).to(torch.int)
+
+            # x0: copy unchanged x values
+            # x_noise: add noise to x values
+            x0 = x.clone()
+            x_noise = x0 * extract_into_tensor(self.sqrt_alphas_cumprod, t, x.shape) + torch.randn_like(
+                x
+            ) * extract_into_tensor(self.sqrt_one_minus_alphas_cumprod, t, x.shape)
+
+            # active noise addition
+            mask_t_equall = (mask_t == t.unsqueeze(1))[:, None, :, None, None]
+            x = torch.where(mask_t_equall, x_noise, x0)
+
+            # create x_mask
+            mask_t_upper = (mask_t > t.unsqueeze(1))[:, None, :, None, None]
+            batch_size = x.shape[0]
+            model_kwargs["x_mask"] = mask_t_upper.reshape(batch_size, -1).to(torch.bool)
+
+        model_mean, _, model_log_variance = self.p_mean_variance(
+            x,
+            t,
+            clip_denoised=clip_denoised,
+            denoised_fn=denoised_fn,
+            model_kwargs=model_kwargs,
+        )
+        noise = torch.randn_like(x)
+        nonzero_mask = (t != 0).float().view(-1, *([1] * (len(x.shape) - 1)))  # no noise when t == 0
+        # TODO: check cond_fn
+        # if cond_fn is not None:
+        #     model_mean = self.condition_mean(cond_fn, out, x, t, model_kwargs=model_kwargs)
+        sample = model_mean + nonzero_mask * torch.exp(0.5 * model_log_variance) * noise
+
+        if mask is not None:
+            mask_t_lower = (mask_t < t.unsqueeze(1))[:, None, :, None, None]
+            sample = torch.where(mask_t_lower, x0, sample)
+
+        return sample
     
     def predict_start_from_noise(self, x_t, t, noise):
         assert noise.shape == x_t.shape
         return super().predict_start_from_noise(x_t, t, noise)
-
 
     def predict_start_from_prev(self, x_t, t, x_prev):
         assert x_prev.shape == x_t.shape
@@ -309,73 +372,104 @@ class IDDPM(DDPM):
 
         return model_mean, model_variance, model_log_variance
 
+
+class OpenSoraScheduler(IDDPMScheduler):
+    def __init__(self,
+                *args, **kwargs
+                ):
+        super().__init__(*args, **kwargs)
+
+
+    def p_mean_variance(self, x, c, t, clip_denoised: bool, return_x0=False, score_corrector=None, corrector_kwargs=None, model_kwargs=None, **kwargs):
+        if model_kwargs is None:
+            model_kwargs = {}
+        t_in = t
+        model_output = self.apply_model(x, t_in, c, **kwargs)
+        B, C = x.shape[:2]
+        if isinstance(model_output, tuple):
+            model_output, extra = model_output
+        else:
+            extra = None
+        
+        if self.model_var_type in [ModelVarType.LEARNED, ModelVarType.LEARNED_RANGE]:
+            assert model_output.shape == (B, C * 2, *x.shape[2:])
+            model_output, model_var_values = torch.split(model_output, C, dim=1)
+            min_log = extract_into_tensor(self.posterior_log_variance_clipped, t, x.shape)
+            max_log = extract_into_tensor(torch.log(self.betas), t, x.shape)
+            # The model_var_values is [-1, 1] for [min_var, max_var].
+            frac = (model_var_values + 1) / 2
+            model_log_variance = frac * max_log + (1 - frac) * min_log
+            model_variance = torch.exp(model_log_variance)
+        else:
+            model_variance, model_log_variance = {
+                # for fixedlarge, we set the initial (log-)variance like so
+                # to get a better decoder log likelihood.
+                ModelVarType.FIXED_LARGE: (
+                    torch.cat(self.posterior_variance[1].unsqueeze(0), self.betas[1:]),
+                    torch.log(torch.cat(self.posterior_variance[1].unsqueeze(0), self.betas[1:])),
+                ),
+                ModelVarType.FIXED_SMALL: (
+                    self.posterior_variance,
+                    self.posterior_log_variance_clipped,
+                ),
+            }[self.model_var_type]
+            model_variance = extract_into_tensor(model_variance, t, x.shape)
+            model_log_variance = extract_into_tensor(model_log_variance, t, x.shape)
+
+        if self.model_mean_type == ModelMeanType.START_X:
+            x_recon = self.predict_start_from_noise(x, t=t, noise=model_output)
+        else:
+            x_recon = model_output
+        if clip_denoised:
+            x_recon.clamp_(-1., 1.)
+
+        if score_corrector is not None:
+            assert self.parameterization == "eps"
+            model_output = score_corrector.modify_score(self, model_output, x, t, c, **corrector_kwargs)
+
+        model_mean, posterior_variance, posterior_log_variance = self.q_posterior(x_start=x_recon, x_t=x, t=t)
+        # posterior_variance = extract_into_tensor(posterior_variance, t, x.shape)
+        # posterior_log_variance = extract_into_tensor(posterior_log_variance, t, x.shape)
+        if return_x0:
+            return model_mean, model_log_variance, model_log_variance, x_recon
+        else:
+            return model_mean, model_log_variance, model_log_variance
+
     @torch.no_grad()
-    def p_sample(
-        self,
-        x,
-        t,
-        clip_denoised=True,
-        denoised_fn=None,
-        cond_fn=None,
-        model_kwargs=None,
-        mask=None,
-    ):
-        """
-        Sample x_{t-1} from the model at the given timestep.
-        :param x: the current tensor at x_{t-1}.
-        :param t: the value of t, starting at 0 for the first diffusion step.
-        :param clip_denoised: if True, clip the x_start prediction to [-1, 1].
-        :param denoised_fn: if not None, a function which applies to the
-            x_start prediction before it is used to sample.
-        :param cond_fn: if not None, this is a gradient function that acts
-                        similarly to the model.
-        :param model_kwargs: if not None, a dict of extra keyword arguments to
-            pass to the model. This can be used for conditioning.
-        :return: a dict containing the following keys:
-                 - 'sample': a random sample from the model.
-                 - 'pred_xstart': a prediction of x_0.
-        """
-        if mask is not None:
-            if mask.shape[0] != x.shape[0]:
-                mask = mask.repeat(2, 1)  # HACK
-            mask_t = (mask * len(self.betas)).to(torch.int)
+    def p_sample(self, x, c, t, clip_denoised=False, repeat_noise=False, return_x0=False, \
+                 temperature=1., noise_dropout=0., score_corrector=None, corrector_kwargs=None, **kwargs):
+        b, *_, device = *x.shape, x.device
+        outputs = self.p_mean_variance(model=self.model, x=x, c=c, t=t, clip_denoised=clip_denoised, return_x0=return_x0, \
+                                       score_corrector=score_corrector, corrector_kwargs=corrector_kwargs, **kwargs)
+        if return_x0:
+            model_mean, _, model_log_variance, x0 = outputs
+        else:
+            model_mean, _, model_log_variance = outputs
 
-            # x0: copy unchanged x values
-            # x_noise: add noise to x values
-            x0 = x.clone()
-            x_noise = x0 * extract_into_tensor(self.sqrt_alphas_cumprod, t, x.shape) + torch.randn_like(
-                x
-            ) * extract_into_tensor(self.sqrt_one_minus_alphas_cumprod, t, x.shape)
+        noise = noise_like(x.shape, device, repeat_noise) * temperature
+        if noise_dropout > 0.:
+            noise = torch.nn.functional.dropout(noise, p=noise_dropout)
+        # no noise when t == 0
+        nonzero_mask = (1 - (t == 0).float()).reshape(b, *((1,) * (len(x.shape) - 1)))
 
-            # active noise addition
-            mask_t_equall = (mask_t == t.unsqueeze(1))[:, None, :, None, None]
-            x = torch.where(mask_t_equall, x_noise, x0)
+        if return_x0:
+            return model_mean + nonzero_mask * (0.5 * model_log_variance).exp() * noise, x0
+        else:
+            return model_mean + nonzero_mask * (0.5 * model_log_variance).exp() * noise
 
-            # create x_mask
-            mask_t_upper = (mask_t > t.unsqueeze(1))[:, None, :, None, None]
-            batch_size = x.shape[0]
-            model_kwargs["x_mask"] = mask_t_upper.reshape(batch_size, -1).to(torch.bool)
 
-        model_mean, _, model_log_variance = self.p_mean_variance(
-            x,
-            t,
-            clip_denoised=clip_denoised,
-            denoised_fn=denoised_fn,
-            model_kwargs=model_kwargs,
-        )
-        noise = torch.randn_like(x)
-        nonzero_mask = (t != 0).float().view(-1, *([1] * (len(x.shape) - 1)))  # no noise when t == 0
-        # TODO: check cond_fn
-        # if cond_fn is not None:
-        #     model_mean = self.condition_mean(cond_fn, out, x, t, model_kwargs=model_kwargs)
-        sample = model_mean + nonzero_mask * torch.exp(0.5 * model_log_variance) * noise
 
-        if mask is not None:
-            mask_t_lower = (mask_t < t.unsqueeze(1))[:, None, :, None, None]
-            sample = torch.where(mask_t_lower, x0, sample)
+class IDDPM(DDPMFlow):
+    def __init__(self,
+                model_mean_type=ModelMeanType.EPSILON,
+                model_var_type=ModelVarType.LEARNED_RANGE,
+                loss_type=LossType.MSE,
+                *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.model_mean_type = model_mean_type
+        self.model_var_type = model_var_type
+        self.loss_type = loss_type
 
-        return sample
-    
     @torch.no_grad()
     def p_sample_loop(
         self,
@@ -416,7 +510,7 @@ class IDDPM(DDPM):
             img = noise
         else:
             img = torch.randn(*shape, device=device)
-        indices = list(range(self.num_timesteps))[::-1]
+        indices = list(range(self.diffusion_scheduler.num_timesteps))[::-1]
         b = shape[0]
 
         if progress:
@@ -428,7 +522,7 @@ class IDDPM(DDPM):
         intermediates = [img]
         for i in indices:
             t = torch.full((b,), i, device=device)
-            out = self.p_sample(
+            out = self.diffusion_scheduler.p_sample(
                 img,
                 t,
                 clip_denoised=clip_denoised,
@@ -437,7 +531,7 @@ class IDDPM(DDPM):
                 model_kwargs=model_kwargs,
                 mask=mask,
             )
-            if i % self.log_every_t == 0 or i == self.num_timesteps - 1:
+            if i % self.log_every_t == 0 or i == self.diffusion_scheduler.num_timesteps - 1:
                 intermediates.append(img)
 
         if return_intermediates:
@@ -454,8 +548,8 @@ class IDDPM(DDPM):
                  - 'output': a shape [N] tensor of NLLs or KLs.
                  - 'pred_xstart': the x_0 predictions.
         """
-        true_mean, _, true_log_variance_clipped = self.q_posterior(x_start=x_start, x_t=x_t, t=t)
-        out = self.p_mean_variance(x_t, t, clip_denoised=clip_denoised, model_kwargs=model_kwargs)
+        true_mean, _, true_log_variance_clipped = self.diffusion_scheduler.q_posterior(x_start=x_start, x_t=x_t, t=t)
+        out = self.diffusion_scheduler.p_mean_variance(x_t, t, clip_denoised=clip_denoised, model_kwargs=model_kwargs)
         kl = normal_kl(true_mean, true_log_variance_clipped, out["mean"], out["log_variance"])
         kl = mean_flat(kl, mask=mask) / np.log(2.0)
 
@@ -494,10 +588,10 @@ class IDDPM(DDPM):
         if model_kwargs is None:
             model_kwargs = {}
         noise = default(noise, lambda: torch.randn_like(x_start))
-        x_t = self.q_sample(x_start, t, noise=noise)
+        x_t = self.diffusion_scheduler.q_sample(x_start, t, noise=noise)
         if mask is not None:
             t0 = torch.zeros_like(t)
-            x_t0 = self.q_sample(x_start, t0, noise=noise)
+            x_t0 = self.diffusion_scheduler.q_sample(x_start, t0, noise=noise)
             x_t = torch.where(mask[:, None, :, None, None], x_t, x_t0)
         
         terms = {}
@@ -511,7 +605,7 @@ class IDDPM(DDPM):
                 model_kwargs=model_kwargs,
             )
             if self.loss_type == LossType.RESCALED_KL:
-                terms["loss"] *= self.num_timesteps
+                terms["loss"] *= self.diffusion_scheduler.num_timesteps
         elif self.loss_type == LossType.MSE or self.loss_type == LossType.RESCALED_MSE:
             model_output = self.model(x_t, t, **model_kwargs)
 
@@ -536,10 +630,10 @@ class IDDPM(DDPM):
                 if self.loss_type == LossType.RESCALED_MSE:
                     # Divide by 1000 for equivalence with initial implementation.
                     # Without a factor of 1/1000, the VB term hurts the MSE term.
-                    terms["vb"] *= self.num_timesteps / 1000.0
+                    terms["vb"] *= self.diffusion_scheduler.num_timesteps / 1000.0
 
             target = {
-                ModelMeanType.PREVIOUS_X: self.q_posterior(x_start=x_start, x_t=x_t, t=t)[0],
+                ModelMeanType.PREVIOUS_X: self.diffusion_scheduler.q_posterior(x_start=x_start, x_t=x_t, t=t)[0],
                 ModelMeanType.START_X: x_start,
                 ModelMeanType.EPSILON: noise,
             }[self.model_mean_type]
@@ -683,7 +777,7 @@ class LatentDiffusion(SpacedDiffusion):
     def __init__(self,
                  first_stage_config,
                  cond_stage_config,
-                 num_timesteps_cond=None,
+                 diffusion_scheduler_config,
                  cond_stage_key="caption",
                  cond_stage_trainable=False,
                  cond_stage_forward=None,
@@ -709,25 +803,25 @@ class LatentDiffusion(SpacedDiffusion):
                  num_sampling_steps=None, # Added for SpacedDiffusion
                  timestep_respacing=None, # Added for SpacedDiffusion
                  *args, **kwargs):
-        self.num_timesteps_cond = default(num_timesteps_cond, 1)
         self.scale_by_std = scale_by_std
-        assert self.num_timesteps_cond <= kwargs['timesteps']
         # for backwards compatibility after implementation of DiffusionWrapper
         ckpt_path = kwargs.pop("ckpt_path", None)
         ignore_keys = kwargs.pop("ignore_keys", [])
         conditioning_key = default(conditioning_key, 'crossattn')
 
-        given_betas = get_named_beta_schedule("linear", kwargs['timesteps'])
+        given_betas = get_named_beta_schedule("linear", diffusion_scheduler_config.params.get('timesteps', 1000))
         if num_sampling_steps is not None:
             assert timestep_respacing is None
             timestep_respacing = str(num_sampling_steps)
         if timestep_respacing is None or timestep_respacing == "":
-            timestep_respacing = [kwargs['timesteps']]
+            timestep_respacing = [diffusion_scheduler_config.params.get('timesteps', 1000)]
 
-        super().__init__(use_timesteps=space_timesteps(kwargs['timesteps'], timestep_respacing),
+        super().__init__(use_timesteps=space_timesteps(diffusion_scheduler_config.params.get('timesteps', 1000), timestep_respacing),
                         given_betas=given_betas,
                         conditioning_key=conditioning_key,
+                        diffusion_scheduler_config=diffusion_scheduler_config,
                         *args, **kwargs)
+        
 
         # add support for auto gradient checkpointing 
         from src.opensora.acceleration.checkpoint import set_grad_checkpoint
@@ -800,11 +894,6 @@ class LatentDiffusion(SpacedDiffusion):
         self.rand_cond_frame = rand_cond_frame
         self.interp_mode = interp_mode
 
-    def make_cond_schedule(self, ):
-        self.cond_ids = torch.full(size=(self.num_timesteps,), fill_value=self.num_timesteps - 1, dtype=torch.long)
-        ids = torch.round(torch.linspace(0, self.num_timesteps - 1, self.num_timesteps_cond)).long()
-        self.cond_ids[:self.num_timesteps_cond] = ids
-
     def _freeze_model(self):
         for name, para in self.model.diffusion_model.named_parameters():
             para.requires_grad = False
@@ -831,9 +920,7 @@ class LatentDiffusion(SpacedDiffusion):
                           linear_start=1e-4, linear_end=2e-2, cosine_s=8e-3):
         super().register_schedule(given_betas, beta_schedule, timesteps, linear_start, linear_end, cosine_s)
 
-        self.shorten_cond_schedule = self.num_timesteps_cond > 1
-        if self.shorten_cond_schedule:
-            self.make_cond_schedule()
+
 
     def instantiate_first_stage(self, config):
         model = instantiate_from_config(config)
@@ -1008,10 +1095,10 @@ class LatentDiffusion(SpacedDiffusion):
         if model_kwargs is None:
             model_kwargs = {}
         noise = default(noise, lambda: torch.randn_like(x_start))
-        x_t = self.q_sample(x_start=x_start, t=t, noise=noise)
+        x_t = self.diffusion_scheduler.q_sample(x_start=x_start, t=t, noise=noise)
         if mask is not None:
             t0 = torch.zeros_like(t)
-            x_t0 = self.q_sample(x_start, t0, noise=noise)
+            x_t0 = self.diffusion_scheduler.q_sample(x_start, t0, noise=noise)
             x_t = torch.where(mask[:, None, :, None, None], x_t, x_t0)
 
         model_output = self.apply_model(x_t, t, cond, **kwargs)
@@ -1044,7 +1131,7 @@ class LatentDiffusion(SpacedDiffusion):
                     terms["vb"] *= self.num_timesteps / 1000.0
 
             target = {
-                ModelMeanType.PREVIOUS_X: self.q_posterior(x_start=x_start, x_t=x_t, t=t)[0],
+                ModelMeanType.PREVIOUS_X: self.diffusion_scheduler.q_posterior(x_start=x_start, x_t=x_t, t=t)[0],
                 ModelMeanType.START_X: x_start,
                 ModelMeanType.EPSILON: noise,
             }[self.model_mean_type]
@@ -1182,8 +1269,8 @@ class LatentDiffusion(SpacedDiffusion):
                  - 'output': a shape [N] tensor of NLLs or KLs.
                  - 'pred_xstart': the x_0 predictions.
         """
-        true_mean, _, true_log_variance_clipped = self.q_posterior(x_start=x_start, x_t=x_t, t=t)
-        out = self.p_mean_variance(x_t, c, t, clip_denoised=clip_denoised, model_kwargs=model_kwargs, **kwargs)
+        true_mean, _, true_log_variance_clipped = self.diffusion_scheduler.q_posterior(x_start=x_start, x_t=x_t, t=t)
+        out = self.diffusion_scheduler.p_mean_variance(x_t, c, t, clip_denoised=clip_denoised, model_kwargs=model_kwargs, **kwargs)
         model_mean, posterior_variance, posterior_log_variance = out
         kl = normal_kl(true_mean, true_log_variance_clipped, model_mean, posterior_log_variance)
         kl = mean_flat(kl, mask=mask) / np.log(2.0)
@@ -1199,82 +1286,7 @@ class LatentDiffusion(SpacedDiffusion):
         output = torch.where((t == 0), decoder_nll, kl)
         return output
 
-    def p_mean_variance(self, x, c, t, clip_denoised: bool, return_x0=False, score_corrector=None, corrector_kwargs=None, model_kwargs=None, **kwargs):
-        if model_kwargs is None:
-            model_kwargs = {}
-        t_in = t
-        model_output = self.apply_model(x, t_in, c, **kwargs)
-        B, C = x.shape[:2]
-        if isinstance(model_output, tuple):
-            model_output, extra = model_output
-        else:
-            extra = None
-        
-        if self.model_var_type in [ModelVarType.LEARNED, ModelVarType.LEARNED_RANGE]:
-            assert model_output.shape == (B, C * 2, *x.shape[2:])
-            model_output, model_var_values = torch.split(model_output, C, dim=1)
-            min_log = extract_into_tensor(self.posterior_log_variance_clipped, t, x.shape)
-            max_log = extract_into_tensor(torch.log(self.betas), t, x.shape)
-            # The model_var_values is [-1, 1] for [min_var, max_var].
-            frac = (model_var_values + 1) / 2
-            model_log_variance = frac * max_log + (1 - frac) * min_log
-            model_variance = torch.exp(model_log_variance)
-        else:
-            model_variance, model_log_variance = {
-                # for fixedlarge, we set the initial (log-)variance like so
-                # to get a better decoder log likelihood.
-                ModelVarType.FIXED_LARGE: (
-                    torch.cat(self.posterior_variance[1].unsqueeze(0), self.betas[1:]),
-                    torch.log(torch.cat(self.posterior_variance[1].unsqueeze(0), self.betas[1:])),
-                ),
-                ModelVarType.FIXED_SMALL: (
-                    self.posterior_variance,
-                    self.posterior_log_variance_clipped,
-                ),
-            }[self.model_var_type]
-            model_variance = extract_into_tensor(model_variance, t, x.shape)
-            model_log_variance = extract_into_tensor(model_log_variance, t, x.shape)
 
-        if self.model_mean_type == ModelMeanType.START_X:
-            x_recon = self.predict_start_from_noise(x, t=t, noise=model_output)
-        else:
-            x_recon = model_output
-        if clip_denoised:
-            x_recon.clamp_(-1., 1.)
-
-        if score_corrector is not None:
-            assert self.parameterization == "eps"
-            model_output = score_corrector.modify_score(self, model_output, x, t, c, **corrector_kwargs)
-
-        model_mean, posterior_variance, posterior_log_variance = self.q_posterior(x_start=x_recon, x_t=x, t=t)
-        # posterior_variance = extract_into_tensor(posterior_variance, t, x.shape)
-        # posterior_log_variance = extract_into_tensor(posterior_log_variance, t, x.shape)
-        if return_x0:
-            return model_mean, model_log_variance, model_log_variance, x_recon
-        else:
-            return model_mean, model_log_variance, model_log_variance
-
-    @torch.no_grad()
-    def p_sample(self, x, c, t, clip_denoised=False, repeat_noise=False, return_x0=False, \
-                 temperature=1., noise_dropout=0., score_corrector=None, corrector_kwargs=None, **kwargs):
-        b, *_, device = *x.shape, x.device
-        outputs = self.p_mean_variance(model=self.model, x=x, c=c, t=t, clip_denoised=clip_denoised, return_x0=return_x0, \
-                                       score_corrector=score_corrector, corrector_kwargs=corrector_kwargs, **kwargs)
-        if return_x0:
-            model_mean, _, model_log_variance, x0 = outputs
-        else:
-            model_mean, _, model_log_variance = outputs
-
-        noise = noise_like(x.shape, device, repeat_noise) * temperature
-        if noise_dropout > 0.:
-            noise = torch.nn.functional.dropout(noise, p=noise_dropout)
-        # no noise when t == 0
-        nonzero_mask = (1 - (t == 0).float()).reshape(b, *((1,) * (len(x.shape) - 1)))
-
-        if return_x0:
-            return model_mean + nonzero_mask * (0.5 * model_log_variance).exp() * noise, x0
-        else:
-            return model_mean + nonzero_mask * (0.5 * model_log_variance).exp() * noise
 
     @torch.no_grad()
     def p_sample_loop(self, cond, shape, return_intermediates=False, x_T=None, verbose=True, callback=None, \
@@ -1282,7 +1294,7 @@ class LatentDiffusion(SpacedDiffusion):
 
         if not log_every_t:
             log_every_t = self.log_every_t
-        device = self.betas.device
+        device = self.diffusion_scheduler.betas.device
         b = shape[0]        
         # sample an initial noise
         if x_T is None:
@@ -1304,14 +1316,10 @@ class LatentDiffusion(SpacedDiffusion):
 
         for i in iterator:
             ts = torch.full((b,), i, device=device, dtype=torch.long)
-            if self.shorten_cond_schedule:
-                assert self.model.conditioning_key != 'hybrid'
-                tc = self.cond_ids[ts].to(cond.device)
-                cond = self.q_sample(x_start=cond, t=tc, noise=torch.randn_like(cond))
 
-            img = self.p_sample(img, cond, ts, clip_denoised=self.clip_denoised, **kwargs)
+            img = self.diffusion_scheduler.p_sample(img, cond, ts, clip_denoised=self.clip_denoised, **kwargs)
             if mask is not None:
-                img_orig = self.q_sample(x0, ts)
+                img_orig = self.diffusion_scheduler.q_sample(x0, ts)
                 img = img_orig * mask + (1. - mask) * img
 
             if i % log_every_t == 0 or i == timesteps - 1:
@@ -1367,7 +1375,7 @@ class LatentDiffusion(SpacedDiffusion):
             params = list(self.model.parameters())
             mainlogger.info(f"@Training [{len(params)}] Full Paramters.")
                
-        if self.learn_logvar:
+        if self.diffusion_scheduler.learn_logvar:
             mainlogger.info('Diffusion model optimizing logvar')
             if isinstance(params[0], dict):
                 params.append({"params": [self.logvar]})
