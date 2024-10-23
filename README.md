@@ -26,6 +26,13 @@ Let's finetune video generation models!
 ## 🔆 Updates
 - [2024-09-XX] We make the VideoTuna V0.1.0 public!
 
+## Demo
+### VAE
+
+### Face domain
+
+### Storytelling
+
 
 ## 🔆 Introduction
 🤗🤗🤗 VideoTuna is an open-sourcing finetuning framework for text-to-video generation.
