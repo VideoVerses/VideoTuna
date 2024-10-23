@@ -28,6 +28,12 @@ Let's finetune video generation models!
 
 ## Demo
 ### VAE
+## Demos
+
+| **GT**                                                                                                                                      | **Reconstruction**                                                                                                                                      |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| <video width="320" controls><source src="assets/demos/gtanimal2.mp4" type="video/mp4">Your browser does not support the video tag.</video> | <video width="320" controls><source src="assets/demos/fkanimal2.mp4" type="video/mp4">Your browser does not support the video tag.</video> |
+
 
 ### Face domain
 
