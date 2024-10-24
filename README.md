@@ -26,13 +26,87 @@ Let's finetune video generation models!
 ## 🔆 Updates
 - [2024-09-XX] We make the VideoTuna V0.1.0 public!
 
+
 ## Demo
 ### VAE
-## Demos
+<div class="video-grid">
+  <div class="video-row">
+    <div class="video-container">
+      <video src="assets/demos/gtview7.mp4" controls></video>
+      <p>GT (Ground Truth)</p>
+    </div>
+    <div class="video-container">
+      <video src="assets/demos/fkview7.mp4" controls></video>
+      <p>Output</p>
+    </div>
+  </div>
 
-| **GT**                                                                                                                                      | **Reconstruction**                                                                                                                                      |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| <video width="320" controls><source src="assets/demos/gtanimal2.mp4" type="video/mp4">Your browser does not support the video tag.</video> | <video width="320" controls><source src="assets/demos/fkanimal2.mp4" type="video/mp4">Your browser does not support the video tag.</video> |
+  <div class="video-row">
+    <div class="video-container">
+      <video src="assets/demos/gtcloseshot1.mp4" controls></video>
+      <p>GT (Ground Truth)</p>
+    </div>
+    <div class="video-container">
+      <video src="assets/demos/fkcloseshot1.mp4" controls></video>
+      <p>Output</p>
+    </div>
+  </div>
+  <div class="video-row">
+    <div class="video-container">
+      <video src="assets/demos/gtmotion4.mp4" controls></video>
+      <p>GT (Ground Truth)</p>
+    </div>
+    <div class="video-container">
+      <video src="assets/demos/fkmotion4.mp4" controls></video>
+      <p>Output</p>
+    </div>
+  <!-- </div>
+    <div class="video-row">
+    <div class="video-container">
+      <video src="assets/demos/gtportrait5.mp4" controls></video>
+      <p>GT (Ground Truth)</p>
+    </div>
+    <div class="video-container">
+      <video src="assets/demos/fkportrait5.mp4" controls></video>
+      <p>Output</p>
+    </div> -->
+  </div>
+    <div class="video-row">
+    <div class="video-container">
+      <video src="assets/demos/gtview9.mp4" controls></video>
+      <p>GT (Ground Truth)</p>
+    </div>
+    <div class="video-container">
+      <video src="assets/demos/fkview9.mp4" controls></video>
+      <p>Output</p>
+    </div>
+  </div>
+  <!-- Add more video pairs as needed -->
+</div>
+
+<style>
+  .video-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 20px; /* Space between each row */
+  }
+
+  .video-row {
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .video-container {
+    width: 48%; /* Make the videos take equal width with space between */
+    text-align: center;
+  }
+
+  video {
+    width: 100%;
+  }
+</style>
+
+
 
 
 ### Face domain
