@@ -27,7 +27,7 @@ model:
     scale_b: 0.7 # adapt to videocrafter-v2
 
     diffusion_scheduler_config:
-      target: src.base.iddpm3d.IDDPMScheduler
+      target: src.base.iddpm3d.OpenSoraScheduler
       params: 
         timesteps: 1000
         linear_start: 0.00085
@@ -68,7 +68,7 @@ data:
       target: src.data.datasets.DatasetFromCSV
       params:
         # csv_path: /project/llmsvgen/share/opensora_datafile/artgrid_caption_long_base.csv
-        csv_path: /disk8/yazhou/Dataset/artgrid/artgrid_caption_long_base.csv
+        csv_path: /disk8/yazhou/Dataset/artgrid/artgrid_caption_long_base_disk8.csv
         data_root: /disk8/yazhou/Dataset/artgrid
         resolution: [256, 256]
         video_length: 16
@@ -78,7 +78,7 @@ data:
       target: src.data.datasets.DatasetFromCSV
       params:
         # csv_path: /project/llmsvgen/share/opensora_datafile/artgrid_caption_long_base.csv
-        csv_path: /home/yazhou/disk8/Dataset/artgrid/artgrid_caption_long_base.csv
+        csv_path: /disk8/yazhou/Dataset/artgrid/artgrid_caption_long_base_disk8.csv
         data_root: /disk8/yazhou/Dataset/artgrid
         resolution: [256, 256]
         video_length: 16

@@ -462,7 +462,27 @@ class OpenSoraScheduler(IDDPMScheduler):
             return model_mean + nonzero_mask * (0.5 * model_log_variance).exp() * noise, x0
         else:
             return model_mean + nonzero_mask * (0.5 * model_log_variance).exp() * noise
+    
+    def apply_model(self, x_noisy, t, cond, **kwargs):
+        if isinstance(cond, dict):
+            # hybrid case, cond is exptected to be a dict
+            pass
+        else:
+            if not isinstance(cond, list):
+                cond = [cond]
+            key = 'c_concat' if self.model.conditioning_key == 'concat' else 'c_crossattn'
+            cond = {key: cond}
 
+        # If model is provided as a keyword argument, use it to train the variance.
+        if 'model' not in kwargs:
+            x_recon = self.model(x_noisy, t, **cond, **kwargs)
+        else:
+            x_recon = kwargs['model'](x_noisy, t)
+
+        if isinstance(x_recon, tuple):
+            return x_recon[0]
+        else:
+            return x_recon
 
 
 class IDDPM(DDPMFlow):
@@ -475,6 +495,10 @@ class IDDPM(DDPMFlow):
         self.model_mean_type = model_mean_type
         self.model_var_type = model_var_type
         self.loss_type = loss_type
+
+        # Add the model mean and variance types to the scheduler.
+        self.diffusion_scheduler.model_mean_type = model_mean_type
+        self.diffusion_scheduler.model_var_type = model_var_type
 
     @torch.no_grad()
     def p_sample_loop(
