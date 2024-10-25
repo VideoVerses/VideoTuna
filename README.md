@@ -36,24 +36,24 @@ Let's finetune video generation models!
     <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/vae/fkview7.gif"><img src="assets/demos/vae/fkview7.gif" width="320"></a></td>
   </tr>
   <tr>
-    <td style="text-align:center;" width="320">"Groud Truth: Las Vegas, Fremont Street Walking Tour"</td>
-    <td style="text-align:center;" width="320">"Reconstruction: Las Vegas, Fremont Street Walking Tour"</td>
+    <td style="text-align:center;" width="320">Groud Truth</td>
+    <td style="text-align:center;" width="320">Reconstruction</td>
   </tr>
   <tr>
     <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/vae/gtview9.gif"><img src="assets/demos/vae/fkview9.gif" width="320"></a></td>
     <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/vae/fkview9.gif"><img src="assets/demos/vae/fkview9.gif" width="320"></a></td>
   </tr>
   <tr>
-    <td style="text-align:center;" width="320">"Ground Truth: view in a gardon"</td>
-    <td style="text-align:center;" width="320">"Reconstruction: view in a gardon."</td>
+    <td style="text-align:center;" width="320">Ground Truth</td>
+    <td style="text-align:center;" width="320">Reconstruction</td>
   </tr>
   <tr>
     <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/vae/gtportrait5.gif"><img src="assets/demos/vae/gtportrait5.gif" width="320"></a></td>
     <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/vae/fkportrait5.gif"><img src="assets/demos/vae/fkportrait5.gif" width="320"></a></td>
   </tr>
   <tr>
-    <td style="text-align:center;" width="320">"Ground Truth: A moman blink in the car."</td>
-    <td style="text-align:center;" width="320">"Reconstruction: A moman blink in the car."</td>
+    <td style="text-align:center;" width="320">Ground Truth</td>
+    <td style="text-align:center;" width="320">Reconstruction</td>
   </tr>
 
   <tr>
@@ -61,24 +61,24 @@ Let's finetune video generation models!
     <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/vae/fkmotion4.gif"><img src="assets/demos/vae/fkmotion4.gif" width="320"></a></td>
   </tr>
   <tr>
-    <td style="text-align:center;" width="320">"Ground Truth: Driving on the seaside road."</td>
-    <td style="text-align:center;" width="320">"Reconstruction: Driving on the seaside road."</td>
+    <td style="text-align:center;" width="320">Ground Truth</td>
+    <td style="text-align:center;" width="320">Reconstruction</td>
   </tr>
   <tr>
     <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/vae/gtanimal2.gif"><img src="assets/demos/vae/gtanimal2.gif" width="320"></a></td>
     <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/vae/fkanimal2.gif"><img src="assets/demos/vae/fkanimal2.gif" width="320"></a></td>
   </tr>
   <tr>
-    <td style="text-align:center;" width="320">"Ground Truth: A bird on the tree."</td>
-    <td style="text-align:center;" width="320">"Reconstruction: A bird on the tree."</td>
+    <td style="text-align:center;" width="320">Ground Truth</td>
+    <td style="text-align:center;" width="320">Reconstruction</td>
   </tr>
   <tr>
     <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/vae/gtcloseshot1.gif"><img src="assets/demos/vae/gtcloseshot1.gif" width="320"></a></td>
     <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/vae/fkcloseshot1.gif"><img src="assets/demos/vae/fkcloseshot1.gif" width="320"></a></td>
   </tr>
   <tr>
-    <td style="text-align:center;" width="320">"Ground Truth: A closeshot of a camera."</td>
-    <td style="text-align:center;" width="320">"Reconstruction: A closeshot of a camera."</td>
+    <td style="text-align:center;" width="320">Ground Truth</td>
+    <td style="text-align:center;" width="320">Reconstruction</td>
   </tr>
 </table>
 
