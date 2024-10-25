@@ -29,16 +29,20 @@ Let's finetune video generation models!
 
 ## Demo
 ### VAE
+
 <table class="center">
-  <td><a href="https://github.com/AILab-CVC/VideoCrafter/assets/18735168/d20ee09d-fc32-44a8-9e9a-f12f44b30411"><img src=assets/demos/fkmotion.gif width="320"></td>
-  <td><a href="https://github.com/AILab-CVC/VideoCrafter/assets/18735168/f1d9f434-28e8-44f6-a9b8-cffd67e4574d"><img src=assets/t2v/child.gif width="320"></td>
-  <td><a href="https://github.com/AILab-CVC/VideoCrafter/assets/18735168/bbcfef0e-d8fb-4850-adc0-d8f937c2fa36"><img src=assets/t2v/woman.gif width="320"></td>
   <tr>
-  <td style="text-align:center;" width="320">"Tom Cruise's face reflects focus, his eyes filled with purpose and drive."</td>
-  <td style="text-align:center;" width="320">"A child excitedly swings on a rusty swing set, laughter filling the air."</td>
-  <td style="text-align:center;" width="320">"A young woman with glasses is jogging in the park wearing a pink headband."</td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/fkview7.gif"><img src="assets/demos/fkview7.gif" width="320"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/fkview7.gif"><img src="assets/demos/fkview7.gif" width="320"></a></td> 
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/fkview7.gif"><img src="assets/demos/fkview7.gif" width="320"></a></td>
+  </tr>
   <tr>
-</table >
+    <td style="text-align:center;" width="320">"Description for fkview7.gif."</td>
+    <td style="text-align:center;" width="320">"A child excitedly swings on a rusty swing set, laughter filling the air."</td>
+    <td style="text-align:center;" width="320">"A young woman with glasses is jogging in the park wearing a pink headband."</td>
+  </tr>
+</table>
+
 
 <div class="video-grid">
   <div class="video-row">
