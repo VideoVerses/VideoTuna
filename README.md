@@ -84,6 +84,20 @@ Let's finetune video generation models!
 
 ### Face domain
 
+<table class="center">
+  <tr>
+    <td rowspan="2"><img src="assets/demos/face_i2v/YJJbE-w2qzA_0.png" width="320"></td>
+    <td><a href="link/to/video1.mp4"><img src="assets/demos/face_i2v/YJJbE-w2qzA_0_sample0/YJJbE-w2qzA_0_sample0_anger.gif" width="320"></a></td>
+    <td><a href="link/to/video2.mp4"><img src="assets/demos/face_i2v/YJJbE-w2qzA_0_sample0/YJJbE-w2qzA_0_sample0_disgust.gif" width="320"></a></td>
+    <td><a href="link/to/video3.mp4"><img src="assets/demos/face_i2v/YJJbE-w2qzA_0_sample0/YJJbE-w2qzA_0_sample0_fear.gif" width="320"></a></td>
+  </tr>
+  <tr>
+    <td><a href="link/to/video4.mp4"><img src="assets/demos/face_i2v/YJJbE-w2qzA_0_sample0/YJJbE-w2qzA_0_sample0_happy.gif" width="320"></a></td>
+    <td><a href="link/to/video5.mp4"><img src="assets/demos/face_i2v/YJJbE-w2qzA_0_sample0/YJJbE-w2qzA_0_sample0_sad.gif" width="320"></a></td>
+    <td><a href="link/to/video6.mp4"><img src="assets/demos/face_i2v/YJJbE-w2qzA_0_sample0/YJJbE-w2qzA_0_sample0_surprise.gif" width="320"></a></td>
+  </tr>
+</table>
+
 ### Storytelling
 
 
