@@ -86,6 +86,14 @@ Let's finetune video generation models!
 
 <table class="center">
   <tr>
+    <td><img src="assets/demos/face_i2v/zcCWO3QOguA_0.png" width="240" alt="Image 1"></td>
+    <td><img src="assets/demos/face_i2v/YJJbE-w2qzA_0.png" width="240" alt="Image 2"></td>
+    <td><img src="assets/demos/face_i2v/-ZxtmDbqDRc_0.png" width="240" alt="Image 3"></td>
+  </tr>
+</table>
+
+<table class="center">
+  <tr>
     <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_anger.gif"><img src="assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_anger.gif" width="240"></a></td>
     <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_disgust.gif"><img src="assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_disgust.gif" width="240"></a></td>
     <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_fear.gif"><img src="assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_fear.gif" width="240"></a></td>
