@@ -90,7 +90,13 @@ Let's finetune video generation models!
     <td><img src="assets/demos/face_i2v/YJJbE-w2qzA_0.png" width="240" alt="Image 2"></td>
     <td><img src="assets/demos/face_i2v/-ZxtmDbqDRc_0.png" width="240" alt="Image 3"></td>
   </tr>
+  <tr>
+    <td style="text-align: center;">Input 1</td>
+    <td style="text-align: center;">Input 2</td>
+    <td style="text-align: center;">Input 3</td>
+  </tr>
 </table>
+
 
 <table class="center">
   <tr>
