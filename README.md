@@ -86,9 +86,9 @@ Let's finetune video generation models!
 
 <table class="center">
   <tr>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_anger.gif"><img src="assets/demos/face_i2v/YJJbE-w2qzA_0_sample0/YJJbE-w2qzA_0_sample0_anger.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_disgust.gif"><img src="assets/demos/face_i2v/YJJbE-w2qzA_0_sample0/YJJbE-w2qzA_0_sample0_disgust.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_fear.gif"><img src="assets/demos/face_i2v/YJJbE-w2qzA_0_sample0/YJJbE-w2qzA_0_sample0_fear.gif" width="240"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_anger.gif"><img src="assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_anger.gif" width="240"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_disgust.gif"><img src="assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_disgust.gif" width="240"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_fear.gif"><img src="assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_fear.gif" width="240"></a></td>
   </tr>
   <tr>
     <td style="text-align:center;">Emotion: Anger</td>
@@ -96,9 +96,9 @@ Let's finetune video generation models!
     <td style="text-align:center;">Emotion: Fear</td>
   </tr>
   <tr>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_happy.gif"><img src="assets/demos/face_i2v/YJJbE-w2qzA_0_sample0/YJJbE-w2qzA_0_sample0_happy.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_sad.gif"><img src="assets/demos/face_i2v/YJJbE-w2qzA_0_sample0/YJJbE-w2qzA_0_sample0_sad.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_surprise.gif"><img src="assets/demos/face_i2v/YJJbE-w2qzA_0_sample0/YJJbE-w2qzA_0_sample0_surprise.gif" width="240"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_happy.gif"><img src="assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_happy.gif" width="240"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_sad.gif"><img src="assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_sad.gif" width="240"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_surprise.gif"><img src="assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_surprise.gif" width="240"></a></td>
   </tr>
   <tr>
     <td style="text-align:center;">Emotion: Happy</td>
@@ -134,9 +134,9 @@ Let's finetune video generation models!
 
 <table class="center">
   <tr>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/-ZxtmDbqDRc_0_sample0/-ZxtmDbqDRc_0_sample0_anger.gif"><img src="assets/demos/face_i2v/YJJbE-w2qzA_0_sample0/YJJbE-w2qzA_0_sample0_anger.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/-ZxtmDbqDRc_0_sample0/-ZxtmDbqDRc_0_sample0_disgust.gif"><img src="assets/demos/face_i2v/YJJbE-w2qzA_0_sample0/YJJbE-w2qzA_0_sample0_disgust.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/-ZxtmDbqDRc_0_sample0/-ZxtmDbqDRc_0_sample0_fear.gif"><img src="assets/demos/face_i2v/YJJbE-w2qzA_0_sample0/YJJbE-w2qzA_0_sample0_fear.gif" width="240"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/-ZxtmDbqDRc_0_sample0/-ZxtmDbqDRc_0_sample0_anger.gif"><img src="assets/demos/face_i2v/-ZxtmDbqDRc_0_sample0/-ZxtmDbqDRc_0_sample0_anger.gif" width="240"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/-ZxtmDbqDRc_0_sample0/-ZxtmDbqDRc_0_sample0_disgust.gif"><img src="assets/demos/face_i2v/-ZxtmDbqDRc_0_sample0/-ZxtmDbqDRc_0_sample0_disgust.gif" width="240"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/-ZxtmDbqDRc_0_sample0/-ZxtmDbqDRc_0_sample0_fear.gif"><img src="assets/demos/face_i2v/-ZxtmDbqDRc_0_sample0/-ZxtmDbqDRc_0_sample0_fear.gif" width="240"></a></td>
   </tr>
   <tr>
     <td style="text-align:center;">Emotion: Anger</td>
@@ -144,9 +144,9 @@ Let's finetune video generation models!
     <td style="text-align:center;">Emotion: Fear</td>
   </tr>
   <tr>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/-ZxtmDbqDRc_0_sample0/-ZxtmDbqDRc_0_sample0_happy.gif"><img src="assets/demos/face_i2v/YJJbE-w2qzA_0_sample0/YJJbE-w2qzA_0_sample0_happy.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/-ZxtmDbqDRc_0_sample0/-ZxtmDbqDRc_0_sample0_sad.gif"><img src="assets/demos/face_i2v/YJJbE-w2qzA_0_sample0/YJJbE-w2qzA_0_sample0_sad.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/-ZxtmDbqDRc_0_sample0/-ZxtmDbqDRc_0_sample0_surprise.gif"><img src="assets/demos/face_i2v/YJJbE-w2qzA_0_sample0/YJJbE-w2qzA_0_sample0_surprise.gif" width="240"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/-ZxtmDbqDRc_0_sample0/-ZxtmDbqDRc_0_sample0_happy.gif"><img src="assets/demos/face_i2v/-ZxtmDbqDRc_0_sample0/-ZxtmDbqDRc_0_sample0_happy.gif" width="240"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/-ZxtmDbqDRc_0_sample0/-ZxtmDbqDRc_0_sample0_sad.gif"><img src="assets/demos/face_i2v/-ZxtmDbqDRc_0_sample0/-ZxtmDbqDRc_0_sample0_sad.gif" width="240"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/-ZxtmDbqDRc_0_sample0/-ZxtmDbqDRc_0_sample0_surprise.gif"><img src="assets/demos/face_i2v/-ZxtmDbqDRc_0_sample0/-ZxtmDbqDRc_0_sample0_surprise.gif" width="240"></a></td>
   </tr>
   <tr>
     <td style="text-align:center;">Emotion: Happy</td>
