@@ -4,6 +4,7 @@ import random
 import math
 from contextlib import contextmanager
 from functools import partial
+from omegaconf.listconfig import ListConfig
 
 import enum
 import numpy as np
@@ -168,7 +169,12 @@ class IDDPMScheduler(DDPMScheduler):
     
     def register_schedule(self, given_betas, *args, **kwargs):
         if exists(given_betas):
-            betas = given_betas
+            if isinstance(given_betas, list) or isinstance(given_betas, ListConfig):
+                betas = np.array(given_betas, dtype=np.float32)
+            elif isinstance(given_betas, np.ndarray):
+                betas = given_betas
+            else:
+                raise TypeError("given_betas type error")
         else:
             raise ValueError("given_betas must be provided")
             
@@ -725,17 +731,26 @@ class SpacedDiffusion(IDDPM):
         self.timestep_map = []
         self.original_num_steps = len(kwargs["given_betas"])
 
+        kwargs = self.add_given_betas_to_config(kwargs["given_betas"], kwargs)  # add the 'given_betas' into the 'diffusion_scheduler_config'
         base_diffusion = IDDPM(**kwargs)  # pylint: disable=missing-kwoa
+
         last_alpha_cumprod = 1.0
         new_betas = []
-        for i, alpha_cumprod in enumerate(base_diffusion.alphas_cumprod):
+        for i, alpha_cumprod in enumerate(base_diffusion.diffusion_scheduler.alphas_cumprod):
             if i in self.use_timesteps:
                 new_betas.append(1 - alpha_cumprod / last_alpha_cumprod)
                 last_alpha_cumprod = alpha_cumprod
                 self.timestep_map.append(i)
         kwargs["given_betas"] = torch.FloatTensor(new_betas)
+        kwargs = self.add_given_betas_to_config(new_betas, kwargs)
         super().__init__(**kwargs)
         self.map_tensor = torch.tensor(self.timestep_map)  # TODO: get device
+
+    def add_given_betas_to_config(self, given_betas, kwargs):
+        given_betas_list = list(given_betas)
+        given_betas_list = [float(x) for x in given_betas_list]
+        kwargs["diffusion_scheduler_config"]["params"]["given_betas"] = given_betas_list
+        return kwargs
 
     def p_mean_variance(self, model, *args, **kwargs):  # pylint: disable=signature-differs
         return super().p_mean_variance(self._wrap_model(model), *args, **kwargs)

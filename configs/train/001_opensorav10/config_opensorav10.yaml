@@ -39,7 +39,7 @@ model:
         space_scale: 0.5
         time_scale: 1.0
         # from_pretrained: "/project/llmsvgen/share/opensora_ckpt/stage4/last/model_ckpt.pt"
-        from_pretrained: "/home/yazhou/disk8/check-base/opensora_ckpt/model_ckpt.pt"
+        from_pretrained: "/disk8/yazhou/check-base/opensora_ckpt/model_ckpt.pt"
         enable_flashattn: True
         enable_layernorm_kernel: False
         input_size:
@@ -68,7 +68,7 @@ data:
       target: src.data.datasets.DatasetFromCSV
       params:
         # csv_path: /project/llmsvgen/share/opensora_datafile/artgrid_caption_long_base.csv
-        csv_path: /home/yazhou/disk8/Dataset/artgrid/artgrid_caption_long_base.csv
+        csv_path: /disk8/yazhou/Dataset/artgrid/artgrid_caption_long_base.csv
         data_root: /disk8/yazhou/Dataset/artgrid
         resolution: [256, 256]
         video_length: 16
