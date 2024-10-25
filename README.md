@@ -83,6 +83,11 @@ Let's finetune video generation models!
 </table>
 
 ### Face domain
+<div style="text-align: center;">
+  <img src="assets/demos/face_i2v/YJJbE-w2qzA_0.png" width="240" alt="Image" />
+  <p>Image Description</p>
+</div>
+
 
 <table class="center">
   <tr>
