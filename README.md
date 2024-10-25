@@ -82,31 +82,6 @@ Let's finetune video generation models!
   </tr>
 </table>
 
-<style>
-  .video-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 20px; /* Space between each row */
-  }
-
-  .video-row {
-    display: flex;
-    justify-content: space-between;
-  }
-
-  .video-container {
-    width: 48%; /* Make the videos take equal width with space between */
-    text-align: center;
-  }
-
-  video {
-    width: 100%;
-  }
-</style>
-
-
-
-
 ### Face domain
 
 ### Storytelling
