@@ -32,7 +32,7 @@ Let's finetune video generation models!
 <div class="video-grid">
   <div class="video-row">
     <div class="video-container">
-      <video src="assets/demos/gtview7.mp4" controls></video>
+      <video src="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/fkanimal2.mp4" controls></video>
       <p>GT (Ground Truth)</p>
     </div>
     <div class="video-container">
