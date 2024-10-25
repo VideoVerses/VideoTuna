@@ -40,16 +40,16 @@ Let's finetune video generation models!
     <td style="text-align:center;" width="320">"Reconstruction: Las Vegas, Fremont Street Walking Tour"</td>
   </tr>
   <tr>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/gtview9.gif"><img src="assets/demos/fkview7.gif" width="320"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/fkview9.gif"><img src="assets/demos/fkview7.gif" width="320"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/gtview9.gif"><img src="assets/demos/fkview9.gif" width="320"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/fkview9.gif"><img src="assets/demos/fkview9.gif" width="320"></a></td>
   </tr>
   <tr>
     <td style="text-align:center;" width="320">"Ground Truth: view in a gardon"</td>
     <td style="text-align:center;" width="320">"Reconstruction: view in a gardon."</td>
   </tr>
   <tr>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/gtportrait5.gif"><img src="assets/demos/fkview7.gif" width="320"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/fkportrait5.gif"><img src="assets/demos/fkview7.gif" width="320"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/gtportrait5.gif"><img src="assets/demos/gtportrait5.gif" width="320"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/fkportrait5.gif"><img src="assets/demos/fkportrait5.gif" width="320"></a></td>
   </tr>
   <tr>
     <td style="text-align:center;" width="320">"Ground Truth: A moman blink in the car."</td>
@@ -57,24 +57,24 @@ Let's finetune video generation models!
   </tr>
 
   <tr>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/gtmotion4.gif"><img src="assets/demos/fkview7.gif" width="320"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/fkmotion4.gif"><img src="assets/demos/fkview7.gif" width="320"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/gtmotion4.gif"><img src="assets/demos/gtmotion4.gif" width="320"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/fkmotion4.gif"><img src="assets/demos/fkmotion4.gif" width="320"></a></td>
   </tr>
   <tr>
     <td style="text-align:center;" width="320">"Ground Truth: Driving on the seaside road."</td>
     <td style="text-align:center;" width="320">"Reconstruction: Driving on the seaside road."</td>
   </tr>
   <tr>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/gtanimal2.gif"><img src="assets/demos/fkview7.gif" width="320"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/fkanminal2.gif"><img src="assets/demos/fkview7.gif" width="320"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/gtanimal2.gif"><img src="assets/demos/gtanimal2.gif" width="320"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/fkanminal2.gif"><img src="assets/demos/fkanminal2.gif" width="320"></a></td>
   </tr>
   <tr>
     <td style="text-align:center;" width="320">"Ground Truth: A bird on the tree."</td>
     <td style="text-align:center;" width="320">"Reconstruction: A bird on the tree."</td>
   </tr>
   <tr>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/gtcloseshot1.gif"><img src="assets/demos/fkview7.gif" width="320"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/fkcloseshot1.gif"><img src="assets/demos/fkview7.gif" width="320"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/gtcloseshot1.gif"><img src="assets/demos/gtcloseshot1.gif" width="320"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/fkcloseshot1.gif"><img src="assets/demos/fkcloseshot1.gif" width="320"></a></td>
   </tr>
   <tr>
     <td style="text-align:center;" width="320">"Ground Truth: A closeshot of a camera."</td>
