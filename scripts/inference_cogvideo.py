@@ -112,6 +112,7 @@ def load_inputs(args):
                                                 video_frames=args.frames, 
                                                 )
     return prompt_list, image_list, filename_list
+
 def get_batch(keys, value_dict, N: Union[List, ListConfig], T=None, device="cuda"):
     batch = {}
     batch_uc = {}
@@ -131,8 +132,10 @@ def get_batch(keys, value_dict, N: Union[List, ListConfig], T=None, device="cuda
         if key not in batch_uc and isinstance(batch[key], torch.Tensor):
             batch_uc[key] = torch.clone(batch[key])
     return batch, batch_uc
+
 def get_unique_embedder_keys_from_conditioner(conditioner):
     return list(set([x.input_key for x in conditioner.embedders]))
+
 def save_video_as_grid_and_mp4(video_batch: torch.Tensor, 
                                save_path: str, 
                                filenames=None ,
