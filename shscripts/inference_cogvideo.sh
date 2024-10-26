@@ -1,4 +1,5 @@
 # ----------------------diffusers based pl inference ----------------------
+ckpt='checkpoints/cogvideo/transformer/1000/mp_rank_00_model_states.pt'
 config='configs/train/005_cogvideoxft/config.yaml'
 prompt_file="inputs/t2v/prompts.txt"
 current_time=$(date +%Y%m%d%H%M%S)

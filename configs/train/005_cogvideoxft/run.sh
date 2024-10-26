@@ -3,7 +3,7 @@ export TOKENIZERS_PARALLELISM=false
 # COGCKPT="cogVideo/transformer/1000/mp_rank_00_model_states.pt"
 # exp settings
 EXPNAME="correctness"                              # experiment name 
-CONFIG='configs/train/005_cogvideoxft/cogvideo_diffusers.yaml' # experiment config 
+CONFIG='configs/train/005_cogvideoxft/config.yaml' # experiment config 
 RESROOT="results/cogvideo_train"                   # experiment saving directory
 
 # run

@@ -1,188 +1,96 @@
 model:
-  base_learning_rate: 6.0e-06 # 1.5e-04
-  scale_lr: False
-  not_trainable_prefixes: ['all'] ## Using Lora
-  # empty_params_only: True # disable this means finetuning all parameters
-  scale_factor: 1.15258426
-  disable_first_stage_autocast: true
+  # there might be differet to load from hf and resume from pl 
+  # pretrained_checkpoint: "THUDM/CogVideoX-2b"
+  base_learning_rate: 6e-6
+  target: src.cogvideo_hf.cogvideo_pl.CogVideoXWorkflow
+  params: 
+    # first stage model; cond stage model ; denoising model ; scheduler 
+    first_stage_config:
+      target: diffusers.AutoencoderKLCogVideoX
+      params:
+        pretrained_model_name_or_path: THUDM/CogVideoX-2b 
+        subfolder: "vae"
+        # revision: null 
+        # variant: null
+    cond_stage_config:
+      target: src.lvdm.modules.encoders.condition.FrozenT5Embedder
+      params:
+        version: "checkpoints/cogvideo/t5-v1_1-xxl"
+        device: "cuda"
+        max_length: 226 
+        freeze: True
+    # cond_stage_config:
+    #   target: src.cogvideo_hf.cogvideo_pl.FrozenT5CondModel
+    #   params:
+    #     tokenizer_config:
+    #       target: transformers.AutoTokenizer
+    #       params:
+    #         pretrained_model_name_or_path: THUDM/CogVideoX-2b 
+    #         subfolder: "tokenizer"
+    #     encoder_config:
+    #       target: transformers.T5EncoderModel
+    #       params:
+    #         subfolder: "text_encoder"
+    #         pretrained_model_name_or_path: THUDM/CogVideoX-2b 
+    #       # max_length: 226 
+    #     freeze: True
+    # denosier config equal to unet config in vc 
+    denoiser_config:
+      target: diffusers.CogVideoXTransformer3DModel
+      params:
+        pretrained_model_name_or_path: THUDM/CogVideoX-2b 
+        subfolder: "transformer"
+        load_dtype: fp16 # bf16 5b fp16 2B 
+        # revision: null 
+        # variant: null
+    adapter_config: # the whole dict is remoable 
+      target: peft.HRAConfig
+      params:
+        r: 8
+        init_weights: True
+        target_modules: ["to_k", "to_q", "to_v", "to_out.0"]
 
-  target: src.cogvideo.diffusion_video.SATVideoDiffusionEngine
-  params:
-    model_config:
-      log_keys:
-        - txt
-      denoiser_config:
-        target: sgm.modules.diffusionmodules.denoiser.DiscreteDenoiser
-        params:
-          num_idx: 1000
-          quantize_c_noise: False
+    # adapter_config: # the whole dict is remoable 
+        # target: peft.HRAConfig
+        # params:
+    #     r: 4
+    #     lora_alpha: 1.0 
+    #     init_lora_weights: True
+    #     target_modules: ["to_k", "to_q", "to_v", "to_out.0"]
+    # sampler config. Wrap it.       
+    scheduler_config:
+      target: diffusers.CogVideoXDPMScheduler
+      params:
+        pretrained_model_name_or_path: THUDM/CogVideoX-2b 
+        subfolder: scheduler
 
-          weighting_config:
-            target: sgm.modules.diffusionmodules.denoiser_weighting.EpsWeighting
-          scaling_config:
-            target: sgm.modules.diffusionmodules.denoiser_scaling.VideoScaling
-          discretization_config:
-            target: sgm.modules.diffusionmodules.discretizer.ZeroSNRDDPMDiscretization
-            params:
-              shift_scale: 3.0
-
-      network_config:
-        target: dit_video_concat.DiffusionTransformer
-        params:
-          time_embed_dim: 512
-          elementwise_affine: True
-          num_frames: 49
-          time_compressed_rate: 4
-          latent_width: 90
-          latent_height: 60
-          num_layers: 30
-          patch_size: 2
-          in_channels: 16
-          out_channels: 16
-          hidden_size: 1920
-          adm_in_channels: 256
-          num_attention_heads: 30
-
-          transformer_args:
-            checkpoint_activations: True ## using gradient checkpointing
-            vocab_size: 1
-            max_sequence_length: 64
-            layernorm_order: pre
-            skip_init: false
-            model_parallel_size: 1
-            is_decoder: false
-
-          modules:
-            pos_embed_config:
-              target: dit_video_concat.Basic3DPositionEmbeddingMixin
-              params:
-                text_length: 226
-                height_interpolation: 1.875
-                width_interpolation: 1.875
-
-            lora_config:
-                target: sat.model.finetune.lora2.LoraMixin
-                params:
-                    r: 16
-
-            patch_embed_config:
-              target: dit_video_concat.ImagePatchEmbeddingMixin
-              params:
-                text_hidden_size: 4096
-
-            adaln_layer_config:
-              target: dit_video_concat.AdaLNMixin
-              params:
-                qk_ln: True
-
-            final_layer_config:
-              target: dit_video_concat.FinalLayerMixin
-
-      conditioner_config:
-        target: sgm.modules.GeneralConditioner
-        params:
-          emb_models:
-            - is_trainable: false
-              input_key: txt
-              ucg_rate: 0.1
-              target: sgm.modules.encoders.modules.FrozenT5Embedder
-              params:
-                model_dir: "checkpoints/cogvideo/CogVideoX-2b-sat/t5-v1_1-xxl" #  path to the t5-v1_1-xxl weights folder
-                max_length: 226
-
-      first_stage_config:
-        target: vae_modules.autoencoder.VideoAutoencoderInferenceWrapper
-        params:
-          cp_size: 1
-          # context_parallel_size: 1 
-          ckpt_path: "checkpoints/cogvideo/CogVideoX-2b-sat/vae/3d-vae.pt" # path to the CogVideoX-2b-sat/vae/3d-vae.pt folder
-          ignore_keys: [ 'loss' ]
-
-          loss_config:
-            target: torch.nn.Identity
-
-          regularizer_config:
-            target: vae_modules.regularizers.DiagonalGaussianRegularizer
-
-          encoder_config:
-            target: vae_modules.cp_enc_dec.ContextParallelEncoder3D
-            params:
-              double_z: true
-              z_channels: 16
-              resolution: 256
-              in_channels: 3
-              out_ch: 3
-              ch: 128
-              ch_mult: [ 1, 2, 2, 4 ]
-              attn_resolutions: [ ]
-              num_res_blocks: 3
-              dropout: 0.0
-              gather_norm: True
-
-          decoder_config:
-            target: vae_modules.cp_enc_dec.ContextParallelDecoder3D
-            params:
-              double_z: True
-              z_channels: 16
-              resolution: 256
-              in_channels: 3
-              out_ch: 3
-              ch: 128
-              ch_mult: [ 1, 2, 2, 4 ]
-              attn_resolutions: [ ]
-              num_res_blocks: 3
-              dropout: 0.0
-              gather_norm: False
-
-      loss_fn_config:
-        target: sgm.modules.diffusionmodules.loss.VideoDiffusionLoss
-        params:
-          offset_noise_level: 0
-          sigma_sampler_config:
-            target: sgm.modules.diffusionmodules.sigma_sampling.DiscreteSampling
-            params:
-              uniform_sampling: True
-              num_idx: 1000
-              discretization_config:
-                target: sgm.modules.diffusionmodules.discretizer.ZeroSNRDDPMDiscretization
-                params:
-                  shift_scale: 3.0
-
-      sampler_config:
-        target: sgm.modules.diffusionmodules.sampling.VPSDEDPMPP2MSampler
-        params:
-          num_steps: 50
-          verbose: True
-
-          discretization_config:
-            target: sgm.modules.diffusionmodules.discretizer.ZeroSNRDDPMDiscretization
-            params:
-              shift_scale: 3.0
-
-          guider_config:
-            target: sgm.modules.diffusionmodules.guiders.DynamicCFG
-            params:
-              scale: 6
-              exp: 5
-              num_steps: 50
-      
+## training config 
+### data , can a toy dataset given 
 data:
-  target: data.lightning_data.DataModuleFromConfig
+  target: src.data.lightning_data.DataModuleFromConfig
   params:
-    batch_size: 1
+    batch_size: 2
     num_workers: 16
     wrap: false
     train:
-      target: src.cogvideo.data_video.SFTDataset
+      target: src.data.cogvideo_dataset.VideoDataset
       params:
-        data_dir : inputs/t2v/cogvideo/elon_musk_video
-        video_size: [ 480, 720 ]
-        fps: 8
+        instance_data_root: "inputs/t2v/cogvideo/elon_musk_video"
+        dataset_name: null 
+        dataset_config_name: null
+        caption_column: "labels.txt"
+        video_column: "videos.txt"
+        height: 480
+        width: 720
+        fps: 28
         max_num_frames: 2
-        skip_frms_num: 3.
+        skip_frames_start: 0
+        skip_frames_end: 0
+        cache_dir: ~/.cache
+        id_token: null
 
+### training_step in cogvideoxft
 lightning:
-  strategy: deepspeed
   trainer:
     benchmark: True
     batch_size: 3
@@ -190,17 +98,18 @@ lightning:
     num_nodes: 1
     accumulate_grad_batches: 2
     max_epochs: 2000
-    precision: 16 # training precision
+    precision: 32 # training precision
   callbacks:
     image_logger:
       target: src.utils.callbacks.ImageLogger
       params:
-        batch_frequency: -1 # set to -1 to disable
-        max_images: 6
-        to_local: False # save videos into files
+        batch_frequency: 100000
+        max_images: 2
+        to_local: True # save videos into files
         log_images_kwargs:
           unconditional_guidance_scale: 12 # need this, otherwise it is grey
-    model_checkpoint:
+    modelcheckpoint:
+      # target: pytorch_lightning.callbacks.ModelCheckpoin
       target: pytorch_lightning.callbacks.ModelCheckpoint
       params:
         every_n_epochs: 1
@@ -210,6 +119,7 @@ lightning:
       params:
         filename: "{epoch:06}-{step:09}"
         save_weights_only: False
-        every_n_epochs: null
-        every_n_train_steps: 991
+        # every_n_epochs: 300
+        every_n_train_steps: 10
     
+

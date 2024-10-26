@@ -1,23 +1,23 @@
 import os
 import sys
 import time
-import math
 import argparse
+import json
 import numpy as np
 from functools import partial
 from tqdm import trange, tqdm
 from omegaconf import OmegaConf
-from omegaconf import ListConfig
 from einops import rearrange, repeat
-from typing import List, Union
+
 import torch
 from pytorch_lightning import seed_everything
-import imageio
+
+
 sys.path.insert(0, os.getcwd())
+sys.path.insert(1, f'{os.getcwd()}/src')
 from src.base.ddim import DDIMSampler
 from src.utils.common_utils import instantiate_from_config
 from src.base.ddim_multiplecond import DDIMSampler as DDIMSampler_multicond
-from src.cogvideo.arguments import get_args
 from src.utils.inference_utils import (
     load_model_checkpoint, 
     load_prompts, 
@@ -26,6 +26,7 @@ from src.utils.inference_utils import (
     sample_batch_t2v, 
     sample_batch_i2v,
     save_videos,
+    save_videos_vbench,
 )
 
 def get_parser():
@@ -37,6 +38,7 @@ def get_parser():
     parser.add_argument("--prompt_file", type=str, default=None, help="a text file containing many prompts for text-to-video")
     parser.add_argument("--prompt_dir", type=str, default=None, help="a input dir containing images and prompts for image-to-video/interpolation")
     parser.add_argument("--savedir", type=str, default=None, help="results saving path")
+    parser.add_argument("--standard_vbench", action='store_true', default=False, help="inference standard vbench prompts")
     #
     parser.add_argument("--seed", type=int, default=123, help="random seed")
     #
@@ -58,8 +60,11 @@ def get_parser():
     parser.add_argument("--timestep_spacing", type=str, default="uniform", help="The way the timesteps should be scaled. Refer to Table 2 of the [Common Diffusion Noise Schedules and Sample Steps are Flawed](https://huggingface.co/papers/2305.08891) for more information.")
     parser.add_argument("--guidance_rescale", type=float, default=0.0, help="guidance rescale in [Common Diffusion Noise Schedules and Sample Steps are Flawed](https://huggingface.co/papers/2305.08891)")
     parser.add_argument("--loop", action='store_true', default=False, help="generate looping videos or not")
+    parser.add_argument("--gfi", action='store_true', default=False, help="generate generative frame interpolation (gfi) or not")
+    # lora args 
+    parser.add_argument("--lorackpt", type=str, default=None, help="[Optional] checkpoint path for lora model. ")
     #
-    parser.add_argument("--savefps", type=float, default=10, help="video fps to generate")
+    parser.add_argument("--savefps", type=str, default=10, help="video fps to generate")
     return parser
 
 def load_model(args, cuda_idx=0):
@@ -69,22 +74,18 @@ def load_model(args, cuda_idx=0):
     # build model
     config = OmegaConf.load(args.config)
     model_config = config.pop("model", OmegaConf.create())
+    if args.lorackpt is not None:
+        model_config["params"]["lora_args"] = {"lora_ckpt": args.lorackpt}
     model = instantiate_from_config(model_config)
     model = model.cuda(cuda_idx)
     # load weights
     assert os.path.exists(args.ckpt_path), f"Error: checkpoint [{args.ckpt_path}] Not Found!"
-    print(args.ckpt_path)
-    # customized checkpoint loader 
-    try:
-        # pl chekcpoint 
-        missing_keys, unexpected_keys = model.load_state_dict(torch.load(args.ckpt_path)['state_dict'], strict=False)
-    except:
-        # pretrained checkpoint 
-        missing_keys, unexpected_keys = model.load_state_dict(torch.load(args.ckpt_path)['module'], strict=False)
-        
-    if len(unexpected_keys) > 0:
-        print_rank0(
-            f'Will continue but found unexpected_keys! Check whether you are loading correct checkpoints: {unexpected_keys}.')
+    model = load_model_checkpoint(model, args.ckpt_path)
+    # load lora weights 
+    # notice lora args 
+    if hasattr(model,"lora_args") and len(model.lora_args)!=0:
+        model.inject_lora()
+    
     model.eval()
     return model
 
@@ -153,23 +154,18 @@ def save_video_as_grid_and_mp4(video_batch: torch.Tensor,
             for frame in gif_frames:
                 writer.append_data(frame)
 
-def run_inference(args, gpu_num=1, rank=0, **kwargs):
+def run_inference_cogvideo(args, gpu_num=1, rank=0, **kwargs):
     """
-    Inference t2v/i2v models
-    """
+    ideally this should be merged to run_inference()
     
+    """
     assert (args.height % 16 == 0) and (args.width % 16 == 0), "Error: image size [h,w] should be multiples of 16!"
     
     seed_everything(args.seed)
     os.makedirs(args.savedir, exist_ok=True)
-    # import pdb;pdb.set_trace()
-    # load model, sampler, inputs
-    model = load_model(args)
-    # cogvideo doesn't need to be wrapped by DDIM 
-    
-    # args.frames = model.temporal_length if args.frames is None else args.frames
     prompt_list, image_list, filename_list = load_inputs(args)
-
+    print(args)
+    model = load_model(args)
     # split across multiple gpus
     num_samples = len(prompt_list)
     num_samples_rank = num_samples // gpu_num
@@ -180,116 +176,91 @@ def run_inference(args, gpu_num=1, rank=0, **kwargs):
     #
     prompt_list_rank = [prompt_list[i] for i in indices_rank]
     filename_list_rank = [filename_list[i] for i in indices_rank]
-
-    # noise shape
-    # image_size = [480, 720]
-    # h, w, frames, channels = args.height // 8, args.width // 8, args.frames, model.channels
-    frames, h , w, channels , F = args.frames,  args.height,  args.width , 16 , 8
-    device = torch.device("cuda", rank)
+    if args.mode == "i2v":
+        image_list_rank = [image_list[i] for i in indices_rank]
+    
     # -----------------------------------------------------------------
     # inference
+    format_file = {}
     start = time.time()
     n_iters = len(prompt_list_rank) // args.bs + (1 if len(prompt_list_rank) % args.bs else 0)
-    with torch.no_grad(), torch.cuda.amp.autocast():
+    with torch.no_grad():
         for idx in trange(0, n_iters, desc="Sample Iters"):
             # print(f'[rank:{rank}] batch {idx}: prompt bs {args.bs}) x nsamples_per_prompt {args.n_samples_prompt} ...')
+
             prompts = prompt_list_rank[idx*args.bs:(idx+1)*args.bs]
             filenames = filename_list_rank[idx*args.bs:(idx+1)*args.bs]
-            model.to(device)
-            print(f"{len(prompts)},{type(prompts)}",prompts[0])
-            value_dict = {
-                "prompt": prompts,
-                "negative_prompt": ["" for p in prompts],
-                "num_frames": torch.tensor(frames).unsqueeze(0),
-            }
-            force_uc_zero_embeddings = ["txt"]
-            batch, batch_uc = get_batch(
-                get_unique_embedder_keys_from_conditioner(model.conditioner), value_dict, [args.n_samples_prompt]
-            )
-            for key in batch:
-                if isinstance(batch[key], torch.Tensor):
-                    print(key, batch[key].shape)
-                elif isinstance(batch[key], list):
-                    print(key, [len(l) for l in batch[key]])
-                else:
-                    print(key, batch[key])
-            c, uc = model.conditioner.get_unconditional_conditioning(
-                batch,
-                batch_uc=batch_uc,
-                force_uc_zero_embeddings=force_uc_zero_embeddings,
-            )
-            # import pdb;pdb.set_trace()
-            samples_z = model.sample(
-                c,
-                uc=uc,
-                batch_size=1,
-                shape=(frames, channels, h // F, w // F),
-            )
-            samples_z = samples_z.permute(0, 2, 1, 3, 4).contiguous()
 
-            torch.cuda.empty_cache()
-            first_stage_model = model.first_stage_model
-            first_stage_model = first_stage_model.to(device)
-
-            latent = 1.0 / model.scale_factor * samples_z
-
-            # Decode latent serial to save GPU memory
-            recons = []
-            loop_num = (frames - 1) // 2
-            for i in range(loop_num):
-                if i == 0:
-                    start_frame, end_frame = 0, 3
+            if args.mode == 'i2v':
+                images = image_list_rank[idx*args.bs:(idx+1)*args.bs]
+                if isinstance(images, list):
+                    images = torch.stack(images, dim=0).to("cuda")
                 else:
-                    start_frame, end_frame = i * 2 + 1, i * 2 + 3
-                if i == loop_num - 1:
-                    clear_fake_cp_cache = True
-                else:
-                    clear_fake_cp_cache = False
-                with torch.no_grad():
-                    # print(latent[:, :, start_frame:end_frame].contiguous().shape)
-                    # import pdb;pdb.set_trace()
-                    # latent = torch.permute(latent, (0, 2, 1, 3, 4)).contiguous()
-                    # print(latent.shape)
-                    recon = first_stage_model.decode(
-                        latent[:, :, start_frame:end_frame].contiguous(), clear_fake_cp_cache=clear_fake_cp_cache
-                    )
-                recons.append(recon)
-                recon = torch.cat(recons, dim=2).to(torch.float32)
-                # print(recon.shape)
-            model.to("cpu")
-            samples_x = recon.permute(0, 2, 1, 3, 4).contiguous()
-            samples = torch.clamp((samples_x + 1.0) / 2.0, min=0.0, max=1.0).cpu()
-            # import pdb;pdb.set_trace()
-            save_video_as_grid_and_mp4(samples, args.savedir,filenames=filenames, fps=args.savefps)
-            # save_videos(batch_samples, args.savedir, filenames, fps=args.savefps)
+                    images = images.unsqueeze(0).to("cuda")
+            # idx_s = idx*args.bs
+            # idx_e = min(idx_s+args.bs, len(prompt_list_rank))
+            # batch_size = idx_e - idx_s
+            # filenames = filename_list_rank[idx_s:idx_e]
+
+            # prompts = prompt_list_rank[idx_s:idx_e]
+            # if isinstance(prompts, str):
+            #     prompts = [prompts]
+            #prompts = batch_size * [""]
+
+            # if args.mode == 't2v':
+            #     cond = {"c_crossattn": [text_emb], "fps": fps}
+
+            # TODO
+            # elif args.mode == 'i2v':
+            #     cond_images = load_image_batch(image_list_rank[idx_s:idx_e], (args.height, args.width))
+            #     cond_images = cond_images.to(model.device)
+            #     img_emb = model.get_image_embeds(cond_images)
+            #     imtext_cond = torch.cat([text_emb, img_emb], dim=1)
+            #     cond = {"c_crossattn": [imtext_cond], "fps": fps}
+            # else:
+            #     raise NotImplementedError
+
+            ## inference
+            bs = args.bs if args.bs == len(prompts) else len(prompts)
+            # noise_shape = [bs, channels, frames, h, w]
+            if args.mode == 't2v':
+                # batch_samples = sample_batch_t2v(model, ddim_sampler, prompts, noise_shape, args.fps,
+                #                         args.n_samples_prompt, args.ddim_steps, args.ddim_eta,
+                #                         args.unconditional_guidance_scale, args.unconditional_guidance_scale_temporal,
+                #                         args.uncond_prompt,
+                #                         )
+                batch_samples = model.sample(
+                    prompts,
+                    None,
+                    height = args.height,
+                    width = args.width, 
+                    num_frames = 12,
+                    num_videos_per_prompt = args.n_samples_prompt,
+                    guidance_scale = args.unconditional_guidance_scale, 
+                    # args.unconditional_guidance_scale_temporal,
+                    # args.uncond_prompt
+                )
+            elif args.mode == 'i2v':
+                raise NotImplementedError
+            else:
+                raise ValueError
+            
+            if args.standard_vbench:
+                save_videos_vbench(batch_samples, args.savedir, prompts, format_file, fps=args.savefps)
+                print('test')
+            else:
+                save_videos(batch_samples, args.savedir, filenames, fps=args.savefps)
+
+    if args.standard_vbench:
+        with open(os.path.join(args.savedir, 'info.json'), 'w') as f:
+            json.dump(format_file, f)
+            
     print(f"Saved in {args.savedir}. Time used: {(time.time() - start):.2f} seconds")
 
 
-if __name__ == "__main__":
-    if "OMPI_COMM_WORLD_LOCAL_RANK" in os.environ:
-        os.environ["LOCAL_RANK"] = os.environ["OMPI_COMM_WORLD_LOCAL_RANK"]
-        os.environ["WORLD_SIZE"] = os.environ["OMPI_COMM_WORLD_SIZE"]
-        os.environ["RANK"] = os.environ["OMPI_COMM_WORLD_RANK"]
-    # py_parser = argparse.ArgumentParser(add_help=False)
-    # known, args_list = py_parser.parse_known_args()
+
+if __name__ == '__main__':
+    
     args = get_parser().parse_args()
-    # args = get_args(args_list)
-    # # args = argparse.Namespace(**vars(args), **vars(known))
-    # del args.deepspeed_config
-    print(args)
-    # args.model_config.first_stage_config.params.cp_size = 1
-    # args.model_config.network_config.params.transformer_args.model_parallel_size = 1
-    # args.model_config.network_config.params.transformer_args.checkpoint_activations = False
-    # args.model_config.loss_fn_config.params.sigma_sampler_config.params.uniform_sampling = False
-    args.height = 480
-    args.width = 720
-    # args.savedir = args.output_dir
-    # args.savefps = args.sampling_fps
-    # args.frames = args.sampling_num_frames
-    # args.config = "/home/liurt/liurt_data/haoyu/VideoTuna/configs/inference/cogvideo_t2v_pl.yaml"
-    # args.ckpt_path = args.load
-    # args.prompt_file = args.input_file
-    args.bs = 1
-    args.n_samples_prompt = 1
-    args.seed = 11111
-    run_inference(args)
+    # run_inference(args)
+    run_inference_cogvideo(args)
