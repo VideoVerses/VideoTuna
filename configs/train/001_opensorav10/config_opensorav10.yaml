@@ -105,7 +105,7 @@ lightning:
         every_n_train_steps: 1000
   trainer:
     benchmark: True
-    num_workers: 32
+    # num_workers: 32
     num_nodes: 1
     accumulate_grad_batches: 1
     max_epochs: 2000
