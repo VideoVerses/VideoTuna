@@ -8,10 +8,6 @@ model:
   params:
     # loss_type: l1
     log_every_t: 200
-    linear_start: 0.00085
-    linear_end: 0.012
-    num_timesteps_cond: 1
-    timesteps: 1000
     first_stage_key: video
     cond_stage_key: caption
     # cond_stage_trainable: false
@@ -30,12 +26,20 @@ model:
     use_scale: true
     scale_b: 0.7 # adapt to videocrafter-v2
 
+    diffusion_scheduler_config:
+      target: src.base.iddpm3d.OpenSoraScheduler
+      params: 
+        timesteps: 1000
+        linear_start: 0.00085
+        linear_end: 0.012
+
     unet_config:
       target: src.opensora.models.stdit.stdit.STDiT_XL_2
       params:
         space_scale: 0.5
         time_scale: 1.0
-        from_pretrained: "/project/llmsvgen/share/opensora_ckpt/stage4/last/model_ckpt.pt"
+        # from_pretrained: "/project/llmsvgen/share/opensora_ckpt/stage4/last/model_ckpt.pt"
+        from_pretrained: "/disk8/yazhou/check-base/opensora_ckpt/model_ckpt.pt"
         enable_flashattn: True
         enable_layernorm_kernel: False
         input_size:
@@ -57,13 +61,15 @@ model:
 data:
   target: src.data.lightning_data.DataModuleFromConfig
   params:
-    batch_size: 32
+    batch_size: 4
     num_workers: 16
     wrap: false
     train:
       target: src.data.datasets.DatasetFromCSV
       params:
-        csv_path: /project/llmsvgen/share/opensora_datafile/artgrid_caption_long_base.csv
+        # csv_path: /project/llmsvgen/share/opensora_datafile/artgrid_caption_long_base.csv
+        csv_path: /disk8/yazhou/Dataset/artgrid/artgrid_caption_long_base_disk8.csv
+        data_root: /disk8/yazhou/Dataset/artgrid
         resolution: [256, 256]
         video_length: 16
         frame_interval: 4
@@ -71,7 +77,9 @@ data:
     validation:
       target: src.data.datasets.DatasetFromCSV
       params:
-        csv_path: /project/llmsvgen/share/opensora_datafile/artgrid_caption_long_base.csv
+        # csv_path: /project/llmsvgen/share/opensora_datafile/artgrid_caption_long_base.csv
+        csv_path: /disk8/yazhou/Dataset/artgrid/artgrid_caption_long_base_disk8.csv
+        data_root: /disk8/yazhou/Dataset/artgrid
         resolution: [256, 256]
         video_length: 16
         frame_interval: 4
@@ -97,7 +105,7 @@ lightning:
         every_n_train_steps: 1000
   trainer:
     benchmark: True
-    num_workers: 32
+    # num_workers: 32
     num_nodes: 1
     accumulate_grad_batches: 1
     max_epochs: 2000

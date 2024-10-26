@@ -15,7 +15,7 @@ LOGDIR="./results"                                     # experiment saving direc
 # --logdir $LOGDIR \
 # --auto_resume True
 
-python scripts/train.py \
+CUDA_VISIBLE_DEVICES=3 python scripts/train.py \
 -t --devices '0,' \
 lightning.trainer.num_nodes=1 \
 --base $CONFIG \

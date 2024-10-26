@@ -114,6 +114,46 @@ def load_inputs(args):
                                                 )
     return prompt_list, image_list, filename_list
 
+def get_batch(keys, value_dict, N: Union[List, ListConfig], T=None, device="cuda"):
+    batch = {}
+    batch_uc = {}
+
+    for key in keys:
+        if key == "txt":
+            # import pdb;pdb.set_trace()
+            batch["txt"] = np.repeat([value_dict["prompt"]], repeats=math.prod(N)).reshape(N).tolist()
+            batch_uc["txt"] = np.repeat([value_dict["negative_prompt"]], repeats=math.prod(N)).reshape(N).tolist()
+        else:
+            batch[key] = value_dict[key]
+
+    if T is not None:
+        batch["num_video_frames"] = T
+
+    for key in batch.keys():
+        if key not in batch_uc and isinstance(batch[key], torch.Tensor):
+            batch_uc[key] = torch.clone(batch[key])
+    return batch, batch_uc
+
+def get_unique_embedder_keys_from_conditioner(conditioner):
+    return list(set([x.input_key for x in conditioner.embedders]))
+
+def save_video_as_grid_and_mp4(video_batch: torch.Tensor, 
+                               save_path: str, 
+                               filenames=None ,
+                               fps: int = 5
+                               ):
+    for i, vid in enumerate(video_batch):
+        gif_frames = []
+        for frame in vid:
+            frame = rearrange(frame, "c h w -> h w c")
+            frame = (255.0 * frame).cpu().numpy().astype(np.uint8)
+            gif_frames.append(frame)
+        now_save_path = os.path.join(save_path, filenames[i]+f"-{i}.mp4")
+        print(now_save_path)
+        with imageio.get_writer(now_save_path, fps=fps) as writer:
+            for frame in gif_frames:
+                writer.append_data(frame)
+
 def run_inference_cogvideo(args, gpu_num=1, rank=0, **kwargs):
     """
     ideally this should be merged to run_inference()

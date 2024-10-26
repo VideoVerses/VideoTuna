@@ -5,6 +5,7 @@ import numpy as np
 from PIL import Image
 from einops import rearrange
 import logging
+
 mainlogger = logging.getLogger('mainlogger')
 
 import torch
@@ -13,20 +14,21 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import Callback
 from pytorch_lightning.utilities import rank_zero_only
 from pytorch_lightning.utilities import rank_zero_info
-from src.utils.save_video import log_local, prepare_to_log
+from utils.save_video import log_local, prepare_to_log
+
 
 class LoraModelCheckpoint(pl.callbacks.ModelCheckpoint):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def on_save_checkpoint(self, trainer, pl_module,checkpoint):
-        
+    def on_save_checkpoint(self, trainer, pl_module, checkpoint):
+
         """
         the hook in pl.module and ModelCheckpoint is slight different. 
         pl.Module: https://lightning.ai/docs/pytorch/stable/common/lightning_module.html#on-save-checkpoint
         ModelCheckpoint: https://pytorch-lightning.readthedocs.io/en/1.5.10/extensions/generated/pytorch_lightning.callbacks.ModelCheckpoint.html"""
         # only save lora 
-        state_dict =  checkpoint['state_dict']
+        state_dict = checkpoint['state_dict']
         for k in list(state_dict.keys()):
             if 'lora' not in k:
                 del state_dict[k]
@@ -34,16 +36,15 @@ class LoraModelCheckpoint(pl.callbacks.ModelCheckpoint):
         checkpoint = super().on_save_checkpoint(trainer, pl_module, checkpoint)
         return checkpoint
 
-        
-        
+
 class ImageLogger(Callback):
-    def __init__(self, 
-                 batch_frequency, 
+    def __init__(self,
+                 batch_frequency,
                  save_dir,
-                 max_images=8, 
-                 clamp=True, 
-                 rescale=True, 
-                 to_local=False, 
+                 max_images=8,
+                 clamp=True,
+                 rescale=True,
+                 to_local=False,
                  log_images_kwargs=None,
                  ):
         super().__init__()
@@ -60,20 +61,21 @@ class ImageLogger(Callback):
             os.makedirs(os.path.join(self.save_dir, "val"), exist_ok=True)
 
     def log_to_tensorboard(self, pl_module, batch_logs, filename, split, save_fps=10):
-        """ log images and videos to tensorboard """        
+        """ log images and videos to tensorboard """
         global_step = pl_module.global_step
         for key in batch_logs:
             value = batch_logs[key]
-            tag = "gs%d-%s/%s-%s"%(global_step, split, filename, key)
+            tag = "gs%d-%s/%s-%s" % (global_step, split, filename, key)
             if isinstance(value, list) and isinstance(value[0], str):
                 captions = ' |------| '.join(value)
                 pl_module.logger.experiment.add_text(tag, captions, global_step=global_step)
             elif isinstance(value, torch.Tensor) and value.dim() == 5:
                 video = value
                 n = video.shape[0]
-                video = video.permute(2, 0, 1, 3, 4) # t,n,c,h,w
-                frame_grids = [torchvision.utils.make_grid(framesheet, nrow=int(n)) for framesheet in video] #[3, n*h, 1*w]
-                grid = torch.stack(frame_grids, dim=0) # stack in temporal dim [t, 3, n*h, w]
+                video = video.permute(2, 0, 1, 3, 4)  # t,n,c,h,w
+                frame_grids = [torchvision.utils.make_grid(framesheet, nrow=int(n)) for framesheet in
+                               video]  # [3, n*h, 1*w]
+                grid = torch.stack(frame_grids, dim=0)  # stack in temporal dim [t, 3, n*h, w]
                 grid = (grid + 1.0) / 2.0
                 grid = grid.unsqueeze(dim=0)
                 pl_module.logger.experiment.add_video(tag, grid, fps=save_fps, global_step=global_step)
@@ -89,7 +91,7 @@ class ImageLogger(Callback):
     def log_batch_imgs(self, pl_module, batch, batch_idx, split="train"):
         """ generate images, then save and log to tensorboard """
         skip_freq = self.batch_freq if split == "train" else 5
-        if (batch_idx+1) % skip_freq == 0:
+        if (batch_idx + 1) % skip_freq == 0:
             is_train = pl_module.training
             if is_train:
                 pl_module.eval()
@@ -97,21 +99,21 @@ class ImageLogger(Callback):
             with torch.no_grad():
                 log_func = pl_module.log_images
                 batch_logs = log_func(batch, split=split, **self.log_images_kwargs)
-            
+
             ## process: move to CPU and clamp
             batch_logs = prepare_to_log(batch_logs, self.max_images, self.clamp)
             torch.cuda.empty_cache()
-            
+
             filename = "ep{}_idx{}_rank{}".format(
                 pl_module.current_epoch,
                 batch_idx,
                 pl_module.global_rank)
             if self.to_local:
-                mainlogger.info("Log [%s] batch <%s> to local ..."%(split, filename))
+                mainlogger.info("Log [%s] batch <%s> to local ..." % (split, filename))
                 filename = "gs{}_".format(pl_module.global_step) + filename
                 log_local(batch_logs, os.path.join(self.save_dir, split), filename, save_fps=10)
             else:
-                mainlogger.info("Log [%s] batch <%s> to tensorboard ..."%(split, filename))
+                mainlogger.info("Log [%s] batch <%s> to tensorboard ..." % (split, filename))
                 self.log_to_tensorboard(pl_module, batch_logs, filename, split, save_fps=10)
             mainlogger.info('Finish!')
 
@@ -137,19 +139,14 @@ class CUDACallback(Callback):
     def on_train_epoch_start(self, trainer, pl_module):
         # Reset the memory use counter
         # lightning update
-        if int((pl.__version__).split('.')[1])>=7:
-            gpu_index = trainer.strategy.root_device.index
-        else:
-            gpu_index = trainer.root_gpu
+        gpu_index = trainer.strategy.root_device.index
+        print(f'gpu_index: {gpu_index}')
         torch.cuda.reset_peak_memory_stats(gpu_index)
         torch.cuda.synchronize(gpu_index)
         self.start_time = time.time()
 
     def on_train_epoch_end(self, trainer, pl_module):
-        if int((pl.__version__).split('.')[1])>=7:
-            gpu_index = trainer.strategy.root_device.index
-        else:
-            gpu_index = trainer.root_gpu
+        gpu_index = trainer.strategy.root_device.index
         torch.cuda.synchronize(gpu_index)
         max_memory = torch.cuda.max_memory_allocated(gpu_index) / 2 ** 20
         epoch_time = time.time() - self.start_time
