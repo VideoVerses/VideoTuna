@@ -48,8 +48,8 @@ Let's finetune video generation models!
     <td style="text-align:center;" width="320">Reconstruction</td>
   </tr>
   <tr>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/vae/gtportrait5.gif"><img src="assets/demos/vae/gtportrait5.gif" width="320"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/vae/fkportrait5.gif"><img src="assets/demos/vae/fkportrait5.gif" width="320"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/vae/gtface.gif"><img src="assets/demos/vae/gtface.gif" width="320"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/vae/fkface.gif"><img src="assets/demos/vae/fkface.gif" width="320"></a></td>
   </tr>
   <tr>
     <td style="text-align:center;" width="320">Ground Truth</td>
@@ -171,6 +171,71 @@ Let's finetune video generation models!
 
 
 ### Storytelling
+
+
+<table class="center">
+  <tr>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/bear/0_9.gif"><img src="assets/demos/story/bear/0_9.gif" width="240"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/bear/1_4.gif"><img src="assets/demos/story/bear/1_4.gif" width="240"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/bear/2_5.gif"><img src="assets/demos/story/bear/2_5.gif" width="240"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/bear/3_6.gif"><img src="assets/demos/story/bear/3_6.gif" width="240"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/bear/4_4.gif"><img src="assets/demos/story/bear/4_4.gif" width="240"></a></td>
+  </tr>
+  <tr>
+    <td style="text-align:center;">The picture shows a cozy room with a little girl telling her travel story to her teddybear beside the bed.</td>
+    <td style="text-align:center;">As night falls, teddybear sits by the window, his eyes sparkling with longing for the distant place</td>
+    <td style="text-align:center;">Teddybear was in a corner of the room, making a small backpack out of old cloth strips, with a map, a compass and dry food next to it.</td>
+    <td style="text-align:center;">The first rays of sunlight in the morning came through the window, and teddybear quietly opened the door and embarked on his adventure.</td>
+    <td style="text-align:center;">In the forest, the sun shines through the treetops, and teddybear moves among various animals and communicates with them.</td>
+  </tr>
+  <tr>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/bear/5_5.gif"><img src="assets/demos/story/bear/5_5.gif" width="240"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/bear/6_2.gif"><img src="assets/demos/story/bear/6_2.gif" width="240"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/bear/7_4.gif"><img src="assets/demos/story/bear/7_4.gif" width="240"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/bear/8_4.gif"><img src="assets/demos/story/bear/8_4.gif" width="240"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/bear/10_5.gif"><img src="assets/demos/story/bear/10_5.gif" width="240"></a></td>
+  </tr>
+  <tr>
+    <td style="text-align:center;">Teddybear leaves his mark on the edge of a clear lake, surrounded by exotic flowers, and the picture is full of mystery and exploration.</td>
+    <td style="text-align:center;">Teddybear climbs the rugged mountain road, the weather is changeable, but he is determined.</td>
+    <td style="text-align:center;">The picture switches to the top of the mountain, where teddybear stands in the glow of the sunrise, with a magnificent mountain view in the background.</td>
+    <td style="text-align:center;">On the way home, teddybear helps a wounded bird, the picture is warm and touching.</td>
+    <td style="text-align:center;">Teddybear sits by the little girl's bed and tells her his adventure story, and the little girl is fascinated.</td>
+  </tr>
+</table>
+
+
+<table class="center">
+  <tr>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/cat/0_2.gif"><img src="assets/demos/story/cat/0_2.gif" width="240"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/cat/1_3.gif"><img src="assets/demos/story/cat/1_3.gif" width="240"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/cat/2_4.gif"><img src="assets/demos/story/cat/2_4.gif" width="240"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/cat/3_7.gif"><img src="assets/demos/story/cat/3_7.gif" width="240"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/cat/4_3.gif"><img src="assets/demos/story/cat/4_3.gif" width="240"></a></td>
+  </tr>
+  <tr>
+    <td style="text-align:center;">The scene shows a peaceful village, with moonlight shining on the roofs and streets, creating a peaceful atmosphere.</td>
+    <td style="text-align:center;">cat sits by the window, her eyes twinkling in the night, reflecting her special connection with the moon and stars.</td>
+    <td style="text-align:center;">Villagers gather in the center of the village for the annual Moon Festival celebration, with lanterns and colored lights adorning the night sky.</td>
+    <td style="text-align:center;">cat feels the call of the moon, and her beard trembles with the excitement in her heart.</td>
+    <td style="text-align:center;">cat quietly leaves her home in the night and embarks on a path illuminated by the silver moonlight.</td>
+  </tr>
+  <tr>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/cat/8_8.gif"><img src="assets/demos/story/cat/8_8.gif" width="240"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/cat/9_2.gif"><img src="assets/demos/story/cat/9_2.gif" width="240"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/cat/11_0.gif"><img src="assets/demos/story/cat/11_0.gif" width="240"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/cat/12_1.gif"><img src="assets/demos/story/cat/12_1.gif" width="240"></a></td>
+    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/cat/15_9.gif"><img src="assets/demos/story/cat/15_9.gif" width="240"></a></td>
+  </tr>
+  <tr>
+    <td style="text-align:center;">A group of forest elves dance around glowing mushrooms, their costumes and movements full of magic and vitality.</td>
+    <td style="text-align:center;">cat joins the celebration and dances with the elves, the picture is full of joy and freedom.</td>
+    <td style="text-align:center;">A wise old owl reveals the secret power of the moon to cat and the light of the moon in the picture becomes brighter.</td>
+    <td style="text-align:center;">cat closes her eyes in the moonlight, puts her hands together, and makes a wish, surrounded by the light of stars and the moon.</td>
+    <td style="text-align:center;">cat feels the surge of power, and her eyes become more determined.</td>
+  </tr>
+</table>
+
 
 
 ## 🔆 Introduction
