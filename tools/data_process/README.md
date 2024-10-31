@@ -4,8 +4,8 @@ This folder contains data processing scripts.
 # Code structure:
 ```
 VideoTuna/
-└── data/
-    └── process/
+└── tools/
+    └── data_process/
         ├── scenecut.py
         ├── caption.py
         ├── xxx.py
