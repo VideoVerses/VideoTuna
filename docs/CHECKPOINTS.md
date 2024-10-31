@@ -4,7 +4,7 @@
 This document contains commands for preparing model checkpoints and the final checkpoint orgnization structure.
 
 ### Download checkpoints
-
+Please run the following commands in your terminal to download the checkpoints for each model.
 ```
 mkdir checkpoints
 
