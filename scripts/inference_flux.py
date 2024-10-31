@@ -5,8 +5,13 @@ import argparse
 from inference_utils import load_prompt_file
 
 def inference(args):
-    pipe = FluxPipeline.from_pretrained("black-forest-labs/FLUX.1-schnell", torch_dtype=torch.bfloat16)
-    # pipe.enable_model_cpu_offload()
+    if args.model_type=='dev':
+        pipe = FluxPipeline.from_pretrained("black-forest-labs/FLUX.1-dev", torch_dtype=torch.bfloat16)
+    elif args.model_type=='schnell':
+        pipe = FluxPipeline.from_pretrained("black-forest-labs/FLUX.1-schnell", torch_dtype=torch.bfloat16)
+    else:
+        raise ValueError("model_type must be either 'dev' or 'schnell'")
+
     pipe.enable_sequential_cpu_offload()
     pipe.vae.enable_slicing()
     pipe.vae.enable_tiling()
@@ -32,6 +37,7 @@ def inference(args):
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser()
+    parser.add_argument('--model_type',type=str,default='dev', choices=['dev','schnell'])
     parser.add_argument('--prompt',type=str,default="A cat holding a sign that says hello world")
     parser.add_argument('--out_path',type=str,default='./image.png')
     parser.add_argument('--width',type=int,default=1360)
