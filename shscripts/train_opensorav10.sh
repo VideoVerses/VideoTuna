@@ -8,7 +8,7 @@ LOGDIR="./results"                                     # experiment saving direc
 
 # run
 python scripts/train.py \
--t --devices '0' \
+-t --devices '0,' \
 lightning.trainer.num_nodes=1 \
 --base $CONFIG \
 --name "$current_time"_$EXPNAME \
