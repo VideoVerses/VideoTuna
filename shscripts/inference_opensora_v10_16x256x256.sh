@@ -1,10 +1,10 @@
 current_time=$(date +%Y%m%d%H%M%S)
 
-ckpt="checkpoints/open-sora/t2v_v10/OpenSora-v1-HQ-16x512x512.pth"
+ckpt="checkpoints/open-sora/t2v_v10/OpenSora-v1-HQ-16x256x256.pth"
 config='configs/train/001_opensorav10/config_opensorav10.yaml'
 
 prompt_file="inputs/t2v/prompts.txt"
-res_dir="results/t2v/$current_time-opensorav10-HQ-16x512x512"
+res_dir="results/t2v/$current_time-opensorav10-HQ-16x256x256"
 
 python3 scripts/inference.py \
     --seed 123 \

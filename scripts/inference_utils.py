@@ -39,12 +39,15 @@ def load_model_checkpoint(model, ckpt):
         except:
             if "state_dict" in list(state_dict.keys()):
                 state_dict = state_dict["state_dict"]
-            model.load_state_dict(state_dict, strict=False)
+            try:
+                model.model.diffusion_model.load_state_dict(state_dict, strict=full_strict)
+            except:
+                model.load_state_dict(state_dict, strict=False)
         return model
+    
     if ckpt.endswith(".safetensors"):
         state_dict = load_safetensors(ckpt)
         model.load_state_dict(state_dict, strict=False)
-        import pdb;pdb.set_trace()
     else:
         load_checkpoint(model, ckpt, full_strict=True)
     print('[INFO] model checkpoint loaded.')
