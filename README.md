@@ -303,7 +303,9 @@ git clone https://github.com/JingyeChen/SwissArmyTransformer
 pip install -e SwissArmyTransformer/
 rm -rf SwissArmyTransformer
 git clone https://github.com/tgxs002/HPSv2.git
-pip install -e HPSv2/
+cd ./HPSv2
+pip install -e .
+cd ..
 rm -rf HPSv2
 ```
 
