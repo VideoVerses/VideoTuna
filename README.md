@@ -378,7 +378,7 @@ We support video alignment post-training to align human perference for video dif
 https://github.com/YingqingHe/Awesome-LLMs-meet-Multimodal-Generation
 
 ## Acknowledgement
-We thank the following repos for sharing their awsome models and codes!
+We thank the following repos for sharing their awesome models and codes!
 * [VideoCrafter2](https://github.com/AILab-CVC/VideoCrafter): Overcoming Data Limitations for High-Quality Video Diffusion Models
 * [VideoCrafter1](https://github.com/AILab-CVC/VideoCrafter): Open Diffusion Models for High-Quality Video Generation
 * [DynamiCrafter](https://github.com/Doubiiu/DynamiCrafter): Animating Open-domain Images with Video Diffusion Priors
@@ -386,6 +386,8 @@ We thank the following repos for sharing their awsome models and codes!
 * [CogVideoX](https://github.com/THUDM/CogVideo): Text-to-Video Diffusion Models with An Expert Transformer
 * [VADER](https://github.com/mihirp1998/VADER): Video Diffusion Alignment via Reward Gradients
 * [VBench](https://github.com/Vchitect/VBench): Comprehensive Benchmark Suite for Video Generative Models
+* [Flux](https://github.com/black-forest-labs/flux): Text-to-image models from Black Forest Labs.
+* [SimpleTuner](https://github.com/bghira/SimpleTuner): A fine-tuning kit for text-to-image generation.
 
 ## 🍻 Contributors
 
