@@ -25,7 +25,8 @@
 🌟 **Post-processing:** Enhance the videos with video-to-video enhancement model.  
 🌟 **Post-training/Human preference alignment:** Post-training with RLHF for more attractive results.  
 
-
+## 🔆 Updates
+- [2024-10-31] We make the VideoTuna V0.1.0 public!
 
 ## Demo
 ### 3D Video VAE
@@ -242,9 +243,6 @@ The 3D video VAE from VideoTuna can accurately compress and reconstruct the inpu
 ## ⏰ TODOs
 - [ ] More demo and applications
 - [ ] More functionalities such as control modules. (Suggestions are welcome!)
-
-## 🔆 Updates
-- [2024-10-31] We make the VideoTuna V0.1.0 public!
 
 
 ## 🔆 Information

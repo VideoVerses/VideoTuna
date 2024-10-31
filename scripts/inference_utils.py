@@ -342,8 +342,4 @@ def save_videos_vbench(batch_tensors, savedir, prompts, format_file, fps=10):
             video = (video + 1.0) / 2.0
             video = (video * 255).to(torch.uint8).permute(0, 2, 3, 1)
             savepath = os.path.join(sub_savedir, filename)
-<<<<<<< HEAD
             torchvision.io.write_video(savepath, video, fps=fps, video_codec='h264', options={'crf': '10'})
-=======
-            torchvision.io.write_video(savepath, video, fps=fps, video_codec='h264', options={'crf': '10'})
->>>>>>> b0ead99239287d85087267bb86564b11c40216b4
