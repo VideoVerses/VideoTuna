@@ -3,28 +3,16 @@
 </p>
 
 # VideoTuna
-Let's finetune video generation models!
+🤗🤗🤗 VideoTuna is an open-sourcing finetuning framework for text-to-video generation.
 
 
-## ⏰TODOs
-- [x] inference vc, dc   
-- [x] finetune & train vc2，dc   
-- [x] opensora-train, inference  
-- [x] flux inference, fine-tune  
-- [x] cogvideo inference, fine-tune  
-- [x] merge diffusion parts
-- [x] add peft lora 
-- [x] add RL for alignment 
-- [ ] refactor vc, opensora, cogvideo and flux 
-- [x] add documents 
-- [ ] add unit test support 
-- [ ] svd, open-sora-plan
-- [ ] Finish codebase V0.1.0
-- [ ] Release demo gallery
-- [ ] Release technical report
-
-## 🔆 Updates
-- [2024-09-XX] We make the VideoTuna V0.1.0 public!
+## Features
+1. All in one framework: Inference and finetune state-of-the-art T2V models.
+2. Continuous training
+3. Fintuning: domain-specific.
+4. Fintuning: enhanced language understanding.
+5. Fintuning: enhancement.
+6. Human preference alignment/Post-training: RLHF, DPO.
 
 
 ## Demo
@@ -238,16 +226,15 @@ Let's finetune video generation models!
 
 
 
-## 🔆 Introduction
-🤗🤗🤗 VideoTuna is an open-sourcing finetuning framework for text-to-video generation.
+## ⏰TODOs
+- [ ] More demo and applications
+- [ ] More functionalities
 
-### Features
-1. All in one framework: Inference and finetune state-of-the-art T2V models.
-2. Continuous training
-3. Fintuning: domain-specific.
-4. Fintuning: enhanced language understanding.
-5. Fintuning: enhancement.
-6. Human preference alignment/Post-training: RLHF, DPO.
+## 🔆 Updates
+- [2024-10-31] We make the VideoTuna V0.1.0 public!
+
+
+## 🔆 Information
 
 ### Code Structure
 ```
