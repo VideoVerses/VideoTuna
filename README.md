@@ -376,6 +376,10 @@ We thank the following repos for sharing their awsome models and codes!
 
 ## 🍻 Contributors
 
+<a href="https://github.com/VideoVerses/VideoTuna/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=VideoVerses/VideoTuna" />
+</a>
+
 ## 📋 License
 
 ## 😊 Citation
