@@ -4,7 +4,9 @@
 
 # VideoTuna
 
-![Version](https://img.shields.io/badge/version-0.01-blue) ![visitors](https://visitor-badge.laobi.icu/badge?page_id=VideoVerses.VideoTuna&left_color=green&right_color=red) [![GitHub](https://img.shields.io/github/stars/VideoVerses/VideoTuna?style=social)](https://github.com/VideoVerses/VideoTuna) 
+![Version](https://img.shields.io/badge/version-0.01-blue) ![visitors](https://visitor-badge.laobi.icu/badge?page_id=VideoVerses.VideoTuna&left_color=green&right_color=red) [![GitHub](https://img.shields.io/github/stars/VideoVerses/VideoTuna?style=social)](https://github.com/VideoVerses/VideoTuna) [![](https://dcbadge.limes.pink/api/server/AammaaR2?style=flat)](https://discord.gg/AammaaR2)
+
+
 
 🤗🤗🤗 VideoTuna is an open-sourcing finetuning framework for text-to-video generation.
 
