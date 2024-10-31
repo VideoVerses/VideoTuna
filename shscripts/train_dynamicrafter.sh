@@ -3,7 +3,8 @@ export TOKENIZERS_PARALLELISM=false
 
 # dependencies
 SDCKPT="checkpoints/stablediffusion/v2-1_512-ema/model.ckpt"
-DCCKPT="checkpoints/dynamicrafter/i2v_576x1024/model.ckpt"
+# DCCKPT="checkpoints/dynamicrafter/i2v_576x1024/model.ckpt"
+DCCKPT="checkpoints/dynamicrafter/i2v_576x1024/model_converted.ckpt"
 
 EXPNAME="002_dynamicrafterft_1024"                            # experiment name 
 CONFIG='configs/train/002_dynamicrafterft_1024/config.yaml' # experiment config 

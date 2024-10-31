@@ -5,16 +5,16 @@ from transformers import logging as transf_logging
 import torch
 import pytorch_lightning as pl
 from pytorch_lightning import seed_everything, Trainer
+from pytorch_lightning import seed_everything, Trainer
 from pytorch_lightning.cli import LightningCLI
 
 # sys.path.insert(1, os.path.join(sys.path[0], '..'))
 sys.path.insert(0, os.getcwd())
-from utils.common_utils import instantiate_from_config
-from utils.lightning_utils import add_trainer_args_to_parser
-from scripts.train_utils import get_trainer_callbacks, get_trainer_logger, get_trainer_strategy
-from scripts.train_utils import check_config_attribute, get_empty_params_comparedwith_sd
-from scripts.train_utils import set_logger, init_workspace, load_checkpoints, get_autoresume_path
-
+from src.utils.common_utils import instantiate_from_config
+from src.utils.lightning_utils import add_trainer_args_to_parser
+from src.utils.train_utils import get_trainer_callbacks, get_trainer_logger, get_trainer_strategy
+from src.utils.train_utils import check_config_attribute, get_empty_params_comparedwith_sd
+from src.utils.train_utils import set_logger, init_workspace, load_checkpoints, get_autoresume_path
 
 def get_parser(**parser_kwargs):
     parser = argparse.ArgumentParser(**parser_kwargs)
@@ -40,6 +40,8 @@ def get_parser(**parser_kwargs):
     return parser
 
 
+
+
 def get_nondefault_trainer_args(args):
     parser = argparse.ArgumentParser()
     parser = add_trainer_args_to_parser(Trainer, parser)
@@ -59,6 +61,8 @@ if __name__ == "__main__":
 
     parser = get_parser()
     ## Extends existing argparse by default Trainer attributes
+    parser = add_trainer_args_to_parser(Trainer, parser)
+
     parser = add_trainer_args_to_parser(Trainer, parser)
 
     args, unknown = parser.parse_known_args()
