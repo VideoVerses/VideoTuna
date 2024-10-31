@@ -21,7 +21,7 @@ python tools/video_comparison/check_input.py --input_dir=$input_dir
 
 
 
-#### run videocrafter ####
+#### run videocrafter2 ####
 ckpt='checkpoints/videocrafter/t2v_v2_512/model.ckpt'
 config='configs/train/000_videocrafter2ft/config.yaml'
 prompt_file="${input_dir}/prompts.txt"
