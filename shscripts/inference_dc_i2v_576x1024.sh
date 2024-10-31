@@ -1,6 +1,6 @@
 
 ckpt=checkpoints/dynamicrafter/i2v_576x1024/model.ckpt
-config=configs/inference/dc_i2v_1024.yaml
+config=configs/train/002_dynamicrafterft_1024/config.yaml
 prompt_dir=inputs/i2v/576x1024
 savedir=results/dc-i2v-576x1024
 

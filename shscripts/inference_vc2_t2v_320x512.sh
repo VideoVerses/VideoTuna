@@ -1,5 +1,5 @@
 ckpt='checkpoints/videocrafter/t2v_v2_512/model.ckpt'
-config='configs/inference/vc2_t2v_512.yaml'
+config='configs/train/000_videocrafter2ft/config.yaml'
 prompt_file="inputs/t2v/prompts.txt"
 current_time=$(date +%Y%m%d%H%M%S)
 savedir="results/t2v/$current_time-videocrafter2"

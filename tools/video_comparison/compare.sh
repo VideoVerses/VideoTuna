@@ -1,7 +1,7 @@
 #! /bin/bash
 
 input_dir='inputs/t2v'
-save_dir='results/compare2/'
+save_dir='results/compare7/'
 
 #### check input ####
 # Check if the directory exists
@@ -22,8 +22,8 @@ python tools/video_comparison/check_input.py --input_dir=$input_dir
 
 
 #### run videocrafter ####
-ckpt='checkpoints/videocrafter/base_512_v2/model.ckpt'
-config='configs/inference/vc2_t2v_512.yaml'
+ckpt='checkpoints/videocrafter/t2v_v2_512/model.ckpt'
+config='configs/train/000_videocrafter2ft/config.yaml'
 prompt_file="${input_dir}/prompts.txt"
 height=320
 width=512
@@ -42,7 +42,7 @@ python3 scripts/inference.py \
 
 #### run dynamicrafter ####
 ckpt=checkpoints/dynamicrafter/i2v_576x1024/model.ckpt
-config=configs/inference/dc_i2v_1024.yaml
+config=configs/train/002_dynamicrafterft_1024/config.yaml
 prompt_dir="${input_dir}"
 height=576
 width=1024
