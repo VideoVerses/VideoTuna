@@ -390,3 +390,7 @@ We thank the following repos for sharing their awsome models and codes!
 ```
 To be updated...
 ```
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=VideoVerses/VideoTuna&type=Date)](https://star-history.com/#VideoVerses/VideoTuna&Date)
