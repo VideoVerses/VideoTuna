@@ -18,10 +18,14 @@
 
 
 ## Features
-1. Integrate **up-to-date video generation models** with optimal performance. We are not limited to Text-to-Video generation; instead, we also integrate Image-to-Video models with Text-to-Image models, creating a strong pipeline for the Text-to-Video task. The AI generation models we support include CogVideoX, Open Sora, VideoCrafter, DynamiCrafter, and Flux. We will also keep updated with the emerging generation models.
-2. The **whole pipeline for video generation** including pre-training, continuous training, post-training, and fine-tuning. Some of the modules will be open-sourced after the submission of CVPR 2024.
-3. Fine-tuning: including domain-specific fine-tuning, and concept-specific fine-tuning. 
-4. Human preference alignment: RLFH, DPO (soon).
+🌟 **All-in-one framework:** Inference and fine-tune state-of-the-art video generation models.  
+🌟 **Pre-training:** Build your own foundational text-to-video model.  
+🌟 **Continuous training:** Keep improving your model with new data.  
+🌟 **Domain-specific fine-tuning:** Adapt models to your specific scenario.  
+🌟 **Concept-specific fine-tuning:** Teach your models with unique concepts.  
+🌟 **Enhanced language understanding:** Improve model's comprehension through continous training.  
+🌟 **Post-processing:** Enhance the videos with video-to-video enhancement model.  
+🌟 **Post-training/Human preference alignment:** Post-training with RLHF for more attractive results.  
 
 
 
