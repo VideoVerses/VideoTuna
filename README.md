@@ -13,7 +13,7 @@
 
 ## Features
 1. All in one framework: Inference and finetune state-of-the-art T2V models.
-2. Continuous training
+2. Continuous training.
 3. Fintuning: domain-specific.
 4. Fintuning: enhanced language understanding.
 5. Fintuning: enhancement.
