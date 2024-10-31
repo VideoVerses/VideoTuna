@@ -16,7 +16,7 @@
 # fi
 CONDA_PREFIX="$(conda env list | grep \* | awk '{print $NF}')"
 if [ -z "${VENV_PATH}" ]; then
-    # 如果 VENV_PATH 为空,则使用当前激活的 Conda 环境路径
+    #if VENV_PATH is empty, then use the path for activated conda environment
     export VENV_PATH="${CONDA_PREFIX}"
 fi
 if [ -z "${DISABLE_LD_OVERRIDE}" ]; then
