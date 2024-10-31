@@ -187,7 +187,7 @@ def main():
     )
 
     if torch.cuda.is_available() and not torch.cuda.is_bf16_supported(
-        including_emulation=False
+        # including_emulation=False
     ):
         raise ValueError(
             "Currently-available CUDA hardware does not support bfloat16. You must use newer equipment."
