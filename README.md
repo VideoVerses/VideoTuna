@@ -309,7 +309,6 @@ git clone https://github.com/tgxs002/HPSv2.git
 cd ./HPSv2
 pip install -e .
 cd ..
-rm -rf HPSv2
 ```
 
 ### 2.Prepare checkpoints
@@ -339,18 +338,18 @@ Task|Models|Commands|
 |T2V|VideoCrafter-V1-576x1024|`bash shscripts/inference_vc1_t2v_576x1024.sh`|
 |I2V|DynamiCrafter|`bash shscripts/inference_dc_i2v_576x1024.sh`|
 |I2V|VideoCrafter|`bash shscripts/inference_vc1_i2v_320x512.sh`|
-|T2I|Flux|`bash shscripts/inference_flux_schnell.sh`|
+|T2I|Flux|`bash shscripts/inference_flux.sh`|
 
 
 ### 4. Finetune T2V models
 #### Lora finetuning
 
 We support lora finetuning to make the model to learn new concepts/characters/styles.   
-- Example config file: `configs/train/003_vc2_lora_ft/config.yaml`  
-- Training lora based on VideoCrafter2: `bash scripts/train/003_vc2_lora_ft/run.sh`  
-- Inference the trained models: `bash scripts/train/003_vc2_lora_ft/inference.sh`   
+- Example config file: `configs/001_videocrafter2/vc2_t2v_lora.yaml`  
+- Training lora based on VideoCrafter2: `bash shscripts/train_videocrafter_lora.sh`  
+- Inference the trained models: `bash shscripts/inference_vc2_t2v_320x512_lora.sh`   
 
-Please check [configs/train/003_vc2_lora_ft/README.md](configs/train/003_vc2_lora_ft/README.md) for details.   
+<!-- Please check [configs/train/003_vc2_lora_ft/README.md](configs/train/003_vc2_lora_ft/README.md) for details.    -->
 <!-- 
 
 (1) Prepare data
