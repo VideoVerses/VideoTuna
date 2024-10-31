@@ -1,7 +1,7 @@
 #! /bin/bash
 
 input_dir='inputs/t2v'
-save_dir='results/compare7/'
+save_dir='results/compare14/'
 
 #### check input ####
 # Check if the directory exists
@@ -60,15 +60,50 @@ python3 scripts/inference.py \
 
 
 
-#### run cogvideo
+#### run cogvideo—t2v
 python scripts/inference_cogVideo_diffusers.py \
   --model_input $prompt_file \
   --model_path checkpoints/cogvideo/CogVideoX-2b \
-  --output_path ${save_dir}/t2v/cogvideo \
+  --output_path ${save_dir}/t2v/cogvideo-t2v-720x480-8fps \
   --num_inference_steps 50 \
   --guidance_scale 3.5 \
   --num_videos_per_prompt 1 \
   --dtype float16 --seed 123
+
+
+#### run cogvideo—i2v
+python scripts/inference_cogVideo_diffusers.py \
+    --generate_type i2v \
+    --model_input "inputs/t2v/" \
+    --model_path checkpoints/cogvideo/CogVideoX-5b-I2V \
+    --output_path ${save_dir}/t2v/cogvideo-i2v-720x480-8fps \
+    --num_inference_steps 50 \
+    --guidance_scale 3.5 \
+    --num_videos_per_prompt 1 \
+    --dtype float16
+
+#### run opensora
+ckpt="checkpoints/open-sora/t2v_v10/OpenSora-v1-HQ-16x256x256.pth"
+config='configs/train/001_opensorav10/config_opensorav10.yaml'
+height=256
+width=256
+fps=8
+res_dir="${save_dir}/t2v/opensora-${height}x${width}-${fps}fps"
+
+python3 scripts/inference.py \
+    --seed 123 \
+    --mode 't2v' \
+    --ckpt_path $ckpt \
+    --config $config \
+    --savedir $res_dir \
+    --n_samples 1 \
+    --bs 1 --height ${height} --width ${width} \
+    --unconditional_guidance_scale 7.0 \
+    --ddim_steps 50 \
+    --ddim_eta 1.0 \
+    --prompt_file $prompt_file \
+    --fps ${fps} \
+    --frames 16
 
 
 
