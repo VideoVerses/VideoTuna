@@ -1,7 +1,10 @@
-from typing import Union, Type, List, Tuple, Any, Dict
-_ARGPARSE_CLS = Union[Type["pl.LightningDataModule"], Type["pl.Trainer"]]
+from typing import Any, Callable, cast, Dict, List, Tuple, Type, TypeVar, Union
 import inspect
 from argparse import ArgumentParser
+
+import pytorch_lightning as pl
+
+_ARGPARSE_CLS = Union[Type["pl.LightningDataModule"], Type["pl.Trainer"]]
 
 def _get_abbrev_qualified_cls_name(cls: _ARGPARSE_CLS) -> str:
     assert isinstance(cls, type), repr(cls)
@@ -59,6 +62,23 @@ def _parse_args_from_docstring(docstring: str) -> Dict[str, str]:
         elif line_indent > arg_block_indent:
             parsed[current_arg] += f" {stripped}"
     return parsed
+
+def _gpus_allowed_type(x: str) -> Union[int, str]:
+    if "," in x:
+        return str(x)
+    return int(x)
+
+def _precision_allowed_type(x: Union[int, str]) -> Union[int, str]:
+    """
+    >>> _precision_allowed_type("32")
+    32
+    >>> _precision_allowed_type("bf16")
+    'bf16'
+    """
+    try:
+        return int(x)
+    except ValueError:
+        return x
 
 def str_to_bool(val: str) -> bool:
     """Convert a string representation of truth to bool.
@@ -159,15 +179,19 @@ def add_trainer_args_to_parser(cls, parent_parser, use_argument_group=True):
         if arg == "precision":
             use_type = _precision_allowed_type
         
-        parser.add_argument(
-            f"--{arg}",
-            dest=arg,
-            default=arg_default,
-            type=use_type,
-            help=args_help.get(arg),
-            required=(arg_default == inspect._empty),
-            **arg_kwargs,
-        )
+        try:
+            parser.add_argument(
+                f"--{arg}",
+                dest=arg,
+                default=arg_default,
+                type=use_type,
+                help=args_help.get(arg),
+                required=(arg_default == inspect._empty),
+                **arg_kwargs,
+            )
+        except:
+            #TODO: check the argument appending to the parser
+            pass
 
     if use_argument_group:
         return parent_parser

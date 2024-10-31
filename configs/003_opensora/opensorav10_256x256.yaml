@@ -2,8 +2,6 @@ model:
   base_learning_rate: 6.0e-06 # 1.5e-04
   scale_lr: False
   # empty_params_only: True # disable this means finetuning all parameters
-  # sd_checkpoint: /project/llmsvgen/share/shared_ckpts/StableDiffusion/v2-1_512-ema-pruned.ckpt
-  # pretrained_checkpoint: /project/llmsvgen/share/shared_ckpts/VideoCrafter/VideoCrafter2-Text2Video-512/model.ckpt
   target: src.base.iddpm3d.LatentDiffusion
   params:
     # loss_type: l1
@@ -66,8 +64,8 @@ data:
     train:
       target: src.data.datasets.DatasetFromCSV
       params:
-        # csv_path: /project/llmsvgen/share/opensora_datafile/artgrid_caption_long_base.csv
-        csv_path: /disk8/yazhou/Dataset/artgrid/artgrid_caption_long_base_disk8.csv
+        csv_path: /project/llmsvgen/share/opensora_datafile/artgrid_caption_long_base.csv
+        # csv_path: /disk8/yazhou/Dataset/artgrid/artgrid_caption_long_base_disk8.csv
         data_root: /disk8/yazhou/Dataset/artgrid
         resolution: [256, 256]
         video_length: 16
@@ -76,9 +74,9 @@ data:
     validation:
       target: src.data.datasets.DatasetFromCSV
       params:
-        # csv_path: /project/llmsvgen/share/opensora_datafile/artgrid_caption_long_base.csv
-        csv_path: /disk8/yazhou/Dataset/artgrid/artgrid_caption_long_base_disk8.csv
-        data_root: /disk8/yazhou/Dataset/artgrid
+        csv_path: /project/llmsvgen/share/opensora_datafile/artgrid_caption_long_base.csv
+        # csv_path: /disk8/yazhou/Dataset/artgrid/artgrid_caption_long_base_disk8.csv
+        # data_root: /disk8/yazhou/Dataset/artgrid
         resolution: [256, 256]
         video_length: 16
         frame_interval: 4
