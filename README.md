@@ -8,15 +8,11 @@
 
 
 
-🤗🤗🤗 Videotuna is a useful codebase for AI text-to-video generation. 
-
-- VideoTuna is the first repo that integrate various AI generation models for video generation, including T2V, T2I and I2V.   
-
-- VideoTuna is also the first repo that provide the whole pipeline for video generation, including pre-training, continuous training, post-training (alignment), and fine-tuning. 
-
-- The models of VideoTuna include both U-Net and DiT architectures for visual generation tasks.
-
-- A new 3D video VAE, and a controllable facial video generation model will be released soon.
+🤗🤗🤗 Videotuna is a useful codebase for AI text-to-video generation.   
+🌟 VideoTuna is the first repo that integrate various AI video generation models, including T2V, T2I and I2V.   
+🌟 VideoTuna is also the first repo that provide the whole pipeline for video generation, including pre-training, continuous training, post-training (alignment), and fine-tuning.   
+🌟 The models of VideoTuna include both U-Net and DiT architectures for visual generation tasks.  
+🌟 A new 3D video VAE, and a controllable facial video generation model will be released soon.  
 
 
 ## Features
@@ -32,7 +28,8 @@
 
 
 ## Demo
-### VAE
+### 3D Video VAE
+The 3D video VAE from VideoTuna can accurately compress and reconstruct the input videos with fine details.
 
 <table class="center">
   <tr>
@@ -242,7 +239,7 @@
 
 
 
-## ⏰TODOs
+## ⏰ TODOs
 - [ ] More demo and applications
 - [ ] More functionalities such as control modules. (Suggestions are welcome!)
 
@@ -276,9 +273,6 @@ VideoTuna/
 |:---------|:---------|:--------|
 |CogVideoX-2B|720x480, 6s|[Hugging Face](https://huggingface.co/THUDM/CogVideoX-2b)
 |CogVideoX-5B|720x480, 6s|[Hugging Face](https://huggingface.co/THUDM/CogVideoX-5b)
-<!-- |Open-Sora 1.2|240p to 720p, 2~16s|[STDIT](https://huggingface.co/hpcai-tech/OpenSora-STDiT-v3), [VAE](https://huggingface.co/hpcai-tech/OpenSora-VAE-v1.2) -->
-<!-- |Open-Sora 1.1|144p & 240p & 480p, 0~15s|[Stage 2](https://huggingface.co/hpcai-tech/OpenSora-STDiT-v2-stage2) -->
-<!-- |Open-Sora 1.1|144p to 720p, 0~15s|[Stage 3](https://huggingface.co/hpcai-tech/OpenSora-STDiT-v2-stage3) -->
 |Open-Sora 1.0|512×512x16|[Hugging Face](https://huggingface.co/hpcai-tech/Open-Sora/blob/main/OpenSora-v1-HQ-16x512x512.pth)
 |Open-Sora 1.0|256×256x16|[Hugging Face](https://huggingface.co/hpcai-tech/Open-Sora/blob/main/OpenSora-v1-HQ-16x256x256.pth)
 |Open-Sora 1.0|256×256x16|[Hugging Face](https://huggingface.co/hpcai-tech/Open-Sora/blob/main/OpenSora-v1-16x256x256.pth)
@@ -293,7 +287,11 @@ VideoTuna/
 |VideoCrafter1|320x512x16|[Hugging Face](https://huggingface.co/VideoCrafter/Image2Video-512/blob/main/model.ckpt)|
 
 * Note: H: height; W: width; L: length
+<!-- |Open-Sora 1.2|240p to 720p, 2~16s|[STDIT](https://huggingface.co/hpcai-tech/OpenSora-STDiT-v3), [VAE](https://huggingface.co/hpcai-tech/OpenSora-VAE-v1.2) -->
+<!-- |Open-Sora 1.1|144p & 240p & 480p, 0~15s|[Stage 2](https://huggingface.co/hpcai-tech/OpenSora-STDiT-v2-stage2) -->
+<!-- |Open-Sora 1.1|144p to 720p, 0~15s|[Stage 3](https://huggingface.co/hpcai-tech/OpenSora-STDiT-v2-stage3) -->
 
+Please check [docs/CHECKPOINTS.md](https://github.com/VideoVerses/VideoTuna/blob/main/docs/CHECKPOINTS.md) to download all the model checkpoints.
 
 ## 🔆 Get started
 
@@ -317,32 +315,30 @@ rm -rf HPSv2
 Please follow [docs/CHECKPOINTS.md](https://github.com/VideoVerses/VideoTuna/blob/main/docs/CHECKPOINTS.md) to download model checkpoints.  
 After downloading, the model checkpoints should be placed as [Checkpoint Structure](https://github.com/VideoVerses/VideoTuna/blob/main/docs/CHECKPOINTS.md#checkpoint-orgnization-structure).
 
-### 3.Inference state-of-the-art T2V/I2V models
+### 3.Inference state-of-the-art T2V/I2V/T2I models
 
-- Inference a set of models **in one command**:
+- Inference many T2V models **in one command**: `bash tools/video_comparison/compare.sh`
 
-    <!-- ```bash todo.sh``` -->
 
-|Task|Commands|
+<!-- |Task|Commands|
 |:---------|:---------|
 |T2V|`bash tools/video_comparison/compare.sh`|
 |I2V|`TODO`|
-
+ -->
 
 
 - Inference one specific model:
 
 Task|Models|Commands|
 |:---------|:---------|:---------|
-|T2V|cogvideo|`bash shscripts/inference_cogVideo_diffusers.sh`|
-|T2V|open-sora|@yazhou|
-|T2V|videocrafter-v2-320x512|`bash shscripts/inference_vc2_t2v_320x512.sh`|
-|T2V|videocrafter-v1-576x1024|`bash shscripts/inference_vc1_t2v_576x1024.sh`|
-|I2V|dynamicrafter|`bash shscripts/inference_dc_i2v_576x1024.sh`|
-|I2V|videocrafter1|`bash shscripts/inference_vc1_i2v_320x512.sh`|
-|T2I|flux|`bash shscripts/inference_flux_schnell.sh`|
+|T2V|CogvideoX|`bash shscripts/inference_cogVideo_diffusers.sh`|
+|T2V|Open Sora V1.0|`bash shscripts/inference_opensora_v10_16x256x256.sh`|
+|T2V|VideoCrafter-V2-320x512|`bash shscripts/inference_vc2_t2v_320x512.sh`|
+|T2V|VideoCrafter-V1-576x1024|`bash shscripts/inference_vc1_t2v_576x1024.sh`|
+|I2V|DynamiCrafter|`bash shscripts/inference_dc_i2v_576x1024.sh`|
+|I2V|VideoCrafter|`bash shscripts/inference_vc1_i2v_320x512.sh`|
+|T2I|Flux|`bash shscripts/inference_flux_schnell.sh`|
 
-For detailed inference settings please check [docs/inference.md](docs/inference.md).
 
 ### 4. Finetune T2V models
 #### Lora finetuning
@@ -374,6 +370,8 @@ Please check [eval/README.md](docs/evaluation.md) for details.
 We support video alignment post-training to align human perference for video diffusion models. Please check [configs/train/004_rlhf_vc2/README.md](configs/train/004_rlhf_vc2/README.md) for details.
 
 
+## Resources
+https://github.com/YingqingHe/Awesome-LLMs-meet-Multimodal-Generation
 
 ## Acknowledgement
 We thank the following repos for sharing their awsome models and codes!
