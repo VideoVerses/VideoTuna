@@ -1,2 +1,0 @@
-class MultiDatasetExhausted(Exception):
-    pass

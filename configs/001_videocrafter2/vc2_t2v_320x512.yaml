@@ -90,32 +90,37 @@ model:
 data:
   target: src.data.lightning_data.DataModuleFromConfig
   params:
-    batch_size: 3
+    batch_size: 4
     num_workers: 16
     wrap: false
     train:
-      target: src.data.macvid.MaCVid
+      target: src.data.datasets.DatasetFromCSV
       params:
-        data_root: configs/data/macvid/train_data.yaml
+        csv_path: /project/llmsvgen/share/opensora_datafile/artgrid_caption_long_base.csv
+        # csv_path: /disk8/yazhou/Dataset/artgrid/artgrid_caption_long_base_disk8.csv
+        # data_root: /disk8/yazhou/Dataset/artgrid
         resolution: [320, 512]
         video_length: 16
-        subset_split: all
+        frame_interval: 4
+        train: True
     validation:
-      target: src.data.macvid.MaCVid
+      target: src.data.datasets.DatasetFromCSV
       params:
-        data_root: configs/data/macvid/val_data.yaml
+        csv_path: /project/llmsvgen/share/opensora_datafile/artgrid_caption_long_base.csv
+        # csv_path: /disk8/yazhou/Dataset/artgrid/artgrid_caption_long_base_disk8.csv
+        # data_root: /disk8/yazhou/Dataset/artgrid
         resolution: [320, 512]
         video_length: 16
-        subset_split: all
+        frame_interval: 4
+        train: False
 
 lightning:
   trainer:
     benchmark: True
     num_nodes: 1
-    devices: 0
     accumulate_grad_batches: 2
     max_epochs: 2000
-    precision: 16 # training precision
+    precision: bf16 # training precision
   callbacks:
     image_logger:
       target: src.utils.callbacks.ImageLogger

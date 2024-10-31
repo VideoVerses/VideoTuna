@@ -8,7 +8,7 @@ VC2CKPT="checkpoints/videocrafter/t2v_v2_512/model_converted.ckpt"
 
 # exp settings
 EXPNAME="train_t2v_512"                            # experiment name 
-CONFIG='configs/train/000_videocrafter2ft/config.yaml' # experiment config 
+CONFIG='configs/001_videocrafter2/vc2_t2v_320x512.yaml' # experiment config 
 RESROOT="results/train"                               # experiment saving directory
 
 # run
