@@ -1,7 +1,7 @@
 ## Installation
 If you have installed the environment for the model training and inference, you can simply install some extra packages for evaluation.
 ```shell
-pip install -r requirements_vbench.txt
+pip install -r eval/requirements_vbench.txt
 python -m pip install 'git+https://github.com/facebookresearch/detectron2.git'
 ```
 If you encounter errors during installing the [detectron2](https://github.com/facebookresearch/detectron2), you can check [here](https://detectron2.readthedocs.io/en/latest/tutorials/install.html) for detailed suggestions.
@@ -17,10 +17,6 @@ If you encounter errors during installing the [detectron2](https://github.com/fa
     }
     ```
 
-    If you do not have video samples, please firstly sample videos for evaluation via:
-    ```
-    bash configs/train/001_opensorav10/inference.sh
-    ```
     For the standard vbench evaluation, you have to do inference on `all_dimensions.txt`.
 
 2. Evaluation  
@@ -28,7 +24,7 @@ If you encounter errors during installing the [detectron2](https://github.com/fa
 
     Run the following command:  
     ```shell
-    python scripts/evaluation.py  \
+    python eval/scripts/evaluation.py  \
         --output_path $output_path \
         --videos_path $video_path \
         --map_json_path $json_path
@@ -37,7 +33,7 @@ If you encounter errors during installing the [detectron2](https://github.com/fa
 
     Besides, you also can caluate the ***overall score***, ***quality score*** and ***sementic score*** in the VBench Leaderboard by yourself:
     ```shell
-    python scripts/tabular_score.py \
+    python eval/scripts/tabular_score.py \
         --result_path $result_json_path
     ```
     The result will be saved in the file `scaled_results.json`.
@@ -64,7 +60,7 @@ If you encounter errors during installing the [detectron2](https://github.com/fa
     ```
     You can run the following command to perform the customized evaluation:
     ```shell
-    python scripts/evaluation.py  \
+    python eval/scripts/evaluation.py  \
         --output_path $output_path \
         --videos_path $video_path \
         --map_json_path $json_path \
