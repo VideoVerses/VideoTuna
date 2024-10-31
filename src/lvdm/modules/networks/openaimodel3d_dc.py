@@ -14,7 +14,7 @@ from src.lvdm.modules.utils import (
     avg_pool_nd,
     normalization
 )
-from src.lvdm.models.utils_diffusion import timestep_embedding
+from src.base.utils_diffusion import timestep_embedding
 from src.lvdm.modules.attention import SpatialTransformer, TemporalTransformer
 
 

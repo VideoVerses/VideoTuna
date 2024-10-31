@@ -2,7 +2,7 @@ model:
   base_learning_rate: 6.0e-06 # 1.5e-04
   scale_lr: False
   # empty_params_only: True # disable this means finetuning all parameters
-  target: src.lvdm.models.ddpm3d.LatentDiffusion
+  target: src.base.ddpm3d.LVDMFlow
   params:
     lora_args:
       # lora_ckpt: "/path/to/lora.ckpt" # first time training, no need; this is for resume training. 
@@ -12,9 +12,6 @@ model:
       lora_dropout: 0.0
     loss_type: l1
     log_every_t: 200
-    linear_start: 0.00085
-    linear_end: 0.012
-    timesteps: 1000
     first_stage_key: video
     cond_stage_key: caption
     cond_stage_trainable: false
@@ -31,6 +28,13 @@ model:
     encoder_type: 2d
     use_scale: true
     scale_b: 0.7 # adapt to videocrafter-v2
+
+    diffusion_scheduler_config:
+      target: src.base.diffusion_schedulers.LDMScheduler
+      params: 
+        timesteps: 1000
+        linear_start: 0.00085
+        linear_end: 0.012
 
     unet_config:
       target: src.lvdm.modules.networks.openaimodel3d.UNetModel
@@ -62,7 +66,7 @@ model:
         addition_attention: true
         fps_cond: true # adapt to videocrafter-v2
     first_stage_config:
-      target: src.lvdm.models.autoencoder.AutoencoderKL
+      target: src.lvdm.modules.vae.autoencoder.AutoencoderKL
       params:
         embed_dim: 4
         monitor: val/rec_loss
@@ -90,20 +94,20 @@ model:
         layer: penultimate
 
 data:
-  target: data.lightning_data.DataModuleFromConfig
+  target: src.data.lightning_data.DataModuleFromConfig
   params:
     batch_size: 3
     num_workers: 16
     wrap: false
     train:
-      target: data.macvid.MaCVid
+      target: src.data.macvid.MaCVid
       params:
         data_root: configs/data/macvid/train_data.yaml
         resolution: [320, 512]
         video_length: 2
         subset_split: all
     validation:
-      target: data.macvid.MaCVid
+      target: src.data.macvid.MaCVid
       params:
         data_root: configs/data/macvid/val_data.yaml
         resolution: [320, 512]
@@ -121,7 +125,7 @@ lightning:
     precision: 16 # training precision
   callbacks:
     image_logger:
-      target: utils.callbacks.ImageLogger
+      target: src.utils.callbacks.ImageLogger
       params:
         batch_frequency: 100000
         max_images: 2
@@ -130,12 +134,12 @@ lightning:
           unconditional_guidance_scale: 12 # need this, otherwise it is grey
     modelcheckpoint:
       # target: pytorch_lightning.callbacks.ModelCheckpoint
-      target: utils.callbacks.LoraModelCheckpoint
+      target: src.utils.callbacks.LoraModelCheckpoint
       params:
         every_n_epochs: 1
         filename: "{epoch:04}-{step:06}"
     metrics_over_trainsteps_checkpoint:
-      target: utils.callbacks.LoraModelCheckpoint
+      target: src.utils.callbacks.LoraModelCheckpoint
       params:
         filename: "{epoch:06}-{step:09}"
         save_weights_only: False

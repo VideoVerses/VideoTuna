@@ -4,19 +4,19 @@ sys.path.append(".")
 
 import unittest
 import os
-from data.datasets import DatasetFromCSV
-import data.transforms as transforms
+from src.data.datasets import DatasetFromCSV
+import src.data.transforms as transforms
 
 
 class TestDatasets(unittest.TestCase):
 
     def test_video_dataset_from_csv(self):
         transform_video = transforms.get_transforms_video()
-        if not os.path.exists("data/toy_videos"):
+        if not os.path.exists("src/data/toy_videos"):
             transform_video.transforms[0] = transforms.LoadDummyVideo((100, 100), probs_fail=0.5)
         dataset = DatasetFromCSV(
-            "data/anno_files/toy_video_dataset.csv",
-            "data/toy_videos",
+            "src/data/anno_files/toy_video_dataset.csv",
+            "src/data/toy_videos",
             transform={"video": transform_video},
         )
         for i in range(min(5, len(dataset))):
@@ -31,7 +31,7 @@ class TestDatasets(unittest.TestCase):
 
         transform_video.transforms[0] = transforms.LoadDummyVideo(probs_fail=0.4)
         dataset = DatasetFromCSV(
-            "data/anno_files/toy_video_dataset.csv",
+            "src/data/anno_files/toy_video_dataset.csv",
             transform={"video": transform_video},
         )
         for i in range(min(5, len(dataset))):
@@ -42,14 +42,14 @@ class TestDatasets(unittest.TestCase):
 
     def test_video_dataset_wo_transforms_from_csv(self):
         dataset = DatasetFromCSV(
-            "data/anno_files/toy_video_dataset.csv",
-            "data/toy_videos",
+            "src/data/anno_files/toy_video_dataset.csv",
+            "src/data/toy_videos",
         )
-        if not os.path.exists("data/toy_videos"):
+        if not os.path.exists("src/data/toy_videos"):
             transform_video = dataset.transform["video"]
             transform_video.transforms[0] = transforms.LoadDummyVideo(probs_fail=0.5)
             dataset = DatasetFromCSV(
-                "data/anno_files/toy_video_dataset.csv",
+                "src/data/anno_files/toy_video_dataset.csv",
                 transform={"video": transform_video},
             )
         for i in range(min(5, len(dataset))):
@@ -64,11 +64,11 @@ class TestDatasets(unittest.TestCase):
 
     def test_image_dataset_from_csv(self):
         transform_image = transforms.get_transforms_image()
-        if not os.path.exists("data/toy_images"):
+        if not os.path.exists("src/data/toy_images"):
             transform_image.transforms[0] = transforms.LoadDummyImage(probs_fail=0.5)
         dataset = DatasetFromCSV(
-            "data/anno_files/toy_image_dataset.csv",
-            "data/toy_images",
+            "src/data/anno_files/toy_image_dataset.csv",
+            "src/data/toy_images",
             transform={"image": transform_image},
         )
         for i in range(min(5, len(dataset))):
@@ -84,11 +84,11 @@ class TestDatasets(unittest.TestCase):
     def test_multi_res(self):
         # Test Video
         transform_video = transforms.get_transforms_video()
-        if not os.path.exists("data/toy_videos"):
+        if not os.path.exists("src/data/toy_videos"):
             transform_video.transforms[0] = transforms.LoadDummyVideo(probs_fail=0.5)
         dataset = DatasetFromCSV(
-            "data/anno_files/toy_video_dataset.csv",
-            "data/toy_videos",
+            "src/data/anno_files/toy_video_dataset.csv",
+            "src/data/toy_videos",
             transform={"video": transform_video},
             use_multi_res=True,
         )
@@ -104,11 +104,11 @@ class TestDatasets(unittest.TestCase):
 
         # Test Image
         transform_image = transforms.get_transforms_image()
-        if not os.path.exists("data/toy_images"):
+        if not os.path.exists("src/data/toy_images"):
             transform_image.transforms[0] = transforms.LoadDummyImage(probs_fail=0.5)
         dataset = DatasetFromCSV(
-            "data/anno_files/toy_image_dataset.csv",
-            "data/toy_images",
+            "src/data/anno_files/toy_image_dataset.csv",
+            "src/data/toy_images",
             transform={"image": transform_image},
             use_multi_res=True,
         )
@@ -124,18 +124,18 @@ class TestDatasets(unittest.TestCase):
 
     def test_concat_dataset_from_csv(self):
         transform_video = transforms.get_transforms_video()
-        if not os.path.exists("data/toy_videos"):
+        if not os.path.exists("src/data/toy_videos"):
             transform_video.transforms[0] = transforms.LoadDummyVideo(probs_fail=0.5)
 
         transform_image = transforms.get_transforms_image()
-        if not os.path.exists("data/toy_images"):
+        if not os.path.exists("src/data/toy_images"):
             transform_image.transforms[0] = transforms.LoadDummyImage(probs_fail=0.5)
         dataset = DatasetFromCSV(
             [
-                "data/anno_files/toy_video_dataset.csv",
-                "data/anno_files/toy_image_dataset.csv",
+                "src/data/anno_files/toy_video_dataset.csv",
+                "src/data/anno_files/toy_image_dataset.csv",
             ],
-            ["data/toy_videos", "data/toy_images"],
+            ["src/data/toy_videos", "src/data/toy_images"],
             transform={"video": transform_video, "image": transform_image},
         )
         for i in range(min(5, len(dataset))):
@@ -150,11 +150,11 @@ class TestDatasets(unittest.TestCase):
 
     def test_anno_wo_meta_info(self):
         transform_video = transforms.get_transforms_video()
-        if not os.path.exists("data/toy_videos"):
+        if not os.path.exists("src/data/toy_videos"):
             transform_video.transforms[0] = transforms.LoadDummyVideo(probs_fail=0.5)
         dataset = DatasetFromCSV(
-            "data/anno_files/toy_video_dataset.csv",
-            "data/toy_videos",
+            "src/data/anno_files/toy_video_dataset.csv",
+            "src/data/toy_videos",
             transform={"video": transform_video},
             use_multi_res=True,
         )
@@ -175,11 +175,11 @@ class TestDatasets(unittest.TestCase):
 
     def test_anno_wo_meta_info_wo_multi_res(self):
         transform_video = transforms.get_transforms_video()
-        if not os.path.exists("data/toy_videos"):
+        if not os.path.exists("src/data/toy_videos"):
             transform_video.transforms[0] = transforms.LoadDummyVideo(probs_fail=0.5)
         dataset = DatasetFromCSV(
-            "data/anno_files/toy_video_dataset.csv",
-            "data/toy_videos",
+            "src/data/anno_files/toy_video_dataset.csv",
+            "src/data/toy_videos",
             transform={"video": transform_video},
             use_multi_res=False,
         )
@@ -200,13 +200,13 @@ class TestDatasets(unittest.TestCase):
 
     def test_video_dataset_from_csv_with_split(self):
         transform_video = transforms.get_transforms_video()
-        if not os.path.exists("data/toy_videos"):
+        if not os.path.exists("src/data/toy_videos"):
             transform_video.transforms[0] = transforms.LoadDummyVideo(probs_fail=0.5)
 
         # Test Training Dataset
         train_dataset = DatasetFromCSV(
-            "data/anno_files/toy_video_dataset.csv",
-            "data/toy_videos",
+            "src/data/anno_files/toy_video_dataset.csv",
+            "src/data/toy_videos",
             transform={"video": transform_video},
             split_val=True,
         )
@@ -222,8 +222,8 @@ class TestDatasets(unittest.TestCase):
 
         # Test Validation Dataset
         val_dataset = DatasetFromCSV(
-            "data/anno_files/toy_video_dataset.csv",
-            "data/toy_videos",
+            "src/data/anno_files/toy_video_dataset.csv",
+            "src/data/toy_videos",
             transform={"video": transform_video},
             train=False,
             split_val=True,

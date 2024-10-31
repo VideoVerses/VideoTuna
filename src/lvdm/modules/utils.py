@@ -8,7 +8,7 @@
 # thanks!
 
 import torch.nn as nn
-from utils.common_utils import instantiate_from_config
+from src.utils.common_utils import instantiate_from_config
 
 import math
 from inspect import isfunction
