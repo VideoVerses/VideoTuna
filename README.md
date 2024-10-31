@@ -402,6 +402,7 @@ We thank the following repos for sharing their awesome models and codes!
 </a>
 
 ## 📋 License
+Please follow [CC-BY-NC-ND](./LICENSE). If you want a license authorization, please contact yhebm@connect.ust.hk and yxingag@connect.ust.hk.
 
 ## 😊 Citation
 ```
