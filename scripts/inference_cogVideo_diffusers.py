@@ -19,6 +19,7 @@ Additional options are available to specify the model path, guidance scale, numb
 import os
 import sys
 import glob
+import time
 import argparse
 from typing import Literal
 
@@ -130,6 +131,7 @@ def generate_video(
     pipe.vae.enable_slicing()
     pipe.vae.enable_tiling()
 
+    start_time = time.time()
     # 4. Generate the video frames based on the prompt.
     # `num_frames` is the Number of frames to generate.
     # This is the default value for 6 seconds video and 8 fps and will plus 1 frame for the first frame and 49 frames.
@@ -174,7 +176,9 @@ def generate_video(
         # 5. Export the generated frames to a video file. fps must be 8 for original video.
         export_to_video(video_generate, output_path_, fps=8)
 
-
+    print(f"Total time taken: {time.time() - start_time:.2f}s")
+    avg_time = (time.time() - start_time) / len(prompts) / num_videos_per_prompt
+    print(f"Average time taken per prompt: {avg_time:.2f}s")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate a video from a text prompt using CogVideoX")
