@@ -5,6 +5,7 @@ from transformers import logging as transf_logging
 import torch
 import pytorch_lightning as pl
 from pytorch_lightning import seed_everything, Trainer
+from pytorch_lightning import seed_everything, Trainer
 from pytorch_lightning.cli import LightningCLI
 
 # sys.path.insert(1, os.path.join(sys.path[0], '..'))
@@ -39,6 +40,8 @@ def get_parser(**parser_kwargs):
     return parser
 
 
+
+
 def get_nondefault_trainer_args(args):
     parser = argparse.ArgumentParser()
     parser = add_trainer_args_to_parser(Trainer, parser)
@@ -58,6 +61,8 @@ if __name__ == "__main__":
 
     parser = get_parser()
     ## Extends existing argparse by default Trainer attributes
+    parser = add_trainer_args_to_parser(Trainer, parser)
+
     parser = add_trainer_args_to_parser(Trainer, parser)
 
     args, unknown = parser.parse_known_args()

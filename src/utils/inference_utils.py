@@ -12,6 +12,13 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 
+from utils.load_weights import load_safetensors
+
+def load_prompt_file(prompt_file: str):
+    with open(prompt_file, "r") as f:
+        prompts = f.readlines()
+    prompts = [prompt.strip() for prompt in prompts]
+    return prompts
 
 def get_target_filelist(data_dir, ext='*'):
     """
@@ -32,9 +39,17 @@ def load_model_checkpoint(model, ckpt):
         except:
             if "state_dict" in list(state_dict.keys()):
                 state_dict = state_dict["state_dict"]
-            model.load_state_dict(state_dict, strict=False)
+            try:
+                model.model.diffusion_model.load_state_dict(state_dict, strict=full_strict)
+            except:
+                model.load_state_dict(state_dict, strict=False)
         return model
-    load_checkpoint(model, ckpt, full_strict=True)
+    
+    if ckpt.endswith(".safetensors"):
+        state_dict = load_safetensors(ckpt)
+        model.load_state_dict(state_dict, strict=False)
+    else:
+        load_checkpoint(model, ckpt, full_strict=True)
     print('[INFO] model checkpoint loaded.')
     return model
 

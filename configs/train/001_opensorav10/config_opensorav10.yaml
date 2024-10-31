@@ -38,8 +38,7 @@ model:
       params:
         space_scale: 0.5
         time_scale: 1.0
-        # from_pretrained: "/project/llmsvgen/share/opensora_ckpt/stage4/last/model_ckpt.pt"
-        from_pretrained: "/disk8/yazhou/check-base/opensora_ckpt/model_ckpt.pt"
+        from_pretrained: False
         enable_flashattn: True
         enable_layernorm_kernel: False
         input_size:
