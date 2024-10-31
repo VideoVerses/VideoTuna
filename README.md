@@ -374,12 +374,6 @@ Please check [eval/README.md](docs/evaluation.md) for details.
 We support video alignment post-training to align human perference for video diffusion models. Please check [configs/train/004_rlhf_vc2/README.md](configs/train/004_rlhf_vc2/README.md) for details.
 
 
-## Resources
-* [LLMs-Meet-MM-Generation](https://github.com/YingqingHe/Awesome-LLMs-meet-Multimodal-Generation): A paper collections of utilizing LLMs for multimodal generation (image, video, 3D and audio).
-* [MMTrail](https://mattie-e.github.io/MMTrail/): A multimodal trailer video dataset with language and music descriptions.
-* [Seeing-and-Hearing](https://github.com/yzxing87/Seeing-and-Hearing): A versatile framework for Joint VA generation, V2A, A2V, and I2A.
-
-
 ## Acknowledgement
 We thank the following repos for sharing their awesome models and codes!
 * [VideoCrafter2](https://github.com/AILab-CVC/VideoCrafter): Overcoming Data Limitations for High-Quality Video Diffusion Models
@@ -391,6 +385,15 @@ We thank the following repos for sharing their awesome models and codes!
 * [VBench](https://github.com/Vchitect/VBench): Comprehensive Benchmark Suite for Video Generative Models
 * [Flux](https://github.com/black-forest-labs/flux): Text-to-image models from Black Forest Labs.
 * [SimpleTuner](https://github.com/bghira/SimpleTuner): A fine-tuning kit for text-to-image generation.
+
+
+
+
+## Some Resources
+* [LLMs-Meet-MM-Generation](https://github.com/YingqingHe/Awesome-LLMs-meet-Multimodal-Generation): A paper collections of utilizing LLMs for multimodal generation (image, video, 3D and audio).
+* [MMTrail](https://mattie-e.github.io/MMTrail/): A multimodal trailer video dataset with language and music descriptions.
+* [Seeing-and-Hearing](https://github.com/yzxing87/Seeing-and-Hearing): A versatile framework for Joint VA generation, V2A, A2V, and I2A.
+
 
 ## 🍻 Contributors
 
