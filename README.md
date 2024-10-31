@@ -375,7 +375,10 @@ We support video alignment post-training to align human perference for video dif
 
 
 ## Resources
-https://github.com/YingqingHe/Awesome-LLMs-meet-Multimodal-Generation
+* [LLMs-Meet-MM-Generation](https://github.com/YingqingHe/Awesome-LLMs-meet-Multimodal-Generation): A paper collections of utilizing LLMs for multimodal generation (image, video, 3D and audio).
+* [MMTrail](https://mattie-e.github.io/MMTrail/): A multimodal trailer video dataset with language and music descriptions.
+* [Seeing-and-Hearing](https://github.com/yzxing87/Seeing-and-Hearing): A versatile framework for Joint VA generation, V2A, A2V, and I2A.
+
 
 ## Acknowledgement
 We thank the following repos for sharing their awesome models and codes!
