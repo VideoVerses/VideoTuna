@@ -1,5 +1,5 @@
-ckpt=checkpoints/videocrafter/base_1024_v1/model.ckpt
-config=configs/inference/vc1_t2v_1024.yaml
+ckpt=checkpoints/videocrafter/t2v_v1_1024/model.ckpt
+config=configs/000_videocrafter/vc1_t2v_1024.yaml
 prompt_file=inputs/t2v/prompts.txt
 res_dir="results/t2v/videocrafter1-576x1024"
 
