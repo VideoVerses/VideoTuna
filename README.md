@@ -10,11 +10,13 @@
 
 🤗🤗🤗 Videotuna is a useful codebase for AI text-to-video generation. 
 
-- VideoTuna is the first repo that integrate various AI generation models for Text-to-Video generation, including T2V, T2I and I2V.   
+- VideoTuna is the first repo that integrate various AI generation models for video generation, including T2V, T2I and I2V.   
 
 - VideoTuna is also the first repo that provide the whole pipeline for video generation, including pre-training, continuous training, post-training (alignment), and fine-tuning. 
 
-- The models of VideoTuna include both U-Net and DiT architectures for visual generation tasks, and a new 3D video VAE.
+- The models of VideoTuna include both U-Net and DiT architectures for visual generation tasks.
+
+- A new 3D video VAE, and a controllable facial video generation model will be released soon.
 
 
 ## Features
