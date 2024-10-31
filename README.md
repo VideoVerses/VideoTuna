@@ -8,16 +8,21 @@
 
 
 
-🤗🤗🤗 VideoTuna is an open-sourcing finetuning framework for text-to-video generation.
+🤗🤗🤗 Videotuna is a useful codebase for AI text-to-video generation. 
+
+- VideoTuna is the first repo that integrate various AI generation models for Text-to-Video generation, including T2V, T2I and I2V.   
+
+- VideoTuna is also the first repo that provide the whole pipeline for video generation, including pre-training, continuous training, post-training (alignment), and fine-tuning. 
+
+- The models of VideoTuna include both U-Net and DiT architectures for visual generation tasks, and a new 3D video VAE.
 
 
 ## Features
-1. All in one framework: Inference and finetune state-of-the-art T2V models.
-2. Continuous training.
-3. Fintuning: domain-specific.
-4. Fintuning: enhanced language understanding.
-5. Fintuning: enhancement.
-6. Human preference alignment/Post-training: RLHF, DPO.
+1. Integrate **up-to-date video generation models** with optimal performance. We are not limited to Text-to-Video generation; instead, we also integrate Image-to-Video models with Text-to-Image models, creating a strong pipeline for the Text-to-Video task. The AI generation models we support include CogVideoX, Open Sora, VideoCrafter, DynamiCrafter, and Flux. We will also keep updated with the emerging generation models.
+2. The **whole pipeline for video generation** including pre-training, continuous training, post-training, and fine-tuning. Some of the modules will be open-sourced after the submission of CVPR 2024.
+3. Fine-tuning: including domain-specific fine-tuning, and concept-specific fine-tuning. 
+4. Human preference alignment: RLFH, DPO (soon).
+
 
 
 ## Demo
@@ -233,7 +238,7 @@
 
 ## ⏰TODOs
 - [ ] More demo and applications
-- [ ] More functionalities
+- [ ] More functionalities such as control modules. (Suggestions are welcome!)
 
 ## 🔆 Updates
 - [2024-10-31] We make the VideoTuna V0.1.0 public!
@@ -265,9 +270,9 @@ VideoTuna/
 |:---------|:---------|:--------|
 |CogVideoX-2B|720x480, 6s|[Hugging Face](https://huggingface.co/THUDM/CogVideoX-2b)
 |CogVideoX-5B|720x480, 6s|[Hugging Face](https://huggingface.co/THUDM/CogVideoX-5b)
-|Open-Sora 1.2|240p to 720p, 2~16s|[STDIT](https://huggingface.co/hpcai-tech/OpenSora-STDiT-v3), [VAE](https://huggingface.co/hpcai-tech/OpenSora-VAE-v1.2)
-|Open-Sora 1.1|144p & 240p & 480p, 0~15s|[Stage 2](https://huggingface.co/hpcai-tech/OpenSora-STDiT-v2-stage2)
-|Open-Sora 1.1|144p to 720p, 0~15s|[Stage 3](https://huggingface.co/hpcai-tech/OpenSora-STDiT-v2-stage3)
+<!-- |Open-Sora 1.2|240p to 720p, 2~16s|[STDIT](https://huggingface.co/hpcai-tech/OpenSora-STDiT-v3), [VAE](https://huggingface.co/hpcai-tech/OpenSora-VAE-v1.2) -->
+<!-- |Open-Sora 1.1|144p & 240p & 480p, 0~15s|[Stage 2](https://huggingface.co/hpcai-tech/OpenSora-STDiT-v2-stage2) -->
+<!-- |Open-Sora 1.1|144p to 720p, 0~15s|[Stage 3](https://huggingface.co/hpcai-tech/OpenSora-STDiT-v2-stage3) -->
 |Open-Sora 1.0|512×512x16|[Hugging Face](https://huggingface.co/hpcai-tech/Open-Sora/blob/main/OpenSora-v1-HQ-16x512x512.pth)
 |Open-Sora 1.0|256×256x16|[Hugging Face](https://huggingface.co/hpcai-tech/Open-Sora/blob/main/OpenSora-v1-HQ-16x256x256.pth)
 |Open-Sora 1.0|256×256x16|[Hugging Face](https://huggingface.co/hpcai-tech/Open-Sora/blob/main/OpenSora-v1-16x256x256.pth)
