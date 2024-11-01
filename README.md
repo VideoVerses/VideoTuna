@@ -287,12 +287,12 @@ VideoTuna/
 <!-- |Open-Sora 1.1|144p & 240p & 480p, 0~15s|[Stage 2](https://huggingface.co/hpcai-tech/OpenSora-STDiT-v2-stage2) -->
 <!-- |Open-Sora 1.1|144p to 720p, 0~15s|[Stage 3](https://huggingface.co/hpcai-tech/OpenSora-STDiT-v2-stage3) -->
 
-Please check [docs/CHECKPOINTS.md](https://github.com/VideoVerses/VideoTuna/blob/main/docs/CHECKPOINTS.md) to download all the model checkpoints.
+Please check [docs/CHECKPOINTS.md](docs/CHECKPOINTS.md) to download all the model checkpoints.
 
-## 🔆 Get started
+[Title](docs/CHECKPOINTS.md)## 🔆 Get started
 
 ### 1.Prepare environment
-```
+``` shell
 conda create --name videotuna python=3.10 -y
 conda activate videotuna
 pip install -U poetry pip
@@ -340,6 +340,17 @@ Task|Models|Commands|
 
 
 ### 4. Finetune T2V models
+#### (1). Prepare Dataset
+Please follow the [docs/datasets.md](docs/datasets.md) to try provided toydataset or build your own datasets.
+
+#### (2). Finetune
+#### Open-Sora finetuning
+We support open-sora finetuning, you can simply run the following commands:
+``` shell
+# finetune the Open-Sora v1.0
+bash shscripts/train_opensorav10.sh
+```
+
 #### Lora finetuning
 
 We support lora finetuning to make the model to learn new concepts/characters/styles.   
@@ -365,8 +376,8 @@ bash configs/train/000_videocrafter2ft/run.sh
 We support VBench evaluation to evaluate the T2V generation performance. 
 Please check [eval/README.md](docs/evaluation.md) for details.
 
-### 6. Alignment
-We support video alignment post-training to align human perference for video diffusion models. Please check [configs/train/004_rlhf_vc2/README.md](configs/train/004_rlhf_vc2/README.md) for details.
+<!-- ### 6. Alignment
+We support video alignment post-training to align human perference for video diffusion models. Please check [configs/train/004_rlhf_vc2/README.md](configs/train/004_rlhf_vc2/README.md) for details. -->
 
 
 ## Acknowledgement
