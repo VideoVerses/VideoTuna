@@ -46,6 +46,7 @@ The CSV file should have the following columns:
     path, caption
     path/to/video1, caption1
     path/to/video2, caption2
+    ...
     ```
 
 - **Extended format with additional metadata  (for multi-resolution training):**
@@ -53,12 +54,12 @@ The CSV file should have the following columns:
     path, caption, fps, frames, height, width
     path/to/video1, caption1, 30, 100, 512, 512
     path/to/video2, caption2, 30, 50, 1080, 512
+    ...
     ```
 
 Ensure that the paths in the CSV file are either absolute or relative to the `data_root` provided during initialization.
 
 In addition, to support a new dataset, you need to convert your annotations to the required CSV format. 
-Please refer to ```{PROJECT}/data/anno_files/toy_video_dataset.csv``` if you still feel confused.
 
 
 ### Important Considerations
@@ -66,6 +67,31 @@ Please refer to ```{PROJECT}/data/anno_files/toy_video_dataset.csv``` if you sti
 - **Transform Functions:** If no transform functions are provided, default transforms for video and image data will be used. Ensure that your transform functions are compatible with the data format.
 - **Resolution and Frame Settings:** The `resolution`, `num_frames`, and `frame_interval` arguments should be set according to your specific requirements. These parameters control the size and number of frames sampled from each video.
 - **Training and Validation Split:** If `split_val` is set to `True`, the dataset will be split into training and validation sets. Ensure that the `train` parameter is set correctly to indicate whether the dataset is for training or validation.
+
+
+## ToyDataset
+You can download the toydataset through the [Onedrive](https://hkustconnect-my.sharepoint.com/:u:/g/personal/zraoac_connect_ust_hk/EV5iJbQ07ydFnLQTc4UFMRABCr5CT6bHZO8_ogYcUJbZEA?e=shkban) and the [GoogleDrive](https://drive.google.com/file/d/1y91MXYG90d4uTljFfV7bXUgLN0n4j4Gm/view?usp=sharing).
+
+The structure should be
+```
+VideoTuna/
+    ├── Dataset/
+        ├── DATASET1
+        ├── ToyDataset/
+            ├── toydataset.csv
+            ├── ToyDataset/
+                ├── video1.mp4
+                ├── video2.mp4
+                ...
+```
+The `toydataset.csv` includes the path and the caption of the videos.
+```
+path, caption
+Dataset/ToyDataset/videos/QNa4eMNKYwk_2.mp4,A woman with a patch on her eye next to a park bench.
+Dataset/ToyDataset/videos/J4FJGUugMHM_0.mp4,A group of children and adults are playing with lego toys at an exhibition.
+Dataset/ToyDataset/videos/jPu8eStQrnE_2.mp4,A potted plant is growing in a glass container.
+...
+```
 
 
 ## An Example with the Open-sourced Dataset.
