@@ -58,7 +58,7 @@ def main(input_path, output_path, video_root):
     data_list = []
     
     for i, line in tqdm(enumerate(lines)):
-        data = json.loads(line)  # 解析jsonl数据
+        data = json.loads(line)  # parse json file
 
         clip_id = data.get("clip_id")
         video_meta = video_dict.get(clip_id, None)
