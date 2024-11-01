@@ -1,10 +1,21 @@
-export FLUX_SCHNELL='checkpoints/FLUX.1-schnell/flux1-schnell.safetensors'
-export FLUX_DEV='checkpoints/FLUX.1-dev/flux1-dev.safetensors'
-export AE='checkpoints/FLUX.1-schnell/ae.safetensors'
-model=flux-schnell #flux-schnell/flux-dev
-python -m src/flux/cli.py \
-  --name $model \
-  --height 768 --width 1360 \
-  --prompt "a girl is dancing" \
-  --device cuda \
-  --output_dir output
+#!/bin/bash
+# inference with a file of prompts or a single prompt
+# default inference with dev model
+python scripts/inference_flux.py \
+    --model_type dev \
+    --prompt inputs/t2v/prompts.txt \
+    --out_path results/flux-dev/ \
+    --width 1360 \
+    --height 768 \
+    --num_inference_steps 50 \
+    --guidance_scale 0.
+
+# default inference with schell model
+python scripts/inference_flux.py \
+    --model_type schnell \
+    --prompt inputs/t2v/prompts.txt \
+    --out_path results/flux-schnell/ \
+    --width 1360 \
+    --height 768 \
+    --num_inference_steps 4 \
+    --guidance_scale 0.

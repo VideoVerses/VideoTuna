@@ -28,13 +28,13 @@ class DDIMSampler(object):
     def make_schedule(self, ddim_num_steps, ddim_discretize="uniform", ddim_eta=0., verbose=True):
         self.ddim_timesteps = make_ddim_timesteps(ddim_discr_method=ddim_discretize, num_ddim_timesteps=ddim_num_steps,
                                                   num_ddpm_timesteps=self.ddpm_num_timesteps,verbose=verbose)
-        alphas_cumprod = self.model.alphas_cumprod
+        alphas_cumprod = self.model.diffusion_scheduler.alphas_cumprod
         assert alphas_cumprod.shape[0] == self.ddpm_num_timesteps, 'alphas have to be defined for each timestep'
         to_torch = lambda x: x.clone().detach().to(torch.float32).to(self.model.device)
 
-        self.register_buffer('betas', to_torch(self.model.betas))
+        self.register_buffer('betas', to_torch(self.model.diffusion_scheduler.betas))
         self.register_buffer('alphas_cumprod', to_torch(alphas_cumprod))
-        self.register_buffer('alphas_cumprod_prev', to_torch(self.model.alphas_cumprod_prev))
+        self.register_buffer('alphas_cumprod_prev', to_torch(self.model.diffusion_scheduler.alphas_cumprod_prev))
         self.use_scale = self.model.use_scale
         # print('DDIM scale', self.use_scale)
 
@@ -145,7 +145,7 @@ class DDIMSampler(object):
                       unconditional_guidance_scale=1., unconditional_conditioning=None, verbose=True,
                       cond_tau=1., target_size=None, start_timesteps=None,
                       **kwargs):
-        device = self.model.betas.device        
+        device = self.model.diffusion_scheduler.betas.device        
         # print('ddim device', device)
         b = shape[0]
         if x_T is None:

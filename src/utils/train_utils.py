@@ -190,7 +190,11 @@ def load_checkpoints(model, model_cfg):
                     new_pl_sd[key[16:]]=pl_sd['module'][key]
                 model.load_state_dict(new_pl_sd)
         except:
-            model.load_state_dict(pl_sd)
+            if 'state_dict' in pl_sd.keys():
+                model.load_state_dict(pl_sd["state_dict"], strict=False)
+            else:
+                model.load_state_dict(pl_sd, strict=False)
+
         '''
         try:
             model = model.load_from_checkpoint(pretrained_ckpt, **model_cfg.params)

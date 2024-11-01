@@ -21,7 +21,7 @@ fi
 
 #### run dynamicrafter ####
 ckpt=checkpoints/dynamicrafter/i2v_576x1024/model.ckpt
-config=configs/train/002_dynamicrafterft_1024/config.yaml
+config=configs/002_dynamicrafter/dc_i2v_1024.yaml
 prompt_dir="${input_dir}"
 height=576
 width=1024
