@@ -36,7 +36,7 @@ The 3D video VAE from VideoTuna can accurately compress and reconstruct the inpu
 
 <table class="center">
   <tr>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/vae/gtview7.gif"><img src="assets/demos/vae/fkview7.gif" width="320"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/51471c42-8a38-4f02-b29b-e34a5279753a"><img src="https://github.com/user-attachments/assets/51471c42-8a38-4f02-b29b-e34a5279753a" width="320"></a></td>
     <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/vae/fkview7.gif"><img src="assets/demos/vae/fkview7.gif" width="320"></a></td>
   </tr>
   <tr>
