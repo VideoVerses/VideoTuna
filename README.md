@@ -1,5 +1,5 @@
 <p align="center" width="50%">
-<img src="assets/tuna_logo_6m.gif" alt="VideoTuna" style="width: 75%; min-width: 450px; display: block; margin: auto; background-color: transparent;">
+<img src="https://github.com/user-attachments/assets/38efb5bc-723e-4012-aebd-f55723c593fb" alt="VideoTuna" style="width: 75%; min-width: 450px; display: block; margin: auto; background-color: transparent;">
 </p>
 
 # VideoTuna
