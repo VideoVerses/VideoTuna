@@ -316,7 +316,17 @@ After downloading, the model checkpoints should be placed as [Checkpoint Structu
 
 ### 3.Inference state-of-the-art T2V/I2V/T2I models
 
-- Inference many T2V models **in one command**: `bash tools/video_comparison/compare.sh`
+- Inference many video generation models **in one command**: `bash tools/video_comparison/compare.sh`
+
+Before running the script, you need to specify the methods you wish to use for inference (All methods are run in default). List the desired methods separated by semicolons in the inference_methods variable in `compare.sh`. Users can manually select the inference methods they need from the listed options.
+
+`inference_methods="videocrafter2;dynamicrafter;cogvideo—t2v;cogvideo—i2v;opensora"`
+
+Also specify the input directory using `input_dir` variable. This directory should contain a `prompts.txt file, where each line corresponds to a prompt for the video generation.
+
+`input_dir='inputs/t2v'`
+
+
 
 
 <!-- |Task|Commands|
