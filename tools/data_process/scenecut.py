@@ -268,7 +268,7 @@ def run__process(vid_dir, out_dir, num_process):
     #         future = executor.submit(main, vid_dir, out_dir, chunk)
     #         futures.append(future)
     #
-    #     # 获取所有任务的结果
+    #     # Get results of all tasks
     #     for future in futures:
     #         result = future.result()
 
