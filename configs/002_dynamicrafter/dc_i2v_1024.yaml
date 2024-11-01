@@ -119,8 +119,7 @@ data:
     train:
       target: src.data.datasets.DatasetFromCSV
       params:
-        csv_path: /project/llmsvgen/share/opensora_datafile/artgrid_caption_long_base.csv
-        # csv_path: /disk8/yazhou/Dataset/artgrid/artgrid_caption_long_base_disk8.csv
+        csv_path: Dataset/ToyDataset/toydataset.csv
         resolution: [576, 1024]
         video_length: 16
         frame_interval: 4
@@ -128,8 +127,7 @@ data:
     validation:
       target: src.data.datasets.DatasetFromCSV
       params:
-        csv_path: /project/llmsvgen/share/opensora_datafile/artgrid_caption_long_base.csv
-        # csv_path: /disk8/yazhou/Dataset/artgrid/artgrid_caption_long_base_disk8.csv
+        csv_path: Dataset/ToyDataset/toydataset.csv
         resolution: [576, 1024]
         video_length: 16
         frame_interval: 4
