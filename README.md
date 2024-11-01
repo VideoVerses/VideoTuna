@@ -37,7 +37,7 @@ The 3D video VAE from VideoTuna can accurately compress and reconstruct the inpu
 <table class="center">
   <tr>
     <td><a href="https://github.com/user-attachments/assets/51471c42-8a38-4f02-b29b-e34a5279753a"><img src="https://github.com/user-attachments/assets/51471c42-8a38-4f02-b29b-e34a5279753a" width="320"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/vae/fkview7.gif"><img src="assets/demos/vae/fkview7.gif" width="320"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/383f2120-5fed-4d9f-82d8-3de130d6bd65"><img src="https://github.com/user-attachments/assets/383f2120-5fed-4d9f-82d8-3de130d6bd65" width="320"></a></td>
   </tr>
   <tr>
     <td style="text-align:center;" width="320">Groud Truth</td>
@@ -61,24 +61,24 @@ The 3D video VAE from VideoTuna can accurately compress and reconstruct the inpu
   </tr>
 
   <tr>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/vae/gtmotion4.gif"><img src="assets/demos/vae/gtmotion4.gif" width="320"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/vae/fkmotion4.gif"><img src="assets/demos/vae/fkmotion4.gif" width="320"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/a0ffc2ca-c3e2-485f-b0ea-ead0d733cc8b"><img src="https://github.com/user-attachments/assets/a0ffc2ca-c3e2-485f-b0ea-ead0d733cc8b" width="320"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/1465ac70-caa9-42c7-874b-b01e13a78efb"><img src="https://github.com/user-attachments/assets/1465ac70-caa9-42c7-874b-b01e13a78efb" width="320"></a></td>
   </tr>
   <tr>
     <td style="text-align:center;" width="320">Ground Truth</td>
     <td style="text-align:center;" width="320">Reconstruction</td>
   </tr>
   <tr>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/vae/gtanimal2.gif"><img src="assets/demos/vae/gtanimal2.gif" width="320"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/vae/fkanimal2.gif"><img src="assets/demos/vae/fkanimal2.gif" width="320"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/48e2eb49-265b-4eaf-b730-48fa4d7e5bfd"><img src="https://github.com/user-attachments/assets/48e2eb49-265b-4eaf-b730-48fa4d7e5bfd" width="320"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/24c893c5-865e-4af4-b003-17bda2ba4f59"><img src="https://github.com/user-attachments/assets/24c893c5-865e-4af4-b003-17bda2ba4f59" width="320"></a></td>
   </tr>
   <tr>
     <td style="text-align:center;" width="320">Ground Truth</td>
     <td style="text-align:center;" width="320">Reconstruction</td>
   </tr>
   <tr>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/vae/gtcloseshot1.gif"><img src="assets/demos/vae/gtcloseshot1.gif" width="320"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/vae/fkcloseshot1.gif"><img src="assets/demos/vae/fkcloseshot1.gif" width="320"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/c18ed80f-3650-43a7-8438-7914de7e39ab"><img src="https://github.com/user-attachments/assets/c18ed80f-3650-43a7-8438-7914de7e39ab" width="320"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/89d38004-021b-4a4d-ab83-5627474f8928"><img src="https://github.com/user-attachments/assets/89d38004-021b-4a4d-ab83-5627474f8928" width="320"></a></td>
   </tr>
   <tr>
     <td style="text-align:center;" width="320">Ground Truth</td>
