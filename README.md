@@ -90,9 +90,9 @@ The 3D video VAE from VideoTuna can accurately compress and reconstruct the inpu
 
 <table class="center">
   <tr>
-    <td><img src="assets/demos/face_i2v/zcCWO3QOguA_0.png" width="240" alt="Image 1"></td>
-    <td><img src="assets/demos/face_i2v/YJJbE-w2qzA_0.png" width="240" alt="Image 2"></td>
-    <td><img src="assets/demos/face_i2v/-ZxtmDbqDRc_0.png" width="240" alt="Image 3"></td>
+    <td><img src="https://github.com/user-attachments/assets/a1562c70-d97c-4324-bb11-47db2b83f443" width="240" alt="Image 1"></td>
+    <td><img src="https://github.com/user-attachments/assets/3196810b-48d7-4024-b687-df2009774631" width="240" alt="Image 2"></td>
+    <td><img src="https://github.com/user-attachments/assets/4e873f4c-ca56-4549-aaa1-ef24032ae96b" width="240" alt="Image 3"></td>
   </tr>
   <tr>
     <td style="text-align: center;">Input 1</td>
@@ -101,12 +101,11 @@ The 3D video VAE from VideoTuna can accurately compress and reconstruct the inpu
   </tr>
 </table>
 
-
 <table class="center">
   <tr>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_anger.gif"><img src="assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_anger.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_disgust.gif"><img src="assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_disgust.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_fear.gif"><img src="assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_fear.gif" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/972dde7a-fa88-479a-a47e-71d3650b1826"><img src="https://github.com/user-attachments/assets/972dde7a-fa88-479a-a47e-71d3650b1826" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/3c216090-9ad1-4911-b990-179b45314d3e"><img src="https://github.com/user-attachments/assets/3c216090-9ad1-4911-b990-179b45314d3e" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/2e2fb78e-2f39-47bd-acaf-3cfbce83b162"><img src="https://github.com/user-attachments/assets/2e2fb78e-2f39-47bd-acaf-3cfbce83b162" width="240"></a></td>
   </tr>
   <tr>
     <td style="text-align:center;">Emotion: Anger</td>
@@ -114,9 +113,9 @@ The 3D video VAE from VideoTuna can accurately compress and reconstruct the inpu
     <td style="text-align:center;">Emotion: Fear</td>
   </tr>
   <tr>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_happy.gif"><img src="assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_happy.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_sad.gif"><img src="assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_sad.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_surprise.gif"><img src="assets/demos/face_i2v/zcCWO3QOguA_0_sample0/zcCWO3QOguA_0_sample0_surprise.gif" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/f2f55021-4e0d-43a7-9f57-3c94b772f573"><img src="https://github.com/user-attachments/assets/f2f55021-4e0d-43a7-9f57-3c94b772f573" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/600a2f6c-7a8f-4304-bdc3-5f0d65d4fb83"><img src="https://github.com/user-attachments/assets/600a2f6c-7a8f-4304-bdc3-5f0d65d4fb83" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/8ad7c7d8-6492-4435-9436-168f90429be3"><img src="https://github.com/user-attachments/assets/8ad7c7d8-6492-4435-9436-168f90429be3" width="240"></a></td>
   </tr>
   <tr>
     <td style="text-align:center;">Emotion: Happy</td>
@@ -125,12 +124,11 @@ The 3D video VAE from VideoTuna can accurately compress and reconstruct the inpu
   </tr>
 </table>
 
-
 <table class="center">
   <tr>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/YJJbE-w2qzA_0_sample0/YJJbE-w2qzA_0_sample0_anger.gif"><img src="assets/demos/face_i2v/YJJbE-w2qzA_0_sample0/YJJbE-w2qzA_0_sample0_anger.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/YJJbE-w2qzA_0_sample0/YJJbE-w2qzA_0_sample0_disgust.gif"><img src="assets/demos/face_i2v/YJJbE-w2qzA_0_sample0/YJJbE-w2qzA_0_sample0_disgust.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/YJJbE-w2qzA_0_sample0/YJJbE-w2qzA_0_sample0_fear.gif"><img src="assets/demos/face_i2v/YJJbE-w2qzA_0_sample0/YJJbE-w2qzA_0_sample0_fear.gif" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/8ba84071-1978-4245-84b3-3a6fc3c9fa5a"><img src="https://github.com/user-attachments/assets/8ba84071-1978-4245-84b3-3a6fc3c9fa5a" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/d180c358-bdff-40b4-aa5a-fa4ec73d80b6"><img src="https://github.com/user-attachments/assets/d180c358-bdff-40b4-aa5a-fa4ec73d80b6" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/37004c20-3d0d-4cff-8b4a-f8a4d184de51"><img src="https://github.com/user-attachments/assets/37004c20-3d0d-4cff-8b4a-f8a4d184de51" width="240"></a></td>
   </tr>
   <tr>
     <td style="text-align:center;">Emotion: Anger</td>
@@ -138,9 +136,9 @@ The 3D video VAE from VideoTuna can accurately compress and reconstruct the inpu
     <td style="text-align:center;">Emotion: Fear</td>
   </tr>
   <tr>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/YJJbE-w2qzA_0_sample0/YJJbE-w2qzA_0_sample0_happy.gif"><img src="assets/demos/face_i2v/YJJbE-w2qzA_0_sample0/YJJbE-w2qzA_0_sample0_happy.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/YJJbE-w2qzA_0_sample0/YJJbE-w2qzA_0_sample0_sad.gif"><img src="assets/demos/face_i2v/YJJbE-w2qzA_0_sample0/YJJbE-w2qzA_0_sample0_sad.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/YJJbE-w2qzA_0_sample0/YJJbE-w2qzA_0_sample0_surprise.gif"><img src="assets/demos/face_i2v/YJJbE-w2qzA_0_sample0/YJJbE-w2qzA_0_sample0_surprise.gif" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/025fe090-7d53-4a12-9498-1c814a0ee768"><img src="https://github.com/user-attachments/assets/025fe090-7d53-4a12-9498-1c814a0ee768" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/e8ddf3d1-57ea-4545-a004-66554c19f27b"><img src="https://github.com/user-attachments/assets/e8ddf3d1-57ea-4545-a004-66554c19f27b" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/519b3c87-baa6-408b-b3a5-a95eece9e19e"><img src="https://github.com/user-attachments/assets/519b3c87-baa6-408b-b3a5-a95eece9e19e" width="240"></a></td>
   </tr>
   <tr>
     <td style="text-align:center;">Emotion: Happy</td>
@@ -149,12 +147,11 @@ The 3D video VAE from VideoTuna can accurately compress and reconstruct the inpu
   </tr>
 </table>
 
-
 <table class="center">
   <tr>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/-ZxtmDbqDRc_0_sample0/-ZxtmDbqDRc_0_sample0_anger.gif"><img src="assets/demos/face_i2v/-ZxtmDbqDRc_0_sample0/-ZxtmDbqDRc_0_sample0_anger.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/-ZxtmDbqDRc_0_sample0/-ZxtmDbqDRc_0_sample0_disgust.gif"><img src="assets/demos/face_i2v/-ZxtmDbqDRc_0_sample0/-ZxtmDbqDRc_0_sample0_disgust.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/-ZxtmDbqDRc_0_sample0/-ZxtmDbqDRc_0_sample0_fear.gif"><img src="assets/demos/face_i2v/-ZxtmDbqDRc_0_sample0/-ZxtmDbqDRc_0_sample0_fear.gif" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/f55a2b6c-ce10-4716-a001-f747c0da17a4"><img src="https://github.com/user-attachments/assets/f55a2b6c-ce10-4716-a001-f747c0da17a4" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/bb3620af-322d-43bc-9060-c7ce9fc32672"><img src="https://github.com/user-attachments/assets/bb3620af-322d-43bc-9060-c7ce9fc32672" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/46a39738-89c2-43fe-9f98-f0ac0d26e39b"><img src="https://github.com/user-attachments/assets/46a39738-89c2-43fe-9f98-f0ac0d26e39b" width="240"></a></td>
   </tr>
   <tr>
     <td style="text-align:center;">Emotion: Anger</td>
@@ -162,9 +159,9 @@ The 3D video VAE from VideoTuna can accurately compress and reconstruct the inpu
     <td style="text-align:center;">Emotion: Fear</td>
   </tr>
   <tr>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/-ZxtmDbqDRc_0_sample0/-ZxtmDbqDRc_0_sample0_happy.gif"><img src="assets/demos/face_i2v/-ZxtmDbqDRc_0_sample0/-ZxtmDbqDRc_0_sample0_happy.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/-ZxtmDbqDRc_0_sample0/-ZxtmDbqDRc_0_sample0_sad.gif"><img src="assets/demos/face_i2v/-ZxtmDbqDRc_0_sample0/-ZxtmDbqDRc_0_sample0_sad.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/face_i2v/-ZxtmDbqDRc_0_sample0/-ZxtmDbqDRc_0_sample0_surprise.gif"><img src="assets/demos/face_i2v/-ZxtmDbqDRc_0_sample0/-ZxtmDbqDRc_0_sample0_surprise.gif" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/2d3d6e0d-2034-4341-8ca3-42e0cda2704f"><img src="https://github.com/user-attachments/assets/2d3d6e0d-2034-4341-8ca3-42e0cda2704f" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/331f23e1-f441-46f7-98a6-b25a684780f3"><img src="https://github.com/user-attachments/assets/331f23e1-f441-46f7-98a6-b25a684780f3" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/542f8535-634a-4f82-ae2a-39f988c6bc55"><img src="https://github.com/user-attachments/assets/542f8535-634a-4f82-ae2a-39f988c6bc55" width="240"></a></td>
   </tr>
   <tr>
     <td style="text-align:center;">Emotion: Happy</td>
@@ -176,14 +173,13 @@ The 3D video VAE from VideoTuna can accurately compress and reconstruct the inpu
 
 ### Storytelling
 
-
 <table class="center">
   <tr>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/bear/0_9.gif"><img src="assets/demos/story/bear/0_9.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/bear/1_4.gif"><img src="assets/demos/story/bear/1_4.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/bear/2_5.gif"><img src="assets/demos/story/bear/2_5.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/bear/3_6.gif"><img src="assets/demos/story/bear/3_6.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/bear/4_4.gif"><img src="assets/demos/story/bear/4_4.gif" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/27aee539-f2bf-467a-8da5-22f506713aa0"><img src="https://github.com/user-attachments/assets/27aee539-f2bf-467a-8da5-22f506713aa0" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/fef5b694-6e1f-42f6-a5a1-7f0b856f3678"><img src="https://github.com/user-attachments/assets/fef5b694-6e1f-42f6-a5a1-7f0b856f3678" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/91408eb8-264d-4d3f-9098-0bfe06022467"><img src="https://github.com/user-attachments/assets/91408eb8-264d-4d3f-9098-0bfe06022467" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/0b822858-da6f-4e6f-82dd-5f243e2feccc"><img src="https://github.com/user-attachments/assets/0b822858-da6f-4e6f-82dd-5f243e2feccc" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/75f69de2-9e5c-48d7-ae55-b28084772836"><img src="https://github.com/user-attachments/assets/75f69de2-9e5c-48d7-ae55-b28084772836" width="240"></a></td>
   </tr>
   <tr>
     <td style="text-align:center;">The picture shows a cozy room with a little girl telling her travel story to her teddybear beside the bed.</td>
@@ -193,11 +189,11 @@ The 3D video VAE from VideoTuna can accurately compress and reconstruct the inpu
     <td style="text-align:center;">In the forest, the sun shines through the treetops, and teddybear moves among various animals and communicates with them.</td>
   </tr>
   <tr>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/bear/5_5.gif"><img src="assets/demos/story/bear/5_5.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/bear/6_2.gif"><img src="assets/demos/story/bear/6_2.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/bear/7_4.gif"><img src="assets/demos/story/bear/7_4.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/bear/8_4.gif"><img src="assets/demos/story/bear/8_4.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/bear/10_5.gif"><img src="assets/demos/story/bear/10_5.gif" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/3ae06dbf-f41f-4e7f-b384-fca3abf2c0aa"><img src="https://github.com/user-attachments/assets/3ae06dbf-f41f-4e7f-b384-fca3abf2c0aa" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/09a2fdb9-3e84-40a5-a729-075876b10412"><img src="https://github.com/user-attachments/assets/09a2fdb9-3e84-40a5-a729-075876b10412" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/a382aa30-895d-4476-8f86-b668fe153c16"><img src="https://github.com/user-attachments/assets/a382aa30-895d-4476-8f86-b668fe153c16" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/c906b20e-1576-4a96-9c77-b67a940dcce8"><img src="https://github.com/user-attachments/assets/c906b20e-1576-4a96-9c77-b67a940dcce8" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/04f553d2-8ac5-4085-8c1b-59bddf9deb41"><img src="https://github.com/user-attachments/assets/04f553d2-8ac5-4085-8c1b-59bddf9deb41" width="240"></a></td>
   </tr>
   <tr>
     <td style="text-align:center;">Teddybear leaves his mark on the edge of a clear lake, surrounded by exotic flowers, and the picture is full of mystery and exploration.</td>
@@ -211,11 +207,11 @@ The 3D video VAE from VideoTuna can accurately compress and reconstruct the inpu
 
 <table class="center">
   <tr>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/cat/0_2.gif"><img src="assets/demos/story/cat/0_2.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/cat/1_3.gif"><img src="assets/demos/story/cat/1_3.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/cat/2_4.gif"><img src="assets/demos/story/cat/2_4.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/cat/3_7.gif"><img src="assets/demos/story/cat/3_7.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/cat/4_3.gif"><img src="assets/demos/story/cat/4_3.gif" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/14c5f6f1-7830-46fc-9ebd-8611f339d8ab"><img src="https://github.com/user-attachments/assets/14c5f6f1-7830-46fc-9ebd-8611f339d8ab" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/705eb5c4-b084-4752-a47b-ab20d206b9ee"><img src="https://github.com/user-attachments/assets/705eb5c4-b084-4752-a47b-ab20d206b9ee" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/39a814b6-8692-41f5-819d-eecfd6085b03"><img src="https://github.com/user-attachments/assets/39a814b6-8692-41f5-819d-eecfd6085b03" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/e2b7297d-d0bb-482e-9c16-f01f9a56fbb0"><img src="https://github.com/user-attachments/assets/e2b7297d-d0bb-482e-9c16-f01f9a56fbb0" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/3afc9aa8-92f5-4e27-bfed-950300645748"><img src="https://github.com/user-attachments/assets/3afc9aa8-92f5-4e27-bfed-950300645748" width="240"></a></td>
   </tr>
   <tr>
     <td style="text-align:center;">The scene shows a peaceful village, with moonlight shining on the roofs and streets, creating a peaceful atmosphere.</td>
@@ -225,11 +221,11 @@ The 3D video VAE from VideoTuna can accurately compress and reconstruct the inpu
     <td style="text-align:center;">cat quietly leaves her home in the night and embarks on a path illuminated by the silver moonlight.</td>
   </tr>
   <tr>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/cat/8_8.gif"><img src="assets/demos/story/cat/8_8.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/cat/9_2.gif"><img src="assets/demos/story/cat/9_2.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/cat/11_0.gif"><img src="assets/demos/story/cat/11_0.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/cat/12_1.gif"><img src="assets/demos/story/cat/12_1.gif" width="240"></a></td>
-    <td><a href="https://github.com/VideoVerses/VideoTuna/blob/main/assets/demos/story/cat/15_9.gif"><img src="assets/demos/story/cat/15_9.gif" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/b055930e-4f97-4872-bc07-2e9cb5641d7d"><img src="https://github.com/user-attachments/assets/b055930e-4f97-4872-bc07-2e9cb5641d7d" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/ece35515-295d-4655-a5c5-cca95fd11e92"><img src="https://github.com/user-attachments/assets/ece35515-295d-4655-a5c5-cca95fd11e92" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/804e32f1-75ae-4a0b-b3c0-1d13c6e2d987"><img src="https://github.com/user-attachments/assets/804e32f1-75ae-4a0b-b3c0-1d13c6e2d987" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/e09d8134-7991-4585-a09a-b00283ab6a56"><img src="https://github.com/user-attachments/assets/e09d8134-7991-4585-a09a-b00283ab6a56" width="240"></a></td>
+    <td><a href="https://github.com/user-attachments/assets/4c722b97-79d9-4281-8451-b31eb3393c3a"><img src="https://github.com/user-attachments/assets/4c722b97-79d9-4281-8451-b31eb3393c3a" width="240"></a></td>
   </tr>
   <tr>
     <td style="text-align:center;">A group of forest elves dance around glowing mushrooms, their costumes and movements full of magic and vitality.</td>
