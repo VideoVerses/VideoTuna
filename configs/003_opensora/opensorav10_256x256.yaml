@@ -67,7 +67,7 @@ data:
         csv_path: Dataset/ToyDataset/toydataset.csv
         resolution: [256, 256]
         video_length: 16
-        frame_interval: 4
+        frame_interval: 3
         train: True
     validation:
       target: src.data.datasets.DatasetFromCSV
@@ -75,7 +75,7 @@ data:
         csv_path: Dataset/ToyDataset/toydataset.csv
         resolution: [256, 256]
         video_length: 16
-        frame_interval: 4
+        frame_interval: 3
         train: False
 
 lightning:
