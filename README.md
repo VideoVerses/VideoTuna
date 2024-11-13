@@ -362,16 +362,17 @@ After downloading, the model checkpoints should be placed as [Checkpoint Structu
 
 - Inference a specific model, run the corresponding commands as follows:
 
-Task|Models|Commands|
-|:---------|:---------|:---------|
-|T2V|CogvideoX|`bash shscripts/inference_cogVideo_diffusers.sh`|
-|T2V|Open Sora V1.0|`bash shscripts/inference_opensora_v10_16x256x256.sh`|
-|T2V|VideoCrafter-V2-320x512|`bash shscripts/inference_vc2_t2v_320x512.sh`|
-|T2V|VideoCrafter-V1-576x1024|`bash shscripts/inference_vc1_t2v_576x1024.sh`|
-|I2V|DynamiCrafter|`bash shscripts/inference_dc_i2v_576x1024.sh`|
-|I2V|VideoCrafter|`bash shscripts/inference_vc1_i2v_320x512.sh`|
-|T2I|Flux|`bash shscripts/inference_flux.sh`|
-
+Task|Models|Commands|Length(frame)|Resolution|Inference Time(s)|GPU Memory(GiB)|
+|:---------|:---------|:---------|:---------|:---------|:---------|:---------|
+|I2V|CogVideoX-5b-I2V|`bash shscripts/inference_cogVideo_i2v_diffusers.sh`|49|576x1024|310.4|4.78|
+|T2V|CogVideoX-2b|`bash shscripts/inference_cogVideo_t2v_diffusers.sh`|49|576x1024|107.6|2.32|
+|T2V|Open Sora V1.0|`bash shscripts/inference_opensora_v10_16x256x256.sh`|16|256x256|11.2|23.99|
+|T2V|VideoCrafter-V2-320x512|`bash shscripts/inference_vc2_t2v_320x512.sh`|16|320x512|26.4|10.03|
+|T2V|VideoCrafter-V1-576x1024|`bash shscripts/inference_vc1_t2v_576x1024.sh`|16|576x1024|91.4|14.57|
+|I2V|DynamiCrafter|`bash shscripts/inference_dc_i2v_576x1024.sh`|16|576x1024|101.7|52.23|
+|I2V|VideoCrafter-V1|`bash shscripts/inference_vc1_i2v_320x512.sh`|16|320x512|26.4|10.03|
+|T2I|Flux-dev|`bash shscripts/inference_flux.sh`|1|768x1360|238.1|1.18|
+|T2I|Flux-schnell|`bash shscripts/inference_flux.sh`|1|768x1360|5.4|1.20|
 
 ### 4. Finetune T2V models
 #### (1). Prepare Dataset
