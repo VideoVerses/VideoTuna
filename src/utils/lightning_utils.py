@@ -80,6 +80,19 @@ def _precision_allowed_type(x: Union[int, str]) -> Union[int, str]:
     except ValueError:
         return x
 
+def str_to_bool_or_str(val: str) -> Union[str, bool]:
+    """Possibly convert a string representation of truth to bool. Returns the input otherwise. Based on the python
+    implementation distutils.utils.strtobool.
+
+    True values are 'y', 'yes', 't', 'true', 'on', and '1'; false values are 'n', 'no', 'f', 'false', 'off', and '0'.
+    """
+    lower = val.lower()
+    if lower in ("y", "yes", "t", "true", "on", "1"):
+        return True
+    if lower in ("n", "no", "f", "false", "off", "0"):
+        return False
+    return val
+
 def str_to_bool(val: str) -> bool:
     """Convert a string representation of truth to bool.
     True values are 'y', 'yes', 't', 'true', 'on', and '1'; false values
