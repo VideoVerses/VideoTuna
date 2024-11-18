@@ -362,7 +362,7 @@ After downloading, the model checkpoints should be placed as [Checkpoint Structu
 
 - Inference a specific model, run the corresponding commands as follows:
 
-Task|Models|Commands|Length(frame)|Resolution|Inference Time(s)|GPU Memory(GiB)|
+Task|Model|Command|Length (#frames)|Resolution|Inference Time (s)|GPU Memory (GiB)|
 |:---------|:---------|:---------|:---------|:---------|:---------|:---------|
 |I2V|CogVideoX-5b-I2V|`bash shscripts/inference_cogVideo_i2v_diffusers.sh`|49|576x1024|310.4|4.78|
 |T2V|CogVideoX-2b|`bash shscripts/inference_cogVideo_t2v_diffusers.sh`|49|576x1024|107.6|2.32|
