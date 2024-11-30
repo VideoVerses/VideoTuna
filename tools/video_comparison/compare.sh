@@ -4,7 +4,7 @@ input_dir='inputs/t2v'
 save_dir='results/compare1/'
 seed=42
 unified_visualization_height=320
-inference_methods="videocrafter2;dynamicrafter;cogvideo—t2v;cogvideo—i2v;opensora"
+inference_methods="videocrafter2;dynamicrafter;cogvideo—t2v;cogvideo—i2v;opensora;mochi"
 
 #### check input ####
 # Check if the directory exists
@@ -26,7 +26,7 @@ python tools/video_comparison/check_input.py --input_dir=$input_dir --seed=$seed
 
 ################################ videocrafter2 ################################
 ckpt='checkpoints/videocrafter/t2v_v2_512/model.ckpt'
-config='configs/train/000_videocrafter2ft/config.yaml'
+config='configs/001_videocrafter2/vc2_t2v_320x512.yaml'
 prompt_file="${input_dir}/prompts.txt"
 height=320
 width=512
@@ -46,7 +46,7 @@ fi
 
 ################################ dynamicrafter ################################
 ckpt=checkpoints/dynamicrafter/i2v_576x1024/model.ckpt
-config=configs/train/002_dynamicrafterft_1024/config.yaml
+config=configs/002_dynamicrafter/dc_i2v_1024.yaml
 prompt_dir="${input_dir}"
 height=576
 width=1024
@@ -93,7 +93,7 @@ fi
 
 ################################ opensora ################################
 ckpt="checkpoints/open-sora/t2v_v10/OpenSora-v1-HQ-16x256x256.pth"
-config='configs/train/001_opensorav10/config_opensorav10.yaml'
+config='configs/003_opensora/opensorav10_256x256.yaml'
 height=256
 width=256
 fps=8
@@ -115,6 +115,25 @@ if [[ $inference_methods == *"opensora"* ]]; then
       --fps ${fps} \
       --frames 16
 fi
+
+################################ mochi ################################
+if [[ $inference_methods == *"mochi"* ]]; then
+  ckpt='genmo/mochi-1-preview'
+  prompt_file="${input_dir}/prompts.txt"
+  height=480
+  width=848
+  savedir="${save_dir}/t2v/mochi-${width}x${height}-28fps"
+
+  python3 scripts/inference_mochi.py \
+      --ckpt_path $ckpt \
+      --prompt_file $prompt_file \
+      --savedir $savedir \
+      --bs 1 --height $height --width $width \
+      --fps 28 \
+      --seed ${seed}
+fi
+
+
 
 #### combine video
 python3 tools/video_comparison/combine.py --save_dir=$save_dir --input_dir=$input_dir --unified_height=$unified_visualization_height

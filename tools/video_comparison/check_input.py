@@ -3,6 +3,7 @@ import argparse
 
 parser = argparse.ArgumentParser(description='Check the input directory')
 parser.add_argument('--input_dir', type=str, help='The input should be a directory', required=True)
+parser.add_argument('--seed', type=int, help='The seed for the random number generator', default=42)
 args = parser.parse_args()
 
 # check if there are images in the input directory, jpg/png...
@@ -26,6 +27,7 @@ else:
     for index, line in enumerate(lines):
         prompt = line.strip()
         print(f'creating image {index} using prompt: {prompt}')
+        
         out = pipe(
             prompt=prompt,
             guidance_scale=0.,
@@ -33,6 +35,7 @@ else:
             width=1024,
             num_inference_steps=4,
             max_sequence_length=256,
+            generator=torch.Generator("cuda").manual_seed(args.seed)
         ).images[0]
         index_str = str(index).zfill(5)
         out.save(f"{args.input_dir}/prompt_{index_str}.png")

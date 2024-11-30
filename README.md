@@ -295,6 +295,7 @@ VideoTuna/
 
 |T2V-Models|HxWxL|Checkpoints|
 |:---------|:---------|:--------|
+|Mochi|848x480, 3s|[Hugging Face](https://huggingface.co/genmo/mochi-1-preview)
 |CogVideoX-2B|720x480, 6s|[Hugging Face](https://huggingface.co/THUDM/CogVideoX-2b)
 |CogVideoX-5B|720x480, 6s|[Hugging Face](https://huggingface.co/THUDM/CogVideoX-5b)
 |Open-Sora 1.0|512×512x16|[Hugging Face](https://huggingface.co/hpcai-tech/Open-Sora/blob/main/OpenSora-v1-HQ-16x512x512.pth)
@@ -361,6 +362,7 @@ After downloading, the model checkpoints should be placed as [Checkpoint Structu
 
 Task|Model|Command|Length (#frames)|Resolution|Inference Time (s)|GPU Memory (GiB)|
 |:---------|:---------|:---------|:---------|:---------|:---------|:---------|
+|T2V|Mochi|`bash shscripts/inference_mochi.sh`|84|480x848|109.0|26|
 |I2V|CogVideoX-5b-I2V|`bash shscripts/inference_cogVideo_i2v_diffusers.sh`|49|576x1024|310.4|4.78|
 |T2V|CogVideoX-2b|`bash shscripts/inference_cogVideo_t2v_diffusers.sh`|49|576x1024|107.6|2.32|
 |T2V|Open Sora V1.0|`bash shscripts/inference_opensora_v10_16x256x256.sh`|16|256x256|11.2|23.99|
@@ -442,6 +444,7 @@ We support video alignment post-training to align human perference for video dif
 
 ## Acknowledgement
 We thank the following repos for sharing their awesome models and codes!
+* [Mochi](https://www.genmo.ai/blog): A new SOTA in open-source video generation models
 * [VideoCrafter2](https://github.com/AILab-CVC/VideoCrafter): Overcoming Data Limitations for High-Quality Video Diffusion Models
 * [VideoCrafter1](https://github.com/AILab-CVC/VideoCrafter): Open Diffusion Models for High-Quality Video Generation
 * [DynamiCrafter](https://github.com/Doubiiu/DynamiCrafter): Animating Open-domain Images with Video Diffusion Priors

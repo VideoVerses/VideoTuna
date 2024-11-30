@@ -38,4 +38,4 @@ https://github.com/Dao-AILab/flash-attention/releases/download/v2.6.3/flash_attn
 git+https://github.com/huggingface/diffusers
 open_clip_torch==2.12.0
 lmdeploy
-moviepy
+moviepy==1.0.2
