@@ -34,7 +34,7 @@ class DiagonalGaussianDistribution(object):
 
     def sample(self, noise=None):
         if noise is None:
-            noise = torch.randn(self.mean.shape)
+            noise = torch.randn_like(self.mean)
         
         x = self.mean + self.std * noise.to(device=self.parameters.device)
         return x
