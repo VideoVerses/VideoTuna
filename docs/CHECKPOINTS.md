@@ -17,6 +17,15 @@ git clone https://huggingface.co/THUDM/CogVideoX-5b         # This are checkpoin
 git clone https://huggingface.co/THUDM/CogVideoX-5b-I2V     # This are checkpoints for CogVideoX I2V-5B
 git clone https://huggingface.co/THUDM/CogVideoX1.5-5B-SAT  # This are checkpoints for CogVideoX 1.5-5B (both T2V and I2V)
 
+# ---- HunyuanVideo (diffusers) ----
+cd VideoTuna   # Make sure you are under the root path of VideoTuna
+python -m pip install "huggingface_hub[cli]"   # You may follow the instructions [here](https://huggingface.co/docs/huggingface_hub/guides/cli).
+huggingface-cli download tencent/HunyuanVideo --local-dir ./checkpoints/hunyuan
+cd checkpoints/hunyuan
+huggingface-cli download xtuner/llava-llama-3-8b-v1_1-transformers --local-dir ./llava-llama-3-8b-v1_1-transformers
+huggingface-cli download openai/clip-vit-large-patch14 --local-dir ./text_encoder_2
+cd ../..
+python src/hyvideo/utils/preprocess_text_encoder_tokenizer_utils.py --input_dir checkpoints/hunyuan/llava-llama-3-8b-v1_1-transformers --output_dir checkpoints/hunyuan/text_encoder
 
 # ---- Open-Sora ----
 mkdir -p checkpoints/open-sora/t2v_v10
@@ -83,7 +92,12 @@ VideoTuna/
         ├── cogvideo/
         │   └── CogVideoX-2b/   
         │   └── CogVideoX-5b/        
-        │   └── CogVideoX-5b-I2V/        
+        │   └── CogVideoX-5b-I2V/
+        ├── hunyuan/
+        │   └── hunyuan-video-t2v-720p/
+        │   └── llava-llama-3-8b-v1_1-transformers/
+        │   └── text_encoder
+        │   └── text_encoder_2
         ├── dynamicrafter/
         │   └── i2v_576x1024/
         │       └── model.ckpt

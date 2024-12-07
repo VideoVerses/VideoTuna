@@ -8,6 +8,7 @@ fire==0.6.0
 torch==2.2.2
 ftfy==6.2.3
 huggingface_hub==0.24.6
+loguru==0.7.2
 imwatermark==0.0.2
 kornia==0.7.3
 mmengine==0.10.4
