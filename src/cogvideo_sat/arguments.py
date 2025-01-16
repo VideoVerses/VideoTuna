@@ -264,6 +264,7 @@ def getArgs():
     args.input_type = parser.parse_args().input_type
     args.input_file = parser.parse_args().input_file
     args.output_dir = parser.parse_args().output_dir
+    args.image_folder = parser.parse_args().image_folder
     args.batch_size = 1
     args.bf16 = True
 
