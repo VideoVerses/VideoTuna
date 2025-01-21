@@ -1,6 +1,6 @@
-from videotuna.third_party.flux.webhooks.handler import WebhookHandler
-from videotuna.third_party.flux.training.state_tracker import StateTracker
 from videotuna.third_party.flux.training.multi_process import _get_rank as get_rank
+from videotuna.third_party.flux.training.state_tracker import StateTracker
+from videotuna.third_party.flux.webhooks.handler import WebhookHandler
 
 current_rank = get_rank()
 

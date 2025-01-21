@@ -1,6 +1,7 @@
-import os
-import toml
 import logging
+import os
+
+import toml
 
 # Set up logging
 from videotuna.third_party.flux.training.multi_process import _get_rank

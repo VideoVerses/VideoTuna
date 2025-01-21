@@ -1,11 +1,13 @@
+import json
 import os
 import os.path as osp
-import pandas as pd
-import fire
-import json
 from pathlib import Path
-import cv2 
+
+import cv2
+import fire
+import pandas as pd
 from tqdm import tqdm
+
 
 def read_video_meta(video_path):
     # Video fps
@@ -34,7 +36,9 @@ def get_video_data(video_root):
                 if len(os.listdir(sub_sub_path)) == 0:
                     continue
 
-                with open(sub_sub_path / f"{sub_sub_path.name}_cut_meta.json", "r") as f:
+                with open(
+                    sub_sub_path / f"{sub_sub_path.name}_cut_meta.json", "r"
+                ) as f:
                     video_meta = json.load(f)
 
                 for clip_meta in video_meta["clips"]:
@@ -45,6 +49,7 @@ def get_video_data(video_root):
 
             except Exception as e:
                 import traceback
+
                 traceback.print_exc()
 
     return video_dict
@@ -56,7 +61,7 @@ def main(input_path, output_path, video_root):
 
     video_dict = get_video_data(video_root)
     data_list = []
-    
+
     for i, line in tqdm(enumerate(lines)):
         data = json.loads(line)  # parse json file
 
@@ -67,17 +72,19 @@ def main(input_path, output_path, video_root):
 
         # concat captions
         caption_data = data["caption"]
-        caption = ''
+        caption = ""
         for caption_keys in caption_data.keys():
             caption_id = caption_keys
             caption_text = caption_data[caption_keys]
-            if not caption_text.endswith('.'):
-                caption_text += '.'
-            caption += caption_text + ' '
-        video_meta['caption'] = caption
+            if not caption_text.endswith("."):
+                caption_text += "."
+            caption += caption_text + " "
+        video_meta["caption"] = caption
         data_list.append(video_meta)
 
-    df = pd.DataFrame(data_list, columns=["path", "caption", "fps", "frames", "height", "width"])
+    df = pd.DataFrame(
+        data_list, columns=["path", "caption", "fps", "frames", "height", "width"]
+    )
 
     df.to_csv(output_path, index=False)
 

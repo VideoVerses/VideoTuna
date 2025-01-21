@@ -69,7 +69,7 @@ hpsv2 = {git = "https://github.com/tgxs002/HPSv2.git"}
 backports-tarfile = "^1.2.0"
 swissarmytransformer = {git = "https://github.com/JingyeChen/SwissArmyTransformer"}
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 black = "^24.0.0"
 isort = "^5.12.0"
 mypy = "^1.11.2"

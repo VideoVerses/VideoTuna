@@ -1,12 +1,10 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 # This file is modified from https://github.com/Res2Net/Res2Net-detectron2/blob/master/detectron2/modeling/backbone/resnet.py
 # The original file is under Apache-2.0 License
-import numpy as np
 import fvcore.nn.weight_init as weight_init
+import numpy as np
 import torch
 import torch.nn.functional as F
-from torch import nn
-
 from detectron2.layers import (
     CNNBlockBase,
     Conv2d,
@@ -15,12 +13,13 @@ from detectron2.layers import (
     ShapeSpec,
     get_norm,
 )
-
 from detectron2.modeling.backbone import Backbone
-from detectron2.modeling.backbone.fpn import FPN 
 from detectron2.modeling.backbone.build import BACKBONE_REGISTRY
-from .fpn_p5 import LastLevelP6P7_P5
+from detectron2.modeling.backbone.fpn import FPN
+from torch import nn
+
 from .bifpn import BiFPN
+from .fpn_p5 import LastLevelP6P7_P5
 
 __all__ = [
     "ResNetBlockBase",
@@ -124,7 +123,7 @@ class BottleneckBlock(CNNBlockBase):
         norm="BN",
         stride_in_1x1=False,
         dilation=1,
-        basewidth=26, 
+        basewidth=26,
         scale=4,
     ):
         """
@@ -142,8 +141,12 @@ class BottleneckBlock(CNNBlockBase):
 
         if in_channels != out_channels:
             self.shortcut = nn.Sequential(
-                nn.AvgPool2d(kernel_size=stride, stride=stride, 
-                    ceil_mode=True, count_include_pad=False),
+                nn.AvgPool2d(
+                    kernel_size=stride,
+                    stride=stride,
+                    ceil_mode=True,
+                    count_include_pad=False,
+                ),
                 Conv2d(
                     in_channels,
                     out_channels,
@@ -151,7 +154,7 @@ class BottleneckBlock(CNNBlockBase):
                     stride=1,
                     bias=False,
                     norm=get_norm(norm, out_channels),
-                )
+                ),
             )
         else:
             self.shortcut = None
@@ -160,7 +163,7 @@ class BottleneckBlock(CNNBlockBase):
         # The subsequent fb.torch.resnet and Caffe2 ResNe[X]t implementations have
         # stride in the 3x3 conv
         stride_1x1, stride_3x3 = (stride, 1) if stride_in_1x1 else (1, stride)
-        width = bottleneck_channels//scale
+        width = bottleneck_channels // scale
 
         self.conv1 = Conv2d(
             in_channels,
@@ -171,25 +174,27 @@ class BottleneckBlock(CNNBlockBase):
             norm=get_norm(norm, bottleneck_channels),
         )
         if scale == 1:
-          self.nums = 1
+            self.nums = 1
         else:
-          self.nums = scale -1
-        if self.in_channels!=self.out_channels and stride_3x3!=2:
-            self.pool = nn.AvgPool2d(kernel_size=3, stride = stride_3x3, padding=1)
+            self.nums = scale - 1
+        if self.in_channels != self.out_channels and stride_3x3 != 2:
+            self.pool = nn.AvgPool2d(kernel_size=3, stride=stride_3x3, padding=1)
 
         convs = []
         bns = []
         for i in range(self.nums):
-            convs.append(nn.Conv2d(
-                            width, 
-                            width, 
-                            kernel_size=3, 
-                            stride=stride_3x3, 
-                            padding=1 * dilation, 
-                            bias=False,
-                            groups=num_groups,
-                            dilation=dilation,
-                            ))
+            convs.append(
+                nn.Conv2d(
+                    width,
+                    width,
+                    kernel_size=3,
+                    stride=stride_3x3,
+                    padding=1 * dilation,
+                    bias=False,
+                    groups=num_groups,
+                    dilation=dilation,
+                )
+            )
             bns.append(get_norm(norm, width))
         self.convs = nn.ModuleList(convs)
         self.bns = nn.ModuleList(bns)
@@ -213,7 +218,7 @@ class BottleneckBlock(CNNBlockBase):
             for layer in self.shortcut.modules():
                 if isinstance(layer, Conv2d):
                     weight_init.c2_msra_fill(layer)
-                
+
         for layer in self.convs:
             if layer is not None:  # shortcut can be None
                 weight_init.c2_msra_fill(layer)
@@ -236,19 +241,19 @@ class BottleneckBlock(CNNBlockBase):
 
         spx = torch.split(out, self.width, 1)
         for i in range(self.nums):
-            if i==0 or self.in_channels!=self.out_channels:
+            if i == 0 or self.in_channels != self.out_channels:
                 sp = spx[i]
             else:
                 sp = sp + spx[i]
             sp = self.convs[i](sp)
             sp = F.relu_(self.bns[i](sp))
-            if i==0:
+            if i == 0:
                 out = sp
             else:
                 out = torch.cat((out, sp), 1)
-        if self.scale!=1 and self.stride_3x3==1:
+        if self.scale != 1 and self.stride_3x3 == 1:
             out = torch.cat((out, spx[self.nums]), 1)
-        elif self.scale != 1 and self.stride_3x3==2:
+        elif self.scale != 1 and self.stride_3x3 == 2:
             out = torch.cat((out, self.pool(spx[self.nums])), 1)
 
         out = self.conv3(out)
@@ -282,7 +287,7 @@ class DeformBottleneckBlock(ResNetBlockBase):
         dilation=1,
         deform_modulated=False,
         deform_num_groups=1,
-        basewidth=26, 
+        basewidth=26,
         scale=4,
     ):
         super().__init__(in_channels, out_channels, stride)
@@ -298,8 +303,12 @@ class DeformBottleneckBlock(ResNetBlockBase):
             #     norm=get_norm(norm, out_channels),
             # )
             self.shortcut = nn.Sequential(
-                nn.AvgPool2d(kernel_size=stride, stride=stride, 
-                    ceil_mode=True, count_include_pad=False),
+                nn.AvgPool2d(
+                    kernel_size=stride,
+                    stride=stride,
+                    ceil_mode=True,
+                    count_include_pad=False,
+                ),
                 Conv2d(
                     in_channels,
                     out_channels,
@@ -307,13 +316,13 @@ class DeformBottleneckBlock(ResNetBlockBase):
                     stride=1,
                     bias=False,
                     norm=get_norm(norm, out_channels),
-                )
+                ),
             )
         else:
             self.shortcut = None
 
         stride_1x1, stride_3x3 = (stride, 1) if stride_in_1x1 else (1, stride)
-        width = bottleneck_channels//scale
+        width = bottleneck_channels // scale
 
         self.conv1 = Conv2d(
             in_channels,
@@ -325,11 +334,11 @@ class DeformBottleneckBlock(ResNetBlockBase):
         )
 
         if scale == 1:
-          self.nums = 1
+            self.nums = 1
         else:
-          self.nums = scale -1
-        if self.in_channels!=self.out_channels and stride_3x3!=2:
-            self.pool = nn.AvgPool2d(kernel_size=3, stride = stride_3x3, padding=1)
+            self.nums = scale - 1
+        if self.in_channels != self.out_channels and stride_3x3 != 2:
+            self.pool = nn.AvgPool2d(kernel_size=3, stride=stride_3x3, padding=1)
 
         if deform_modulated:
             deform_conv_op = ModulatedDeformConv
@@ -364,27 +373,31 @@ class DeformBottleneckBlock(ResNetBlockBase):
         convs = []
         bns = []
         for i in range(self.nums):
-            conv2_offsets.append(Conv2d(
-                            width, 
-                            offset_channels * deform_num_groups, 
-                            kernel_size=3, 
-                            stride=stride_3x3, 
-                            padding=1 * dilation, 
-                            bias=False,
-                            groups=num_groups,
-                            dilation=dilation,
-                            ))
-            convs.append(deform_conv_op(
-                            width, 
-                            width, 
-                            kernel_size=3, 
-                            stride=stride_3x3, 
-                            padding=1 * dilation, 
-                            bias=False,
-                            groups=num_groups,
-                            dilation=dilation,
-                            deformable_groups=deform_num_groups,
-                            ))
+            conv2_offsets.append(
+                Conv2d(
+                    width,
+                    offset_channels * deform_num_groups,
+                    kernel_size=3,
+                    stride=stride_3x3,
+                    padding=1 * dilation,
+                    bias=False,
+                    groups=num_groups,
+                    dilation=dilation,
+                )
+            )
+            convs.append(
+                deform_conv_op(
+                    width,
+                    width,
+                    kernel_size=3,
+                    stride=stride_3x3,
+                    padding=1 * dilation,
+                    bias=False,
+                    groups=num_groups,
+                    dilation=dilation,
+                    deformable_groups=deform_num_groups,
+                )
+            )
             bns.append(get_norm(norm, width))
         self.conv2_offsets = nn.ModuleList(conv2_offsets)
         self.convs = nn.ModuleList(convs)
@@ -415,7 +428,7 @@ class DeformBottleneckBlock(ResNetBlockBase):
             for layer in self.shortcut.modules():
                 if isinstance(layer, Conv2d):
                     weight_init.c2_msra_fill(layer)
-                
+
         for layer in self.convs:
             if layer is not None:  # shortcut can be None
                 weight_init.c2_msra_fill(layer)
@@ -443,11 +456,11 @@ class DeformBottleneckBlock(ResNetBlockBase):
 
         spx = torch.split(out, self.width, 1)
         for i in range(self.nums):
-            if i==0 or self.in_channels!=self.out_channels:
+            if i == 0 or self.in_channels != self.out_channels:
                 sp = spx[i].contiguous()
             else:
                 sp = sp + spx[i].contiguous()
-            
+
             # sp = self.convs[i](sp)
             if self.deform_modulated:
                 offset_mask = self.conv2_offsets[i](sp)
@@ -459,13 +472,13 @@ class DeformBottleneckBlock(ResNetBlockBase):
                 offset = self.conv2_offsets[i](sp)
                 sp = self.convs[i](sp, offset)
             sp = F.relu_(self.bns[i](sp))
-            if i==0:
+            if i == 0:
                 out = sp
             else:
                 out = torch.cat((out, sp), 1)
-        if self.scale!=1 and self.stride_3x3==1:
+        if self.scale != 1 and self.stride_3x3 == 1:
             out = torch.cat((out, spx[self.nums]), 1)
-        elif self.scale != 1 and self.stride_3x3==2:
+        elif self.scale != 1 and self.stride_3x3 == 2:
             out = torch.cat((out, self.pool(spx[self.nums])), 1)
 
         out = self.conv3(out)
@@ -480,7 +493,9 @@ class DeformBottleneckBlock(ResNetBlockBase):
         return out
 
 
-def make_stage(block_class, num_blocks, first_stride, *, in_channels, out_channels, **kwargs):
+def make_stage(
+    block_class, num_blocks, first_stride, *, in_channels, out_channels, **kwargs
+):
     """
     Create a list of blocks just like those in a ResNet stage.
     Args:
@@ -529,7 +544,7 @@ class BasicStem(CNNBlockBase):
                 stride=2,
                 padding=1,
                 bias=False,
-                ),
+            ),
             get_norm(norm, 32),
             nn.ReLU(inplace=True),
             Conv2d(
@@ -539,7 +554,7 @@ class BasicStem(CNNBlockBase):
                 stride=1,
                 padding=1,
                 bias=False,
-                ),
+            ),
             get_norm(norm, 32),
             nn.ReLU(inplace=True),
             Conv2d(
@@ -549,7 +564,7 @@ class BasicStem(CNNBlockBase):
                 stride=1,
                 padding=1,
                 bias=False,
-                ),
+            ),
         )
         self.bn1 = get_norm(norm, out_channels)
 
@@ -619,7 +634,9 @@ class ResNet(Backbone):
         assert len(self._out_features)
         children = [x[0] for x in self.named_children()]
         for out_feature in self._out_features:
-            assert out_feature in children, "Available children: {}".format(", ".join(children))
+            assert out_feature in children, "Available children: {}".format(
+                ", ".join(children)
+            )
 
     def forward(self, x):
         outputs = {}
@@ -641,7 +658,8 @@ class ResNet(Backbone):
     def output_shape(self):
         return {
             name: ShapeSpec(
-                channels=self._out_feature_channels[name], stride=self._out_feature_strides[name]
+                channels=self._out_feature_channels[name],
+                stride=self._out_feature_strides[name],
             )
             for name in self._out_features
         }
@@ -708,18 +726,24 @@ def build_res2net_backbone(cfg, input_shape):
     }[depth]
 
     if depth in [18, 34]:
-        assert out_channels == 64, "Must set MODEL.RESNETS.RES2_OUT_CHANNELS = 64 for R18/R34"
+        assert (
+            out_channels == 64
+        ), "Must set MODEL.RESNETS.RES2_OUT_CHANNELS = 64 for R18/R34"
         assert not any(
             deform_on_per_stage
         ), "MODEL.RESNETS.DEFORM_ON_PER_STAGE unsupported for R18/R34"
-        assert res5_dilation == 1, "Must set MODEL.RESNETS.RES5_DILATION = 1 for R18/R34"
+        assert (
+            res5_dilation == 1
+        ), "Must set MODEL.RESNETS.RES5_DILATION = 1 for R18/R34"
         assert num_groups == 1, "Must set MODEL.RESNETS.NUM_GROUPS = 1 for R18/R34"
 
     stages = []
 
     # Avoid creating variables without gradients
     # It consumes extra memory and may cause allreduce to fail
-    out_stage_idx = [{"res2": 2, "res3": 3, "res4": 4, "res5": 5}[f] for f in out_features]
+    out_stage_idx = [
+        {"res2": 2, "res3": 3, "res4": 4, "res5": 5}[f] for f in out_features
+    ]
     max_stage_idx = max(out_stage_idx)
     for idx, stage_idx in enumerate(range(2, max_stage_idx + 1)):
         dilation = res5_dilation if stage_idx == 5 else 1

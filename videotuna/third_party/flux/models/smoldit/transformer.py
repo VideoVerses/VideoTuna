@@ -15,8 +15,6 @@ from typing import Optional, Tuple
 
 import torch
 import torch.nn.functional as F
-from torch import nn
-
 from diffusers.configuration_utils import ConfigMixin, register_to_config
 from diffusers.models.attention import FeedForward
 from diffusers.models.embeddings import (
@@ -31,7 +29,7 @@ from diffusers.models.modeling_utils import ModelMixin
 from diffusers.models.normalization import AdaLayerNormContinuous, FP32LayerNorm
 from diffusers.models.transformers.hunyuan_transformer_2d import AdaLayerNormShift
 from diffusers.utils import logging
-
+from torch import nn
 
 logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 

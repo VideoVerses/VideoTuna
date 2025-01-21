@@ -1,62 +1,77 @@
-import huggingface_hub
-from videotuna.third_party.flux.training.default_settings.safety_check import safety_check
-from videotuna.third_party.flux.publishing.huggingface import HubManager
-from configure import model_labels
-import shutil
+import copy
+import glob
 import hashlib
 import json
-import copy
-import random
 import logging
 import math
 import os
+import random
+import shutil
 import sys
-import glob
-import wandb
+
+import huggingface_hub
 import torch
+import wandb
+from configure import model_labels
+
+from videotuna.third_party.flux.publishing.huggingface import HubManager
+from videotuna.third_party.flux.training.default_settings.safety_check import (
+    safety_check,
+)
 
 # Quiet down, you.
 os.environ["ACCELERATE_LOG_LEVEL"] = "WARNING"
+from accelerate.logging import get_logger
+from diffusers.models.embeddings import get_2d_rotary_pos_embed
+
 from videotuna.third_party.flux import log_format  # noqa
-from videotuna.third_party.flux.configuration.loader import load_config
 from videotuna.third_party.flux.caching.memory import reclaim_memory
-from videotuna.third_party.flux.training.multi_process import _get_rank as get_rank
-from videotuna.third_party.flux.training.validation import Validation, prepare_validation_prompt_list
-from videotuna.third_party.flux.training.state_tracker import StateTracker
-from videotuna.third_party.flux.training.schedulers import load_scheduler_from_args
-from videotuna.third_party.flux.training.custom_schedule import get_lr_scheduler
-from videotuna.third_party.flux.training.adapter import determine_adapter_target_modules, load_lora_weights
-from videotuna.third_party.flux.training.diffusion_model import load_diffusion_model
-from videotuna.third_party.flux.training.text_encoding import (
-    load_tes,
-    determine_te_path_subfolder,
-    import_model_class_from_model_name_or_path,
-    get_tokenizers,
+from videotuna.third_party.flux.configuration.loader import load_config
+from videotuna.third_party.flux.data_backend.factory import (
+    BatchFetcher,
+    configure_multi_databackend,
+    random_dataloader_iterator,
 )
-from videotuna.third_party.flux.training.optimizer_param import (
-    determine_optimizer_class_with_config,
-    determine_params_to_optimize,
-    is_lr_scheduler_disabled,
-    cpu_offload_optimizer,
+from videotuna.third_party.flux.models.smoldit import get_resize_crop_region_for_grid
+from videotuna.third_party.flux.training import steps_remaining_in_epoch
+from videotuna.third_party.flux.training.adapter import (
+    determine_adapter_target_modules,
+    load_lora_weights,
 )
-from videotuna.third_party.flux.data_backend.factory import BatchFetcher
+from videotuna.third_party.flux.training.custom_schedule import (
+    generate_timestep_weights,
+    get_lr_scheduler,
+    segmented_timestep_selection,
+)
 from videotuna.third_party.flux.training.deepspeed import (
     deepspeed_zero_init_disabled_context_manager,
     prepare_model_for_deepspeed,
 )
-from videotuna.third_party.flux.training.wrappers import unwrap_model
-from videotuna.third_party.flux.data_backend.factory import configure_multi_databackend
-from videotuna.third_party.flux.data_backend.factory import random_dataloader_iterator
-from videotuna.third_party.flux.training import steps_remaining_in_epoch
-from videotuna.third_party.flux.training.custom_schedule import (
-    generate_timestep_weights,
-    segmented_timestep_selection,
-)
+from videotuna.third_party.flux.training.diffusion_model import load_diffusion_model
 from videotuna.third_party.flux.training.min_snr_gamma import compute_snr
-from videotuna.third_party.flux.training.peft_init import init_lokr_network_with_perturbed_normal
-from accelerate.logging import get_logger
-from diffusers.models.embeddings import get_2d_rotary_pos_embed
-from videotuna.third_party.flux.models.smoldit import get_resize_crop_region_for_grid
+from videotuna.third_party.flux.training.multi_process import _get_rank as get_rank
+from videotuna.third_party.flux.training.optimizer_param import (
+    cpu_offload_optimizer,
+    determine_optimizer_class_with_config,
+    determine_params_to_optimize,
+    is_lr_scheduler_disabled,
+)
+from videotuna.third_party.flux.training.peft_init import (
+    init_lokr_network_with_perturbed_normal,
+)
+from videotuna.third_party.flux.training.schedulers import load_scheduler_from_args
+from videotuna.third_party.flux.training.state_tracker import StateTracker
+from videotuna.third_party.flux.training.text_encoding import (
+    determine_te_path_subfolder,
+    get_tokenizers,
+    import_model_class_from_model_name_or_path,
+    load_tes,
+)
+from videotuna.third_party.flux.training.validation import (
+    Validation,
+    prepare_validation_prompt_list,
+)
+from videotuna.third_party.flux.training.wrappers import unwrap_model
 
 logger = get_logger(
     "SimpleTuner", log_level=os.environ.get("SIMPLETUNER_LOG_LEVEL", "INFO")
@@ -75,12 +90,12 @@ training_logger.setLevel(training_logger_level)
 # Less important logs.
 filelock_logger.setLevel("WARNING")
 connection_logger.setLevel("WARNING")
-import torch
-import diffusers
 import accelerate
-import transformers
+import diffusers
+import torch
 import torch.nn.functional as F
 import torch.utils.checkpoint
+import transformers
 from accelerate import Accelerator
 from accelerate.utils import set_seed
 from configure import model_classes
@@ -90,42 +105,40 @@ try:
     from lycoris import LycorisNetwork
 except:
     print("[ERROR] Lycoris not available. Please install ")
-from tqdm.auto import tqdm
-from transformers import PretrainedConfig, CLIPTokenizer
-from videotuna.third_party.flux.models.sdxl.pipeline import StableDiffusionXLPipeline
-from diffusers import StableDiffusion3Pipeline
-
 from diffusers import (
     AutoencoderKL,
     ControlNetModel,
     DDIMScheduler,
     DDPMScheduler,
-    UNet2DConditionModel,
+    EulerAncestralDiscreteScheduler,
+    EulerDiscreteScheduler,
     FluxTransformer2DModel,
     PixArtTransformer2DModel,
-    EulerDiscreteScheduler,
-    EulerAncestralDiscreteScheduler,
+    StableDiffusion3Pipeline,
+    UNet2DConditionModel,
     UniPCMultistepScheduler,
 )
-
-from peft import LoraConfig
-from peft.utils import get_peft_model_state_dict
-from videotuna.third_party.flux.training.ema import EMAModel
 from diffusers.utils import (
     check_min_version,
     convert_state_dict_to_diffusers,
     is_wandb_available,
 )
 from diffusers.utils.import_utils import is_xformers_available
+from peft import LoraConfig
+from peft.utils import get_peft_model_state_dict
+from tqdm.auto import tqdm
+from transformers import CLIPTokenizer, PretrainedConfig
 from transformers.utils import ContextManagers
 
 from videotuna.third_party.flux.models.flux import (
-    prepare_latent_image_ids,
-    pack_latents,
-    unpack_latents,
-    get_mobius_guidance,
     apply_flux_schedule_shift,
+    get_mobius_guidance,
+    pack_latents,
+    prepare_latent_image_ids,
+    unpack_latents,
 )
+from videotuna.third_party.flux.models.sdxl.pipeline import StableDiffusionXLPipeline
+from videotuna.third_party.flux.training.ema import EMAModel
 
 is_optimi_available = False
 try:
@@ -955,7 +968,9 @@ class Trainer:
 
     def init_post_load_freeze(self):
         if self.config.layer_freeze_strategy == "bitfit":
-            from videotuna.third_party.flux.training.model_freeze import apply_bitfit_freezing
+            from videotuna.third_party.flux.training.model_freeze import (
+                apply_bitfit_freezing,
+            )
 
             if self.unet is not None:
                 logger.info("Applying BitFit freezing strategy to the U-net.")
@@ -2312,7 +2327,9 @@ class Trainer:
                         elif self.config.flow_matching_loss == "compatible":
                             target = noise - latents
                         elif self.config.flow_matching_loss == "sd35":
-                            sigma_reshaped = sigmas.view(-1, 1, 1, 1)  # Ensure sigma has the correct shape
+                            sigma_reshaped = sigmas.view(
+                                -1, 1, 1, 1
+                            )  # Ensure sigma has the correct shape
                             target = (noisy_latents - latents) / sigma_reshaped
 
                     elif self.noise_scheduler.config.prediction_type == "epsilon":
@@ -3046,7 +3063,9 @@ class Trainer:
                         torch_dtype=self.config.weight_dtype,
                     )
                 elif self.config.model_family == "smoldit":
-                    from videotuna.third_party.flux.models.smoldit import SmolDiTPipeline
+                    from videotuna.third_party.flux.models.smoldit import (
+                        SmolDiTPipeline,
+                    )
 
                     self.pipeline = SmolDiTPipeline(
                         text_encoder=self.text_encoder_1

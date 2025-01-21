@@ -1,6 +1,5 @@
-import torch
-
 import optimum
+import torch
 
 if torch.cuda.is_available():
     # the marlin fp8 kernel needs some help with dtype casting for some reason

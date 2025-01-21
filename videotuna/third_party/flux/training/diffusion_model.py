@@ -1,4 +1,5 @@
 import os
+
 from accelerate.logging import get_logger
 
 logger = get_logger(__name__, log_level=os.environ.get("SIMPLETUNER_LOG_LEVEL", "INFO"))
@@ -52,8 +53,8 @@ def load_diffusion_model(args, weight_dtype):
     elif (
         args.model_family.lower() == "flux" and not args.flux_attention_masked_training
     ):
-        from diffusers.models import FluxTransformer2DModel
         import torch
+        from diffusers.models import FluxTransformer2DModel
 
         if torch.cuda.is_available():
             rank = (
@@ -64,8 +65,8 @@ def load_diffusion_model(args, weight_dtype):
             primary_device = torch.cuda.get_device_properties(0)
             if primary_device.major >= 9:
                 try:
-                    from flash_attn_interface import flash_attn_func
                     import diffusers
+                    from flash_attn_interface import flash_attn_func
 
                     from videotuna.third_party.flux.models.flux.attention import (
                         FluxAttnProcessor3_0,
@@ -117,7 +118,10 @@ def load_diffusion_model(args, weight_dtype):
         if args.validation_noise_scheduler is None:
             args.validation_noise_scheduler = "ddpm"
         transformer_variant = None
-        from videotuna.third_party.flux.models.smoldit import SmolDiT2DModel, SmolDiTConfigurations
+        from videotuna.third_party.flux.models.smoldit import (
+            SmolDiT2DModel,
+            SmolDiTConfigurations,
+        )
 
         if args.smoldit_config not in SmolDiTConfigurations:
             raise ValueError(

@@ -1,12 +1,13 @@
-import torch
+import contextlib
 import copy
 import logging
 import os
-import contextlib
-import transformers
 from typing import Any, Dict, Iterable, Optional, Union
-from diffusers.utils.deprecation_utils import deprecate
+
+import torch
+import transformers
 from diffusers.utils import is_transformers_available
+from diffusers.utils.deprecation_utils import deprecate
 
 logger = logging.getLogger("EMAModel")
 logger.setLevel(os.environ.get("SIMPLETUNER_LOG_LEVEL", "INFO"))

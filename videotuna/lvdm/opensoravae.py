@@ -1,19 +1,22 @@
 import os
-import torch
-import torch.nn as nn
-from diffusers.models import AutoencoderKL, AutoencoderKLTemporalDecoder
-from einops import rearrange
 from typing import Optional, Union
 
-import torch.nn.functional as F
 import pytorch_lightning as pl
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from diffusers.models import AutoencoderKL, AutoencoderKLTemporalDecoder
+from einops import rearrange
+
 from videotuna.base.distributions import DiagonalGaussianDistribution
 
 
 class VideoAutoencoderKL(pl.LightningModule):
-    def __init__(self,
-                from_pretrained: Optional[Union[str, os.PathLike]] = None,
-                micro_batch_size: int = None):
+    def __init__(
+        self,
+        from_pretrained: Optional[Union[str, os.PathLike]] = None,
+        micro_batch_size: int = None,
+    ):
         super().__init__()
         self.module = AutoencoderKL.from_pretrained(from_pretrained)
         self.out_channels = self.module.config.latent_channels
@@ -57,6 +60,8 @@ class VideoAutoencoderKL(pl.LightningModule):
 
     def get_latent_size(self, input_size):
         for i in range(3):
-            assert input_size[i] % self.patch_size[i] == 0, "Input size must be divisible by patch size"
+            assert (
+                input_size[i] % self.patch_size[i] == 0
+            ), "Input size must be divisible by patch size"
         input_size = [input_size[i] // self.patch_size[i] for i in range(3)]
-        return input_size 
+        return input_size

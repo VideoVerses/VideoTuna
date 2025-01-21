@@ -1,43 +1,57 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Modified by Jialian Wu from https://github.com/facebookresearch/Detic/blob/main/detic/data/custom_dataset_dataloader.py
+import itertools
 import operator
+from typing import Optional
+
 import torch
 import torch.utils.data
-from detectron2.utils.comm import get_world_size
-
 from detectron2.config import configurable
-from torch.utils.data.sampler import BatchSampler, Sampler
+from detectron2.data.build import (
+    build_batch_data_loader,
+    check_metadata_consistency,
+    filter_images_with_few_keypoints,
+    filter_images_with_only_crowd_annotations,
+    get_detection_dataset_dicts,
+    print_instances_class_histogram,
+    worker_init_reset_seed,
+)
+from detectron2.data.catalog import DatasetCatalog, MetadataCatalog
 from detectron2.data.common import DatasetFromList, MapDataset
 from detectron2.data.dataset_mapper import DatasetMapper
-from detectron2.data.build import get_detection_dataset_dicts, build_batch_data_loader
 from detectron2.data.samplers import TrainingSampler
-from detectron2.data.build import worker_init_reset_seed, print_instances_class_histogram
-from detectron2.data.build import filter_images_with_only_crowd_annotations
-from detectron2.data.build import filter_images_with_few_keypoints
-from detectron2.data.build import check_metadata_consistency
-from detectron2.data.catalog import MetadataCatalog, DatasetCatalog
 from detectron2.utils import comm
-import itertools
-from typing import Optional
+from detectron2.utils.comm import get_world_size
+from torch.utils.data.sampler import BatchSampler, Sampler
 
 
 def _custom_train_loader_from_config(cfg, mapper=None, *, dataset=None, sampler=None):
     sampler_name = cfg.DATALOADER.SAMPLER_TRAIN
-    if 'MultiDataset' in sampler_name:
+    if "MultiDataset" in sampler_name:
         dataset_dicts = get_detection_dataset_dicts_with_source(
             cfg.DATASETS.TRAIN,
             filter_empty=cfg.DATALOADER.FILTER_EMPTY_ANNOTATIONS,
-            min_keypoints=cfg.MODEL.ROI_KEYPOINT_HEAD.MIN_KEYPOINTS_PER_IMAGE
-            if cfg.MODEL.KEYPOINT_ON else 0,
-            proposal_files=cfg.DATASETS.PROPOSAL_FILES_TRAIN if cfg.MODEL.LOAD_PROPOSALS else None,
+            min_keypoints=(
+                cfg.MODEL.ROI_KEYPOINT_HEAD.MIN_KEYPOINTS_PER_IMAGE
+                if cfg.MODEL.KEYPOINT_ON
+                else 0
+            ),
+            proposal_files=(
+                cfg.DATASETS.PROPOSAL_FILES_TRAIN if cfg.MODEL.LOAD_PROPOSALS else None
+            ),
         )
     else:
         dataset_dicts = get_detection_dataset_dicts(
             cfg.DATASETS.TRAIN,
             filter_empty=cfg.DATALOADER.FILTER_EMPTY_ANNOTATIONS,
-            min_keypoints=cfg.MODEL.ROI_KEYPOINT_HEAD.MIN_KEYPOINTS_PER_IMAGE
-            if cfg.MODEL.KEYPOINT_ON else 0,
-            proposal_files=cfg.DATASETS.PROPOSAL_FILES_TRAIN if cfg.MODEL.LOAD_PROPOSALS else None,
+            min_keypoints=(
+                cfg.MODEL.ROI_KEYPOINT_HEAD.MIN_KEYPOINTS_PER_IMAGE
+                if cfg.MODEL.KEYPOINT_ON
+                else 0
+            ),
+            proposal_files=(
+                cfg.DATASETS.PROPOSAL_FILES_TRAIN if cfg.MODEL.LOAD_PROPOSALS else None
+            ),
         )
 
     if mapper is None:
@@ -61,18 +75,21 @@ def _custom_train_loader_from_config(cfg, mapper=None, *, dataset=None, sampler=
         "mapper": mapper,
         "total_batch_size": cfg.SOLVER.IMS_PER_BATCH,
         "num_workers": cfg.DATALOADER.NUM_WORKERS,
-        'dataset_bs': cfg.DATALOADER.DATASET_BS,
-        'num_datasets': len(cfg.DATASETS.TRAIN)
+        "dataset_bs": cfg.DATALOADER.DATASET_BS,
+        "num_datasets": len(cfg.DATASETS.TRAIN),
     }
 
 
 @configurable(from_config=_custom_train_loader_from_config)
 def build_custom_train_loader(
-        dataset, *, mapper, sampler, 
-        total_batch_size=16,
-        num_workers=0,
-        num_datasets=1,
-        dataset_bs=1
+    dataset,
+    *,
+    mapper,
+    sampler,
+    total_batch_size=16,
+    num_workers=0,
+    num_datasets=1,
+    dataset_bs=1,
 ):
 
     if isinstance(dataset, list):
@@ -126,12 +143,13 @@ def get_detection_dataset_dicts_with_source(
     dataset_dicts = [DatasetCatalog.get(dataset_name) for dataset_name in dataset_names]
     for dataset_name, dicts in zip(dataset_names, dataset_dicts):
         assert len(dicts), "Dataset '{}' is empty!".format(dataset_name)
-    
-    for source_id, (dataset_name, dicts) in \
-        enumerate(zip(dataset_names, dataset_dicts)):
+
+    for source_id, (dataset_name, dicts) in enumerate(
+        zip(dataset_names, dataset_dicts)
+    ):
         assert len(dicts), "Dataset '{}' is empty!".format(dataset_name)
         for d in dicts:
-            d['dataset_source'] = source_id
+            d["dataset_source"] = source_id
 
         if "annotations" in dicts[0]:
             try:
@@ -156,32 +174,36 @@ def get_detection_dataset_dicts_with_source(
 
 class MultiDatasetSampler(Sampler):
     def __init__(
-        self, 
-        dataset_dicts, 
+        self,
+        dataset_dicts,
         dataset_ratio,
         seed: Optional[int] = None,
     ):
         sizes = [0 for _ in range(len(dataset_ratio))]
         for d in dataset_dicts:
-            sizes[d['dataset_source']] += 1
-        print('dataset sizes', sizes)
+            sizes[d["dataset_source"]] += 1
+        print("dataset sizes", sizes)
         self.sizes = sizes
-        assert len(dataset_ratio) == len(sizes), \
-            'length of dataset ratio {} should be equal to number if dataset {}'.format(
-                len(dataset_ratio), len(sizes)
-            )
+        assert len(dataset_ratio) == len(
+            sizes
+        ), "length of dataset ratio {} should be equal to number if dataset {}".format(
+            len(dataset_ratio), len(sizes)
+        )
         if seed is None:
             seed = comm.shared_random_seed()
         self._seed = int(seed)
         self._rank = comm.get_rank()
         self._world_size = comm.get_world_size()
-        
+
         self.dataset_ids = torch.tensor(
-            [d['dataset_source'] for d in dataset_dicts], dtype=torch.long)
+            [d["dataset_source"] for d in dataset_dicts], dtype=torch.long
+        )
         self.dataset_ratio = dataset_ratio
 
-        dataset_weight = [torch.ones(s) * max(sizes) / s * r / sum(dataset_ratio) \
-            for i, (r, s) in enumerate(zip(dataset_ratio, sizes))]
+        dataset_weight = [
+            torch.ones(s) * max(sizes) / s * r / sum(dataset_ratio)
+            for i, (r, s) in enumerate(zip(dataset_ratio, sizes))
+        ]
         dataset_weight = torch.cat(dataset_weight)
 
         self.weights = dataset_weight
@@ -190,7 +212,8 @@ class MultiDatasetSampler(Sampler):
     def __iter__(self):
         start = self._rank
         yield from itertools.islice(
-            self._infinite_indices(), start, None, self._world_size)
+            self._infinite_indices(), start, None, self._world_size
+        )
 
     def _infinite_indices(self):
         g = torch.Generator()
@@ -199,10 +222,12 @@ class MultiDatasetSampler(Sampler):
             if len(self.dataset_ratio) > 1:
                 # multiple datasets
                 ids = torch.multinomial(
-                    self.weights, self.sample_epoch_size, generator=g,
-                    replacement=True)
-                nums = [(self.dataset_ids[ids] == i).sum().int().item() \
-                    for i in range(len(self.sizes))]
+                    self.weights, self.sample_epoch_size, generator=g, replacement=True
+                )
+                nums = [
+                    (self.dataset_ids[ids] == i).sum().int().item()
+                    for i in range(len(self.sizes))
+                ]
                 yield from ids
             else:
                 # single dataset
@@ -239,12 +264,15 @@ class MultiDatasets(torch.utils.data.IterableDataset):
         for d in self.dataset:
             w, h = d["width"], d["height"]
             aspect_ratio_bucket_id = 0 if w > h else 1
-            bucket_id = d['dataset_source'] * 2 + aspect_ratio_bucket_id
+            bucket_id = d["dataset_source"] * 2 + aspect_ratio_bucket_id
             bucket = self._buckets[bucket_id]
             if len(bucket) < self.batch_sizes:
                 bucket.append(d)
             selected_dataset = self.iter_idx % self.num_datasets
-            if len(bucket) == self.batch_sizes and selected_dataset == d['dataset_source']:
+            if (
+                len(bucket) == self.batch_sizes
+                and selected_dataset == d["dataset_source"]
+            ):
                 self.iter_idx += 1
                 yield bucket[:]
                 del bucket[:]

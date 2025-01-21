@@ -19,10 +19,14 @@ import urllib.parse as ul
 from typing import Callable, List, Optional, Tuple, Union
 
 import torch
-from transformers import T5EncoderModel, T5Tokenizer
-
-from diffusers.image_processor import PixArtImageProcessor, PipelineImageInput
+from diffusers.image_processor import PipelineImageInput, PixArtImageProcessor
 from diffusers.models import AutoencoderKL, PixArtTransformer2DModel
+from diffusers.pipelines.pipeline_utils import DiffusionPipeline, ImagePipelineOutput
+from diffusers.pipelines.pixart_alpha.pipeline_pixart_alpha import (
+    ASPECT_RATIO_256_BIN,
+    ASPECT_RATIO_512_BIN,
+    ASPECT_RATIO_1024_BIN,
+)
 from diffusers.schedulers import KarrasDiffusionSchedulers
 from diffusers.utils import (
     BACKENDS_MAPPING,
@@ -33,12 +37,7 @@ from diffusers.utils import (
     replace_example_docstring,
 )
 from diffusers.utils.torch_utils import randn_tensor
-from diffusers.pipelines.pipeline_utils import DiffusionPipeline, ImagePipelineOutput
-from diffusers.pipelines.pixart_alpha.pipeline_pixart_alpha import (
-    ASPECT_RATIO_256_BIN,
-    ASPECT_RATIO_512_BIN,
-    ASPECT_RATIO_1024_BIN,
-)
+from transformers import T5EncoderModel, T5Tokenizer
 
 
 # Copied from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img.retrieve_latents

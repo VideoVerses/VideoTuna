@@ -2,7 +2,6 @@ from typing import Callable, Iterable, Union
 
 import torch
 from einops import rearrange, repeat
-
 from sgm.modules.diffusionmodules.model import (
     XFORMERS_IS_AVAILABLE,
     AttnBlock,
@@ -47,7 +46,9 @@ class VideoResBlock(ResnetBlock):
         if self.merge_strategy == "fixed":
             self.register_buffer("mix_factor", torch.Tensor([alpha]))
         elif self.merge_strategy == "learned":
-            self.register_parameter("mix_factor", torch.nn.Parameter(torch.Tensor([alpha])))
+            self.register_parameter(
+                "mix_factor", torch.nn.Parameter(torch.Tensor([alpha]))
+            )
         else:
             raise ValueError(f"unknown merge strategy {self.merge_strategy}")
 
@@ -106,7 +107,9 @@ class AE3DConv(torch.nn.Conv2d):
 
 
 class VideoBlock(AttnBlock):
-    def __init__(self, in_channels: int, alpha: float = 0, merge_strategy: str = "learned"):
+    def __init__(
+        self, in_channels: int, alpha: float = 0, merge_strategy: str = "learned"
+    ):
         super().__init__(in_channels)
         # no context, single headed, as in base class
         self.time_mix_block = VideoTransformerBlock(
@@ -129,7 +132,9 @@ class VideoBlock(AttnBlock):
         if self.merge_strategy == "fixed":
             self.register_buffer("mix_factor", torch.Tensor([alpha]))
         elif self.merge_strategy == "learned":
-            self.register_parameter("mix_factor", torch.nn.Parameter(torch.Tensor([alpha])))
+            self.register_parameter(
+                "mix_factor", torch.nn.Parameter(torch.Tensor([alpha]))
+            )
         else:
             raise ValueError(f"unknown merge strategy {self.merge_strategy}")
 
@@ -172,7 +177,9 @@ class VideoBlock(AttnBlock):
 
 
 class MemoryEfficientVideoBlock(MemoryEfficientAttnBlock):
-    def __init__(self, in_channels: int, alpha: float = 0, merge_strategy: str = "learned"):
+    def __init__(
+        self, in_channels: int, alpha: float = 0, merge_strategy: str = "learned"
+    ):
         super().__init__(in_channels)
         # no context, single headed, as in base class
         self.time_mix_block = VideoTransformerBlock(
@@ -195,7 +202,9 @@ class MemoryEfficientVideoBlock(MemoryEfficientAttnBlock):
         if self.merge_strategy == "fixed":
             self.register_buffer("mix_factor", torch.Tensor([alpha]))
         elif self.merge_strategy == "learned":
-            self.register_parameter("mix_factor", torch.nn.Parameter(torch.Tensor([alpha])))
+            self.register_parameter(
+                "mix_factor", torch.nn.Parameter(torch.Tensor([alpha]))
+            )
         else:
             raise ValueError(f"unknown merge strategy {self.merge_strategy}")
 
@@ -248,7 +257,9 @@ def make_time_attn(
         "vanilla",
         "vanilla-xformers",
     ], f"attn_type {attn_type} not supported for spatio-temporal attention"
-    print(f"making spatial and temporal attention of type '{attn_type}' with {in_channels} in_channels")
+    print(
+        f"making spatial and temporal attention of type '{attn_type}' with {in_channels} in_channels"
+    )
     if not XFORMERS_IS_AVAILABLE and attn_type == "vanilla-xformers":
         print(
             f"Attention mode '{attn_type}' is not available. Falling back to vanilla attention. "
@@ -258,7 +269,9 @@ def make_time_attn(
 
     if attn_type == "vanilla":
         assert attn_kwargs is None
-        return partialclass(VideoBlock, in_channels, alpha=alpha, merge_strategy=merge_strategy)
+        return partialclass(
+            VideoBlock, in_channels, alpha=alpha, merge_strategy=merge_strategy
+        )
     elif attn_type == "vanilla-xformers":
         print(f"building MemoryEfficientAttnBlock with {in_channels} in_channels...")
         return partialclass(
@@ -301,7 +314,11 @@ class VideoDecoder(Decoder):
         if self.time_mode == "attn-only":
             raise NotImplementedError("TODO")
         else:
-            return self.conv_out.time_mix_conv.weight if not skip_time_mix else self.conv_out.weight
+            return (
+                self.conv_out.time_mix_conv.weight
+                if not skip_time_mix
+                else self.conv_out.weight
+            )
 
     def _make_attn(self) -> Callable:
         if self.time_mode not in ["conv-only", "only-last-conv"]:

@@ -1,7 +1,7 @@
+import random
+
 import torch
 import torch.nn as nn
-
-import random
 
 
 class MaskedDrop(nn.Module):
@@ -28,16 +28,24 @@ class MaskedDrop(nn.Module):
             num_tokens = image_feature.shape[0]
             if self.mode == "fixed":
                 num_keep = int(num_tokens * self.ratio)
-                masked_features.append(self.random_masking(image_feature.unsqueeze(0), num_keep)[0][0])
+                masked_features.append(
+                    self.random_masking(image_feature.unsqueeze(0), num_keep)[0][0]
+                )
             elif self.mode == "range":
-                num_keep = int(num_tokens * random.uniform(self.ratio_lower, self.ratio_upper))
-                masked_features.append(self.random_masking(image_feature.unsqueeze(0), num_keep)[0])
+                num_keep = int(
+                    num_tokens * random.uniform(self.ratio_lower, self.ratio_upper)
+                )
+                masked_features.append(
+                    self.random_masking(image_feature.unsqueeze(0), num_keep)[0]
+                )
             elif self.mode == "cls_only":
                 masked_features.append(image_feature[0:1])
             else:
                 raise ValueError(f"Unexpected masked drop mode: {self.mode}")
 
-        if self.mode not in ["range"] and (type(image_features) is not list or self.mode in ["cls_only"]):
+        if self.mode not in ["range"] and (
+            type(image_features) is not list or self.mode in ["cls_only"]
+        ):
             masked_features = torch.stack(masked_features, dim=0)
 
         return masked_features
@@ -64,7 +72,9 @@ class MaskedDrop(nn.Module):
         noise = torch.rand(N, L, device=x.device)  # noise in [0, 1]
 
         # sort noise for each sample
-        ids_shuffle = torch.argsort(noise, dim=1)  # ascend: small is keep, large is remove
+        ids_shuffle = torch.argsort(
+            noise, dim=1
+        )  # ascend: small is keep, large is remove
         ids_restore = torch.argsort(ids_shuffle, dim=1)
 
         # keep the first subset

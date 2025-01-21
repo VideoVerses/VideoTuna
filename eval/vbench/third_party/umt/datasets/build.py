@@ -1,11 +1,13 @@
 import os
+
 from torchvision import transforms
-from .transforms import *
-from .masking_generator import TubeMaskingGenerator, RandomMaskingGenerator
-from .mae import VideoMAE
+
 from .kinetics import VideoClsDataset
 from .kinetics_sparse import VideoClsDataset_sparse
-from .ssv2 import SSVideoClsDataset, SSRawFrameClsDataset
+from .mae import VideoMAE
+from .masking_generator import RandomMaskingGenerator, TubeMaskingGenerator
+from .ssv2 import SSRawFrameClsDataset, SSVideoClsDataset
+from .transforms import *
 
 
 class DataAugmentationForVideoMAE(object):
@@ -13,33 +15,39 @@ class DataAugmentationForVideoMAE(object):
         self.input_mean = [0.485, 0.456, 0.406]  # IMAGENET_DEFAULT_MEAN
         self.input_std = [0.229, 0.224, 0.225]  # IMAGENET_DEFAULT_STD
         normalize = GroupNormalize(self.input_mean, self.input_std)
-        self.train_augmentation = GroupMultiScaleCrop(args.input_size, [1, .875, .75, .66])
+        self.train_augmentation = GroupMultiScaleCrop(
+            args.input_size, [1, 0.875, 0.75, 0.66]
+        )
         if args.color_jitter > 0:
-            self.transform = transforms.Compose([                            
-                self.train_augmentation,
-                GroupColorJitter(args.color_jitter),
-                GroupRandomHorizontalFlip(flip=args.flip),
-                Stack(roll=False),
-                ToTorchFormatTensor(div=True),
-                normalize,
-            ])
+            self.transform = transforms.Compose(
+                [
+                    self.train_augmentation,
+                    GroupColorJitter(args.color_jitter),
+                    GroupRandomHorizontalFlip(flip=args.flip),
+                    Stack(roll=False),
+                    ToTorchFormatTensor(div=True),
+                    normalize,
+                ]
+            )
         else:
-            self.transform = transforms.Compose([                            
-                self.train_augmentation,
-                GroupRandomHorizontalFlip(flip=args.flip),
-                Stack(roll=False),
-                ToTorchFormatTensor(div=True),
-                normalize,
-            ])
-        if args.mask_type == 'tube':
+            self.transform = transforms.Compose(
+                [
+                    self.train_augmentation,
+                    GroupRandomHorizontalFlip(flip=args.flip),
+                    Stack(roll=False),
+                    ToTorchFormatTensor(div=True),
+                    normalize,
+                ]
+            )
+        if args.mask_type == "tube":
             self.masked_position_generator = TubeMaskingGenerator(
                 args.window_size, args.mask_ratio
             )
-        elif args.mask_type == 'random':
+        elif args.mask_type == "random":
             self.masked_position_generator = RandomMaskingGenerator(
                 args.window_size, args.mask_ratio
             )
-        elif args.mask_type in 'attention':
+        elif args.mask_type in "attention":
             self.masked_position_generator = None
 
     def __call__(self, images):
@@ -52,7 +60,9 @@ class DataAugmentationForVideoMAE(object):
     def __repr__(self):
         repr = "(DataAugmentationForVideoMAE,\n"
         repr += "  transform = %s,\n" % str(self.transform)
-        repr += "  Masked position generator = %s,\n" % str(self.masked_position_generator)
+        repr += "  Masked position generator = %s,\n" % str(
+            self.masked_position_generator
+        )
         repr += ")"
         return repr
 
@@ -64,9 +74,9 @@ def build_pretraining_dataset(args):
         setting=args.data_path,
         prefix=args.prefix,
         split=args.split,
-        video_ext='mp4',
+        video_ext="mp4",
         is_color=True,
-        modality='rgb',
+        modality="rgb",
         num_segments=args.num_segments,
         new_length=args.num_frames,
         new_step=args.sampling_rate,
@@ -75,31 +85,28 @@ def build_pretraining_dataset(args):
         video_loader=True,
         use_decord=args.use_decord,
         lazy_init=False,
-        num_sample=args.num_sample)
+        num_sample=args.num_sample,
+    )
     print("Data Aug = %s" % str(transform))
     return dataset
 
 
 def build_dataset(is_train, test_mode, args):
-    print(f'Use Dataset: {args.data_set}')
-    if args.data_set in [
-            'Kinetics',
-            'Kinetics_sparse',
-            'mitv1_sparse'
-        ]:
+    print(f"Use Dataset: {args.data_set}")
+    if args.data_set in ["Kinetics", "Kinetics_sparse", "mitv1_sparse"]:
         mode = None
         anno_path = None
         if is_train is True:
-            mode = 'train'
-            anno_path = os.path.join(args.data_path, 'train.csv')
+            mode = "train"
+            anno_path = os.path.join(args.data_path, "train.csv")
         elif test_mode is True:
-            mode = 'test'
-            anno_path = os.path.join(args.data_path, 'test.csv') 
-        else:  
-            mode = 'validation'
-            anno_path = os.path.join(args.data_path, 'val.csv') 
+            mode = "test"
+            anno_path = os.path.join(args.data_path, "test.csv")
+        else:
+            mode = "validation"
+            anno_path = os.path.join(args.data_path, "val.csv")
 
-        if 'sparse' in args.data_set:
+        if "sparse" in args.data_set:
             func = VideoClsDataset_sparse
         else:
             func = VideoClsDataset
@@ -120,22 +127,23 @@ def build_dataset(is_train, test_mode, args):
             short_side_size=args.short_side_size,
             new_height=256,
             new_width=320,
-            args=args)
-        
+            args=args,
+        )
+
         nb_classes = args.nb_classes
-    
-    elif args.data_set == 'SSV2':
+
+    elif args.data_set == "SSV2":
         mode = None
         anno_path = None
         if is_train is True:
-            mode = 'train'
-            anno_path = os.path.join(args.data_path, 'train.csv')
+            mode = "train"
+            anno_path = os.path.join(args.data_path, "train.csv")
         elif test_mode is True:
-            mode = 'test'
-            anno_path = os.path.join(args.data_path, 'test.csv') 
-        else:  
-            mode = 'validation'
-            anno_path = os.path.join(args.data_path, 'val.csv') 
+            mode = "test"
+            anno_path = os.path.join(args.data_path, "test.csv")
+        else:
+            mode = "validation"
+            anno_path = os.path.join(args.data_path, "val.csv")
 
         if args.use_decord:
             func = SSVideoClsDataset
@@ -157,21 +165,22 @@ def build_dataset(is_train, test_mode, args):
             short_side_size=args.short_side_size,
             new_height=256,
             new_width=320,
-            args=args)
+            args=args,
+        )
         nb_classes = 174
 
-    elif args.data_set == 'UCF101':
+    elif args.data_set == "UCF101":
         mode = None
         anno_path = None
         if is_train is True:
-            mode = 'train'
-            anno_path = os.path.join(args.data_path, 'train.csv')
+            mode = "train"
+            anno_path = os.path.join(args.data_path, "train.csv")
         elif test_mode is True:
-            mode = 'test'
-            anno_path = os.path.join(args.data_path, 'test.csv') 
-        else:  
-            mode = 'validation'
-            anno_path = os.path.join(args.data_path, 'val.csv') 
+            mode = "test"
+            anno_path = os.path.join(args.data_path, "test.csv")
+        else:
+            mode = "validation"
+            anno_path = os.path.join(args.data_path, "val.csv")
 
         dataset = VideoClsDataset(
             anno_path=anno_path,
@@ -189,21 +198,22 @@ def build_dataset(is_train, test_mode, args):
             short_side_size=args.short_side_size,
             new_height=256,
             new_width=320,
-            args=args)
+            args=args,
+        )
         nb_classes = 101
-    
-    elif args.data_set == 'HMDB51':
+
+    elif args.data_set == "HMDB51":
         mode = None
         anno_path = None
         if is_train is True:
-            mode = 'train'
-            anno_path = os.path.join(args.data_path, 'train.csv')
+            mode = "train"
+            anno_path = os.path.join(args.data_path, "train.csv")
         elif test_mode is True:
-            mode = 'test'
-            anno_path = os.path.join(args.data_path, 'test.csv') 
-        else:  
-            mode = 'validation'
-            anno_path = os.path.join(args.data_path, 'val.csv') 
+            mode = "test"
+            anno_path = os.path.join(args.data_path, "test.csv")
+        else:
+            mode = "validation"
+            anno_path = os.path.join(args.data_path, "val.csv")
 
         dataset = VideoClsDataset(
             anno_path=anno_path,
@@ -221,10 +231,11 @@ def build_dataset(is_train, test_mode, args):
             short_side_size=args.short_side_size,
             new_height=256,
             new_width=320,
-            args=args)
+            args=args,
+        )
         nb_classes = 51
     else:
-        print(f'Wrong: {args.data_set}')
+        print(f"Wrong: {args.data_set}")
         raise NotImplementedError()
     assert nb_classes == args.nb_classes
     print("Number of the class = %d" % args.nb_classes)

@@ -1,37 +1,39 @@
-import torch
-import os
-import wandb
 import logging
+import os
+
 import numpy as np
-from tqdm import tqdm
-from videotuna.third_party.flux.training.wrappers import unwrap_model
-from PIL import Image
-from videotuna.third_party.flux.training.state_tracker import StateTracker
-from videotuna.third_party.flux.models.sdxl.pipeline import (
-    StableDiffusionXLPipeline,
-    StableDiffusionXLImg2ImgPipeline,
-)
+import torch
+import wandb
+
 # from toolsegacy.pipeline import StableDiffusionPipeline
 from diffusers.schedulers import (
-    EulerDiscreteScheduler,
-    EulerAncestralDiscreteScheduler,
-    FlowMatchEulerDiscreteScheduler,
-    UniPCMultistepScheduler,
     DDIMScheduler,
     DDPMScheduler,
+    EulerAncestralDiscreteScheduler,
+    EulerDiscreteScheduler,
+    FlowMatchEulerDiscreteScheduler,
+    UniPCMultistepScheduler,
 )
 from diffusers.utils.torch_utils import is_compiled_module
-from videotuna.third_party.flux.multiaspect.image import MultiaspectImage
-from videotuna.third_party.flux.image_manipulation.brightness import calculate_luminance
 from PIL import Image, ImageDraw, ImageFont
+from tqdm import tqdm
+
+from videotuna.third_party.flux.image_manipulation.brightness import calculate_luminance
+from videotuna.third_party.flux.models.sdxl.pipeline import (
+    StableDiffusionXLImg2ImgPipeline,
+    StableDiffusionXLPipeline,
+)
+from videotuna.third_party.flux.multiaspect.image import MultiaspectImage
+from videotuna.third_party.flux.training.state_tracker import StateTracker
+from videotuna.third_party.flux.training.wrappers import unwrap_model
 
 logger = logging.getLogger(__name__)
 logger.setLevel(os.environ.get("SIMPLETUNER_LOG_LEVEL") or "INFO")
 
 try:
     from videotuna.third_party.flux.models.sd3.pipeline import (
-        StableDiffusion3Pipeline,
         StableDiffusion3Img2ImgPipeline,
+        StableDiffusion3Pipeline,
     )
 except ImportError:
     logger.error(
@@ -51,12 +53,11 @@ SCHEDULER_NAME_MAP = {
 import logging
 import os
 import time
+
+from diffusers import AutoencoderKL, DDIMScheduler
 from diffusers.utils import is_wandb_available
+
 from videotuna.third_party.flux.prompts import PromptHandler
-from diffusers import (
-    AutoencoderKL,
-    DDIMScheduler,
-)
 
 if is_wandb_available():
     import wandb
@@ -544,7 +545,7 @@ class Validation:
                     "Flux inference validation using img2img is not yet supported. Please remove --validation_using_datasets."
                 )
             return FluxPipeline
-        
+
         elif model_type == "sd3":
             if self.args.controlnet:
                 raise Exception("SD3 ControlNet is not yet supported.")
@@ -560,7 +561,9 @@ class Validation:
                 raise Exception(
                     "PixArt Sigma inference validation using img2img is not yet supported. Please remove --validation_using_datasets."
                 )
-            from videotuna.third_party.flux.models.pixart.pipeline import PixArtSigmaPipeline
+            from videotuna.third_party.flux.models.pixart.pipeline import (
+                PixArtSigmaPipeline,
+            )
 
             return PixArtSigmaPipeline
         elif model_type == "smoldit":

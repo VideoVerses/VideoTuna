@@ -15,10 +15,7 @@ should be suitable for different backends.
 import torch
 from torch.optim.optimizer import Optimizer
 
-from .stochastic import (
-    add_stochastic_,
-    addcdiv_stochastic_,
-)
+from .stochastic import add_stochastic_, addcdiv_stochastic_
 
 
 class AdamWBF16(Optimizer):

@@ -7,9 +7,13 @@ import torch.nn as nn
 from einops import rearrange
 from timm.models.layers import DropPath
 from timm.models.vision_transformer import Mlp
+from transformers import PretrainedConfig, PreTrainedModel
 
 from videotuna.opensora.acceleration.checkpoint import auto_grad_checkpoint
-from videotuna.opensora.acceleration.communications import gather_forward_split_backward, split_forward_gather_backward
+from videotuna.opensora.acceleration.communications import (
+    gather_forward_split_backward,
+    split_forward_gather_backward,
+)
 from videotuna.opensora.acceleration.parallel_states import get_sequence_parallel_group
 from videotuna.opensora.models.layers.blocks import (
     Attention,
@@ -30,7 +34,6 @@ from videotuna.opensora.models.layers.blocks import (
 )
 from videotuna.opensora.registry import MODELS
 from videotuna.opensora.utils.ckpt_utils import load_checkpoint
-from transformers import PretrainedConfig, PreTrainedModel
 
 
 class STDiTBlock2(nn.Module):
@@ -57,35 +60,48 @@ class STDiTBlock2(nn.Module):
             self.mha_cls = MultiHeadCrossAttention
 
         # spatial branch
-        self.norm1 = get_layernorm(hidden_size, eps=1e-6, affine=False, use_kernel=enable_layernorm_kernel)
+        self.norm1 = get_layernorm(
+            hidden_size, eps=1e-6, affine=False, use_kernel=enable_layernorm_kernel
+        )
         self.attn = self.attn_cls(
             hidden_size,
             num_heads=num_heads,
             qkv_bias=True,
             enable_flashattn=enable_flashattn,
         )
-        self.scale_shift_table = nn.Parameter(torch.randn(6, hidden_size) / hidden_size**0.5)
+        self.scale_shift_table = nn.Parameter(
+            torch.randn(6, hidden_size) / hidden_size**0.5
+        )
 
         # cross attn
         self.cross_attn = self.mha_cls(hidden_size, num_heads)
 
         # mpl branch
-        self.norm2 = get_layernorm(hidden_size, eps=1e-6, affine=False, use_kernel=enable_layernorm_kernel)
+        self.norm2 = get_layernorm(
+            hidden_size, eps=1e-6, affine=False, use_kernel=enable_layernorm_kernel
+        )
         self.mlp = Mlp(
-            in_features=hidden_size, hidden_features=int(hidden_size * mlp_ratio), act_layer=approx_gelu, drop=0
+            in_features=hidden_size,
+            hidden_features=int(hidden_size * mlp_ratio),
+            act_layer=approx_gelu,
+            drop=0,
         )
         self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
 
         # temporal attention
-        self.norm_temp = get_layernorm(hidden_size, eps=1e-6, affine=False, use_kernel=enable_layernorm_kernel)  # new
+        self.norm_temp = get_layernorm(
+            hidden_size, eps=1e-6, affine=False, use_kernel=enable_layernorm_kernel
+        )  # new
         self.attn_temp = self.attn_cls(
             hidden_size,
             num_heads=num_heads,
             qkv_bias=True,
             enable_flashattn=self.enable_flashattn,
         )
-        self.scale_shift_table_temporal = nn.Parameter(torch.randn(3, hidden_size) / hidden_size**0.5)  # new
-    
+        self.scale_shift_table_temporal = nn.Parameter(
+            torch.randn(3, hidden_size) / hidden_size**0.5
+        )  # new
+
     def t_mask_select(self, x_mask, x, masked_x, T, S):
         # x: [B, (T, S), C]
         # mased_x: [B, (T, S), C]
@@ -96,16 +112,23 @@ class STDiTBlock2(nn.Module):
         x = rearrange(x, "B T S C -> B (T S) C")
         return x
 
-    def forward(self, x, y, t, tpe=None, mask=None, x_mask=None, t0=None, T=None, S=None):
+    def forward(
+        self, x, y, t, tpe=None, mask=None, x_mask=None, t0=None, T=None, S=None
+    ):
         B, N, C = x.shape
 
         shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = (
             self.scale_shift_table[None] + t.reshape(B, 6, -1)
         ).chunk(6, dim=1)
         if x_mask is not None:
-            shift_msa_zero, scale_msa_zero, gate_msa_zero, shift_mlp_zero, scale_mlp_zero, gate_mlp_zero = (
-                self.scale_shift_table[None] + t0.reshape(B, 6, -1)
-            ).chunk(6, dim=1)
+            (
+                shift_msa_zero,
+                scale_msa_zero,
+                gate_msa_zero,
+                shift_mlp_zero,
+                scale_mlp_zero,
+                gate_mlp_zero,
+            ) = (self.scale_shift_table[None] + t0.reshape(B, 6, -1)).chunk(6, dim=1)
 
         # modulate
         x_m = t2i_modulate(self.norm1(x), shift_msa, scale_msa)
@@ -162,9 +185,8 @@ class STDiTBlock2(nn.Module):
         return x
 
 
-
 class STDiT6Config(PretrainedConfig):
-    
+
     model_type = "STDiT6"
 
     def __init__(
@@ -217,15 +239,14 @@ class STDiT6(nn.Module):
 
     config_class = STDiT6Config
 
-    def __init__(
-        self,
-        config
-    ):
+    def __init__(self, config):
         super().__init__()
         self.dtype = config.dtype
         self.pred_sigma = config.pred_sigma
         self.in_channels = config.in_channels
-        self.out_channels = config.in_channels * 2 if config.pred_sigma else config.in_channels
+        self.out_channels = (
+            config.in_channels * 2 if config.pred_sigma else config.in_channels
+        )
         self.hidden_size = config.hidden_size
         self.num_heads = config.num_heads
         self.no_temporal_pos_emb = config.no_temporal_pos_emb
@@ -240,10 +261,16 @@ class STDiT6(nn.Module):
         self.input_sq_size = config.input_sq_size
         self.pos_embed = PositionEmbedding2D(config.hidden_size)
 
-        self.x_embedder = PatchEmbed3D(config.patch_size, config.in_channels, config.hidden_size)
+        self.x_embedder = PatchEmbed3D(
+            config.patch_size, config.in_channels, config.hidden_size
+        )
         self.t_embedder = TimestepEmbedder(config.hidden_size)
-        self.t_block = nn.Sequential(nn.SiLU(), nn.Linear(config.hidden_size, 6 * config.hidden_size, bias=True))
-        self.t_block_temp = nn.Sequential(nn.SiLU(), nn.Linear(config.hidden_size, 3 * config.hidden_size, bias=True))
+        self.t_block = nn.Sequential(
+            nn.SiLU(), nn.Linear(config.hidden_size, 6 * config.hidden_size, bias=True)
+        )
+        self.t_block_temp = nn.Sequential(
+            nn.SiLU(), nn.Linear(config.hidden_size, 3 * config.hidden_size, bias=True)
+        )
         self.y_embedder = CaptionEmbedder(
             in_channels=config.caption_channels,
             hidden_size=config.hidden_size,
@@ -255,7 +282,9 @@ class STDiT6(nn.Module):
         self.space_scale = config.space_scale
         self.time_scale = config.time_scale
 
-        drop_path = [x.item() for x in torch.linspace(0, config.drop_path, config.depth)]
+        drop_path = [
+            x.item() for x in torch.linspace(0, config.drop_path, config.depth)
+        ]
         self.blocks = nn.ModuleList(
             [
                 STDiTBlock2(
@@ -270,7 +299,9 @@ class STDiT6(nn.Module):
                 for i in range(self.depth)
             ]
         )
-        self.final_layer = T2IFinalLayer(config.hidden_size, np.prod(self.patch_size), self.out_channels)
+        self.final_layer = T2IFinalLayer(
+            config.hidden_size, np.prod(self.patch_size), self.out_channels
+        )
 
         # multi_res
         assert self.hidden_size % 3 == 0, "hidden_size must be divisible by 3"
@@ -295,7 +326,7 @@ class STDiT6(nn.Module):
             self.sp_rank = dist.get_rank(get_sequence_parallel_group())
         else:
             self.sp_rank = None
-    
+
     def get_dynamic_size(self, x):
         _, _, T, H, W = x.size()
         if T % self.patch_size[0] != 0:
@@ -309,7 +340,19 @@ class STDiT6(nn.Module):
         W = W // self.patch_size[2]
         return (T, H, W)
 
-    def forward(self, x, timestep, y, mask=None, x_mask=None, num_frames=None, height=None, width=None, ar=None, fps=None):
+    def forward(
+        self,
+        x,
+        timestep,
+        y,
+        mask=None,
+        x_mask=None,
+        num_frames=None,
+        height=None,
+        width=None,
+        ar=None,
+        fps=None,
+    ):
         """
         Forward pass of STDiT.
         Args:
@@ -334,7 +377,7 @@ class STDiT6(nn.Module):
 
         # 2. get aspect ratio
         ar = ar.unsqueeze(1)
-        ar = self.ar_embedder(ar, B)        # [B, C/2]
+        ar = self.ar_embedder(ar, B)  # [B, C/2]
         data_info = torch.cat([csize, ar], dim=1)  # [B, C]
 
         # 3. get number of frames
@@ -359,7 +402,9 @@ class STDiT6(nn.Module):
 
         # shard over the sequence dim if sp is enabled
         if self.enable_sequence_parallelism:
-            x = split_forward_gather_backward(x, get_sequence_parallel_group(), dim=1, grad_scale="down")
+            x = split_forward_gather_backward(
+                x, get_sequence_parallel_group(), dim=1, grad_scale="down"
+            )
 
         t = self.t_embedder(timestep, dtype=x.dtype)  # [B, C]
         t_emb = self.t_block(t)  # [B, C]
@@ -384,7 +429,11 @@ class STDiT6(nn.Module):
             if mask.shape[0] != y.shape[0]:
                 mask = mask.repeat(y.shape[0] // mask.shape[0], 1)
             mask = mask.squeeze(1).squeeze(1)
-            y = y.squeeze(1).masked_select(mask.unsqueeze(-1) != 0).view(1, -1, x.shape[-1])
+            y = (
+                y.squeeze(1)
+                .masked_select(mask.unsqueeze(-1) != 0)
+                .view(1, -1, x.shape[-1])
+            )
             y_lens = mask.sum(dim=1).tolist()
         else:
             y_lens = [y.shape[2]] * y.shape[0]
@@ -393,8 +442,15 @@ class STDiT6(nn.Module):
         # blocks
         for i, block in enumerate(self.blocks):
             if i == 0:
-                tpe = get_1d_sincos_pos_embed(self.hidden_size, T, scale=self.time_scale)
-                tpe = torch.from_numpy(tpe).unsqueeze(0).requires_grad_(False).to(x.device, x.dtype)
+                tpe = get_1d_sincos_pos_embed(
+                    self.hidden_size, T, scale=self.time_scale
+                )
+                tpe = (
+                    torch.from_numpy(tpe)
+                    .unsqueeze(0)
+                    .requires_grad_(False)
+                    .to(x.device, x.dtype)
+                )
             else:
                 tpe = None
             x = auto_grad_checkpoint(
@@ -411,14 +467,16 @@ class STDiT6(nn.Module):
             )
             # x.shape: [B, N, C]
 
-       # final process
-        x = self.final_layer(x, t, x_mask, t0, T, S)  # [B, N, C=T_p * H_p * W_p * C_out]
+        # final process
+        x = self.final_layer(
+            x, t, x_mask, t0, T, S
+        )  # [B, N, C=T_p * H_p * W_p * C_out]
         x = self.unpatchify(x, T, H, W, Tx, Hx, Wx)  # [B, C_out, T, H, W]
 
         # cast to float32 for better accuracy
         x = x.to(torch.float32)
         return x
-    
+
     def unpatchify(self, x, N_t, N_h, N_w, R_t, R_h, R_w):
         """
         Args:
@@ -454,8 +512,10 @@ class STDiT6(nn.Module):
             x (torch.Tensor): of shape [B, C_out, T, H, W]
         """
 
-        if input_type == 'image':
-            N_t, N_h, N_w = [self.img_input_size[i] // self.patch_size[i] for i in range(3)]
+        if input_type == "image":
+            N_t, N_h, N_w = [
+                self.img_input_size[i] // self.patch_size[i] for i in range(3)
+            ]
         else:
             N_t, N_h, N_w = [self.input_size[i] // self.patch_size[i] for i in range(3)]
         T_p, H_p, W_p = self.patch_size
@@ -490,7 +550,9 @@ class STDiT6(nn.Module):
             (grid_size[0] // self.patch_size[1], grid_size[1] // self.patch_size[2]),
             scale=self.space_scale,
         )
-        pos_embed = torch.from_numpy(pos_embed).float().unsqueeze(0).requires_grad_(False)
+        pos_embed = (
+            torch.from_numpy(pos_embed).float().unsqueeze(0).requires_grad_(False)
+        )
         return pos_embed
 
     def get_temporal_pos_embed(self):
@@ -499,7 +561,9 @@ class STDiT6(nn.Module):
             self.input_size[0] // self.patch_size[0],
             scale=self.time_scale,
         )
-        pos_embed = torch.from_numpy(pos_embed).float().unsqueeze(0).requires_grad_(False)
+        pos_embed = (
+            torch.from_numpy(pos_embed).float().unsqueeze(0).requires_grad_(False)
+        )
         return pos_embed
 
     def freeze_not_temporal(self):
@@ -554,15 +618,13 @@ class STDiT6(nn.Module):
 @MODELS.register_module("STDiT6-XL/2")
 def STDiT6_XL_2(from_pretrained=None, **kwargs):
     config = STDiT6Config(
-            depth=28,
-            hidden_size=1152,
-            patch_size=(1, 2, 2),
-            num_heads=16, **kwargs
-        )
+        depth=28, hidden_size=1152, patch_size=(1, 2, 2), num_heads=16, **kwargs
+    )
     model = STDiT6(config)
     if from_pretrained is not None:
         import os
-        if os.path.isdir(from_pretrained) or os.path.isfile(from_pretrained): 
+
+        if os.path.isdir(from_pretrained) or os.path.isfile(from_pretrained):
             load_checkpoint(model, from_pretrained)
 
     return model

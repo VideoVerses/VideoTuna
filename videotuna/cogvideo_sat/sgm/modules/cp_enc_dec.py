@@ -1,7 +1,9 @@
 import math
+
 import torch
 import torch.distributed
 import torch.nn as nn
+
 from ..util import (
     get_context_parallel_group,
     get_context_parallel_rank,
@@ -103,9 +105,9 @@ def _gather(input_, dim):
     if cp_rank == 0:
         input_ = input_.transpose(0, dim)[1:].transpose(0, dim).contiguous()
 
-    tensor_list = [torch.empty_like(torch.cat([input_first_frame_, input_], dim=dim))] + [
-        torch.empty_like(input_) for _ in range(cp_world_size - 1)
-    ]
+    tensor_list = [
+        torch.empty_like(torch.cat([input_first_frame_, input_], dim=dim))
+    ] + [torch.empty_like(input_) for _ in range(cp_world_size - 1)]
 
     if cp_rank == 0:
         input_ = torch.cat([input_first_frame_, input_], dim=dim)
@@ -136,9 +138,9 @@ def _conv_split(input_, dim, kernel_size):
     if cp_rank == 0:
         output = input_.transpose(dim, 0)[: dim_size + kernel_size].transpose(dim, 0)
     else:
-        output = input_.transpose(dim, 0)[cp_rank * dim_size + 1 : (cp_rank + 1) * dim_size + kernel_size].transpose(
-            dim, 0
-        )
+        output = input_.transpose(dim, 0)[
+            cp_rank * dim_size + 1 : (cp_rank + 1) * dim_size + kernel_size
+        ].transpose(dim, 0)
     output = output.contiguous()
 
     # print('out _conv_split, cp_rank:', cp_rank, 'input_size:', output.shape)
@@ -158,15 +160,19 @@ def _conv_gather(input_, dim, kernel_size):
 
     # print('in _conv_gather, cp_rank:', cp_rank, 'input_size:', input_.shape)
 
-    input_first_kernel_ = input_.transpose(0, dim)[:kernel_size].transpose(0, dim).contiguous()
+    input_first_kernel_ = (
+        input_.transpose(0, dim)[:kernel_size].transpose(0, dim).contiguous()
+    )
     if cp_rank == 0:
         input_ = input_.transpose(0, dim)[kernel_size:].transpose(0, dim).contiguous()
     else:
-        input_ = input_.transpose(0, dim)[kernel_size - 1 :].transpose(0, dim).contiguous()
+        input_ = (
+            input_.transpose(0, dim)[kernel_size - 1 :].transpose(0, dim).contiguous()
+        )
 
-    tensor_list = [torch.empty_like(torch.cat([input_first_kernel_, input_], dim=dim))] + [
-        torch.empty_like(input_) for _ in range(cp_world_size - 1)
-    ]
+    tensor_list = [
+        torch.empty_like(torch.cat([input_first_kernel_, input_], dim=dim))
+    ] + [torch.empty_like(input_) for _ in range(cp_world_size - 1)]
     if cp_rank == 0:
         input_ = torch.cat([input_first_kernel_, input_], dim=dim)
 

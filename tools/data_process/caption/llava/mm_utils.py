@@ -1,12 +1,13 @@
-from PIL import Image
-from io import BytesIO
+import ast
 import base64
 import math
-import ast
 import re
+from io import BytesIO
+
 import torch
-from transformers import StoppingCriteria
 from llava.constants import IMAGE_TOKEN_INDEX
+from PIL import Image
+from transformers import StoppingCriteria
 
 
 def resize_and_center_crop(image, shortest_edge_length):
@@ -38,11 +39,20 @@ def auto_pad_images(image, grid_params):
     input_width, input_height = image.size
     input_aspect_ratio = input_width / input_height
     candidate_resolutions = [(w / h, w, h) for w in grid_params for h in grid_params]
-    closest_aspect_ratio = min(candidate_resolutions, key=lambda x: abs(input_aspect_ratio - x[0]))
+    closest_aspect_ratio = min(
+        candidate_resolutions, key=lambda x: abs(input_aspect_ratio - x[0])
+    )
 
-    candidate_resolutions = [(x[1], x[2]) for x in candidate_resolutions if abs(x[0] - closest_aspect_ratio[0]) < 1e-3]
+    candidate_resolutions = [
+        (x[1], x[2])
+        for x in candidate_resolutions
+        if abs(x[0] - closest_aspect_ratio[0]) < 1e-3
+    ]
 
-    target_resolution = min(candidate_resolutions, key=lambda res: abs(max(input_width, input_height) / max(res) - 1))
+    target_resolution = min(
+        candidate_resolutions,
+        key=lambda res: abs(max(input_width, input_height) / max(res) - 1),
+    )
 
     resize_width, resize_height = target_resolution
     if input_width > input_height:
@@ -90,8 +100,13 @@ def process_highres_image_crop_split(image, data_args, processor=None):
     if processor is None:
         processor = data_args.image_processor
     image_crop = resize_and_center_crop(image, crop_resolution)
-    image_patches = extract_patches(image_crop, patch_size=split_resolution, overlap_ratio=0)
-    image_patches = [processor.preprocess(image_patch, return_tensors="pt")["pixel_values"][0] for image_patch in image_patches]
+    image_patches = extract_patches(
+        image_crop, patch_size=split_resolution, overlap_ratio=0
+    )
+    image_patches = [
+        processor.preprocess(image_patch, return_tensors="pt")["pixel_values"][0]
+        for image_patch in image_patches
+    ]
     return torch.stack(image_patches, dim=0)
 
 
@@ -105,14 +120,23 @@ def process_highres_image(image, processor, grid_pinpoints):
         select_size = min(fit_grid_params)
     # FIXME: always select the 448
     select_size = max(grid_params)
-    image_padded = expand2square(image, tuple(int(x * 255) for x in processor.image_mean))
+    image_padded = expand2square(
+        image, tuple(int(x * 255) for x in processor.image_mean)
+    )
 
     # FIXME: this seems to be a bug that it always resizes instead of padding
-    image_original_resize = image.resize((processor.size["shortest_edge"], processor.size["shortest_edge"]))
+    image_original_resize = image.resize(
+        (processor.size["shortest_edge"], processor.size["shortest_edge"])
+    )
     image_padded = image_padded.resize((select_size, select_size))
-    image_patches = extract_patches(image_padded, patch_size=processor.size["shortest_edge"], overlap_ratio=0)
+    image_patches = extract_patches(
+        image_padded, patch_size=processor.size["shortest_edge"], overlap_ratio=0
+    )
     image_patches = [image_original_resize] + image_patches
-    image_patches = [processor.preprocess(image_patch, return_tensors="pt")["pixel_values"][0] for image_patch in image_patches]
+    image_patches = [
+        processor.preprocess(image_patch, return_tensors="pt")["pixel_values"][0]
+        for image_patch in image_patches
+    ]
     return torch.stack(image_patches, dim=0)
 
 
@@ -135,13 +159,20 @@ def select_best_resolution(original_size, possible_resolutions):
     for width, height in possible_resolutions:
         # Calculate the downscaled size to keep the aspect ratio
         scale = min(width / original_width, height / original_height)
-        downscaled_width, downscaled_height = int(original_width * scale), int(original_height * scale)
+        downscaled_width, downscaled_height = int(original_width * scale), int(
+            original_height * scale
+        )
 
         # Calculate effective and wasted resolutions
-        effective_resolution = min(downscaled_width * downscaled_height, original_width * original_height)
+        effective_resolution = min(
+            downscaled_width * downscaled_height, original_width * original_height
+        )
         wasted_resolution = (width * height) - effective_resolution
 
-        if effective_resolution > max_effective_resolution or (effective_resolution == max_effective_resolution and wasted_resolution < min_wasted_resolution):
+        if effective_resolution > max_effective_resolution or (
+            effective_resolution == max_effective_resolution
+            and wasted_resolution < min_wasted_resolution
+        ):
             max_effective_resolution = effective_resolution
             min_wasted_resolution = wasted_resolution
             best_fit = (width, height)
@@ -223,13 +254,23 @@ def get_anyres_image_grid_shape(image_size, grid_pinpoints, patch_size):
         tuple: The shape of the image patch grid in the format (width, height).
     """
     if isinstance(grid_pinpoints, str) and "x" in grid_pinpoints:
-        assert patch_size in [224, 336, 384, 448, 512], "patch_size should be in [224, 336, 384, 448, 512]"
+        assert patch_size in [
+            224,
+            336,
+            384,
+            448,
+            512,
+        ], "patch_size should be in [224, 336, 384, 448, 512]"
         # Use regex to extract the range from the input string
         matches = re.findall(r"\((\d+)x(\d+)\)", grid_pinpoints)
         range_start = tuple(map(int, matches[0]))
         range_end = tuple(map(int, matches[-1]))
         # Generate a matrix of tuples from (range_start[0], range_start[1]) to (range_end[0], range_end[1])
-        grid_pinpoints = [(i, j) for i in range(range_start[0], range_end[0] + 1) for j in range(range_start[1], range_end[1] + 1)]
+        grid_pinpoints = [
+            (i, j)
+            for i in range(range_start[0], range_end[0] + 1)
+            for j in range(range_start[1], range_end[1] + 1)
+        ]
         # Multiply all elements by patch_size
         grid_pinpoints = [[dim * patch_size for dim in pair] for pair in grid_pinpoints]
     if type(grid_pinpoints) is list:
@@ -258,13 +299,23 @@ def process_anyres_image(image, processor, grid_pinpoints):
             patch_size = processor.size[0]
         except Exception as e:
             patch_size = processor.size["shortest_edge"]
-        assert patch_size in [224, 336, 384, 448, 512], "patch_size should be in [224, 336, 384, 448, 512]"
+        assert patch_size in [
+            224,
+            336,
+            384,
+            448,
+            512,
+        ], "patch_size should be in [224, 336, 384, 448, 512]"
         # Use regex to extract the range from the input string
         matches = re.findall(r"\((\d+)x(\d+)\)", grid_pinpoints)
         range_start = tuple(map(int, matches[0]))
         range_end = tuple(map(int, matches[-1]))
         # Generate a matrix of tuples from (range_start[0], range_start[1]) to (range_end[0], range_end[1])
-        grid_pinpoints = [(i, j) for i in range(range_start[0], range_end[0] + 1) for j in range(range_start[1], range_end[1] + 1)]
+        grid_pinpoints = [
+            (i, j)
+            for i in range(range_start[0], range_end[0] + 1)
+            for j in range(range_start[1], range_end[1] + 1)
+        ]
         # Multiply all elements by patch_size
         grid_pinpoints = [[dim * patch_size for dim in pair] for pair in grid_pinpoints]
 
@@ -289,7 +340,10 @@ def process_anyres_image(image, processor, grid_pinpoints):
     # image_original_resize = image_padded_square.resize((processor.size['shortest_edge'], processor.size['shortest_edge']))
 
     image_patches = [image_original_resize] + patches
-    image_patches = [processor.preprocess(image_patch, return_tensors="pt")["pixel_values"][0] for image_patch in image_patches]
+    image_patches = [
+        processor.preprocess(image_patch, return_tensors="pt")["pixel_values"][0]
+        for image_patch in image_patches
+    ]
     return torch.stack(image_patches, dim=0)
 
 
@@ -316,11 +370,15 @@ def process_images(images, image_processor, model_cfg):
     new_images = []
     if image_aspect_ratio == "highres":
         for image in images:
-            image = process_highres_image(image, image_processor, model_cfg.image_grid_pinpoints)
+            image = process_highres_image(
+                image, image_processor, model_cfg.image_grid_pinpoints
+            )
             new_images.append(image)
     elif image_aspect_ratio == "anyres" or "anyres_max" in image_aspect_ratio:
         for image in images:
-            image = process_anyres_image(image, image_processor, model_cfg.image_grid_pinpoints)
+            image = process_anyres_image(
+                image, image_processor, model_cfg.image_grid_pinpoints
+            )
             new_images.append(image)
     elif image_aspect_ratio == "crop_split":
         for image in images:
@@ -328,8 +386,12 @@ def process_images(images, image_processor, model_cfg):
             new_images.append(image)
     elif image_aspect_ratio == "pad":
         for image in images:
-            image = expand2square(image, tuple(int(x * 255) for x in image_processor.image_mean))
-            image = image_processor.preprocess(image, return_tensors="pt")["pixel_values"][0]
+            image = expand2square(
+                image, tuple(int(x * 255) for x in image_processor.image_mean)
+            )
+            image = image_processor.preprocess(image, return_tensors="pt")[
+                "pixel_values"
+            ][0]
             new_images.append(image)
     else:
         return image_processor.preprocess(images, return_tensors="pt")["pixel_values"]
@@ -338,7 +400,9 @@ def process_images(images, image_processor, model_cfg):
     return new_images
 
 
-def tokenizer_image_token(prompt, tokenizer, image_token_index=IMAGE_TOKEN_INDEX, return_tensors=None):
+def tokenizer_image_token(
+    prompt, tokenizer, image_token_index=IMAGE_TOKEN_INDEX, return_tensors=None
+):
     prompt_chunks = [tokenizer(chunk).input_ids for chunk in prompt.split("<image>")]
 
     def insert_separator(X, sep):
@@ -346,7 +410,11 @@ def tokenizer_image_token(prompt, tokenizer, image_token_index=IMAGE_TOKEN_INDEX
 
     input_ids = []
     offset = 0
-    if len(prompt_chunks) > 0 and len(prompt_chunks[0]) > 0 and prompt_chunks[0][0] == tokenizer.bos_token_id:
+    if (
+        len(prompt_chunks) > 0
+        and len(prompt_chunks[0]) > 0
+        and prompt_chunks[0][0] == tokenizer.bos_token_id
+    ):
         offset = 1
         input_ids.append(prompt_chunks[0][0])
 
@@ -375,20 +443,29 @@ class KeywordsStoppingCriteria(StoppingCriteria):
         self.keyword_ids = []
         for keyword in keywords:
             cur_keyword_ids = tokenizer(keyword).input_ids
-            if len(cur_keyword_ids) > 1 and cur_keyword_ids[0] == tokenizer.bos_token_id:
+            if (
+                len(cur_keyword_ids) > 1
+                and cur_keyword_ids[0] == tokenizer.bos_token_id
+            ):
                 cur_keyword_ids = cur_keyword_ids[1:]
             self.keyword_ids.append(torch.tensor(cur_keyword_ids))
         self.tokenizer = tokenizer
         self.start_len = input_ids.shape[1]
 
-    def __call__(self, output_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
+    def __call__(
+        self, output_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs
+    ) -> bool:
         assert output_ids.shape[0] == 1, "Only support batch size 1 (yet)"  # TODO
         offset = min(output_ids.shape[1] - self.start_len, 3)
-        self.keyword_ids = [keyword_id.to(output_ids.device) for keyword_id in self.keyword_ids]
+        self.keyword_ids = [
+            keyword_id.to(output_ids.device) for keyword_id in self.keyword_ids
+        ]
         for keyword_id in self.keyword_ids:
             if output_ids[0, -keyword_id.shape[0] :] == keyword_id:
                 return True
-        outputs = self.tokenizer.batch_decode(output_ids[:, -offset:], skip_special_tokens=True)[0]
+        outputs = self.tokenizer.batch_decode(
+            output_ids[:, -offset:], skip_special_tokens=True
+        )[0]
         for keyword in self.keywords:
             if keyword in outputs:
                 return True

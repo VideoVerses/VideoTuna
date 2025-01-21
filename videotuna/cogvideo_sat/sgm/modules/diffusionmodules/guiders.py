@@ -1,8 +1,8 @@
 import logging
-from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Tuple, Union
-from functools import partial
 import math
+from abc import ABC, abstractmethod
+from functools import partial
+from typing import Dict, List, Optional, Tuple, Union
 
 import torch
 from einops import rearrange, repeat
@@ -15,7 +15,9 @@ class Guider(ABC):
     def __call__(self, x: torch.Tensor, sigma: float) -> torch.Tensor:
         pass
 
-    def prepare_inputs(self, x: torch.Tensor, s: float, c: Dict, uc: Dict) -> Tuple[torch.Tensor, float, Dict]:
+    def prepare_inputs(
+        self, x: torch.Tensor, s: float, c: Dict, uc: Dict
+    ) -> Tuple[torch.Tensor, float, Dict]:
         pass
 
 
@@ -31,7 +33,9 @@ class VanillaCFG:
         self.dyn_thresh = instantiate_from_config(
             default(
                 dyn_thresh_config,
-                {"target": "sgm.modules.diffusionmodules.sampling_utils.NoDynamicThresholding"},
+                {
+                    "target": "sgm.modules.diffusionmodules.sampling_utils.NoDynamicThresholding"
+                },
             )
         )
 
@@ -57,13 +61,16 @@ class DynamicCFG(VanillaCFG):
     def __init__(self, scale, exp, num_steps, dyn_thresh_config=None):
         super().__init__(scale, dyn_thresh_config)
         scale_schedule = (
-            lambda scale, sigma, step_index: 1 + scale * (1 - math.cos(math.pi * (step_index / num_steps) ** exp)) / 2
+            lambda scale, sigma, step_index: 1
+            + scale * (1 - math.cos(math.pi * (step_index / num_steps) ** exp)) / 2
         )
         self.scale_schedule = partial(scale_schedule, scale)
         self.dyn_thresh = instantiate_from_config(
             default(
                 dyn_thresh_config,
-                {"target": "sgm.modules.diffusionmodules.sampling_utils.NoDynamicThresholding"},
+                {
+                    "target": "sgm.modules.diffusionmodules.sampling_utils.NoDynamicThresholding"
+                },
             )
         )
 

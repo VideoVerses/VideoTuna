@@ -1,14 +1,15 @@
 import sys
 from pathlib import Path
+
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-import torch
-import os
-from vbench import VBench
-from datetime import datetime
 import argparse
 import json
+import os
+from datetime import datetime
 
+import torch
+from vbench import VBench
 
 STANDARD_DIMENSION = [
     # a: 10min
@@ -42,17 +43,19 @@ def parse_args():
 
     CUR_DIR = os.path.dirname(os.path.abspath(__file__))
     PARENT_DIR = os.path.dirname(CUR_DIR)
-    parser = argparse.ArgumentParser(description='VBench', formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description="VBench", formatter_class=argparse.RawTextHelpFormatter
+    )
     parser.add_argument(
         "--output_path",
         type=str,
-        default='./evaluation_results/',
+        default="./evaluation_results/",
         help="output path to save the evaluation results",
     )
     parser.add_argument(
         "--full_json_dir",
         type=str,
-        default=f'{PARENT_DIR}/vbench/VBench_full_info.json',
+        default=f"{PARENT_DIR}/vbench/VBench_full_info.json",
         help="path to save the json file that contains the prompt and dimension information",
     )
     parser.add_argument(
@@ -69,7 +72,7 @@ def parse_args():
     )
     parser.add_argument(
         "--dimension",
-        nargs='+',
+        nargs="+",
         required=False,
         default=None,
         help="list of evaluation dimensions, usage: --dimension <dim_1> <dim_2>",
@@ -88,8 +91,8 @@ def parse_args():
     )
     parser.add_argument(
         "--mode",
-        choices=['custom_input', 'vbench_standard', 'vbench_category'],
-        default='vbench_standard',
+        choices=["custom_input", "vbench_standard", "vbench_category"],
+        default="vbench_standard",
         help="""This flags determine the mode of evaluations, choose one of the following:
         1. "custom_input": receive input prompt from either --prompt/--prompt_file flags or the filename
         2. "vbench_standard": evaluate on standard prompt suite of VBench
@@ -100,7 +103,7 @@ def parse_args():
         "--custom_input",
         action="store_true",
         required=False,
-        help="(deprecated) use --mode=\"custom_input\" instead",
+        help='(deprecated) use --mode="custom_input" instead',
     )
     parser.add_argument(
         "--prompt",
@@ -110,7 +113,7 @@ def parse_args():
         If not specified, filenames will be used as input prompts
         * Mutually exclusive to --prompt_file.
         ** This option must be used with --custom_input flag
-        """
+        """,
     )
     parser.add_argument(
         "--prompt_file",
@@ -120,7 +123,7 @@ def parse_args():
         If not specified, filenames will be used as input prompts
         * Mutually exclusive to --prompt.
         ** This option must be used with --custom_input flag
-        """
+        """,
     )
     parser.add_argument(
         "--category",
@@ -136,7 +139,7 @@ def parse_args():
         "--imaging_quality_preprocessing_mode",
         type=str,
         required=False,
-        default='longer',
+        default="longer",
         help="""This is for setting preprocessing in imaging_quality
         1. 'shorter': if the shorter side is more than 512, the image is resized so that the shorter side is 512.
         2. 'longer': if the longer side is more than 512, the image is resized so that the longer side is 512.
@@ -151,12 +154,12 @@ def parse_args():
 
 def main():
     args = parse_args()
-    print(f'args: {args}')
+    print(f"args: {args}")
 
     device = torch.device("cuda")
     my_VBench = VBench(device, args.full_json_dir, args.output_path)
-    
-    print(f'start evaluation')
+
+    print(f"start evaluation")
 
     if args.dimension is None:
         dimensions = STANDARD_DIMENSION
@@ -168,37 +171,41 @@ def main():
 
     kwargs = {}
     prompt = []
-    with open(prompt_file, 'r') as f:
+    with open(prompt_file, "r") as f:
         prompt = json.load(f)
-    assert type(prompt) == dict, "Invalid prompt file format. The correct format is {\"video_path\": prompt, ... }"
+    assert (
+        type(prompt) == dict
+    ), 'Invalid prompt file format. The correct format is {"video_path": prompt, ... }'
 
     if args.category != "":
-        kwargs['category'] = args.category
+        kwargs["category"] = args.category
 
-    kwargs['imaging_quality_preprocessing_mode'] = args.imaging_quality_preprocessing_mode
-    result_save_name = args.output_path + f'results'
+    kwargs["imaging_quality_preprocessing_mode"] = (
+        args.imaging_quality_preprocessing_mode
+    )
+    result_save_name = args.output_path + f"results"
 
     my_VBench.evaluate(
-        videos_path = video_path,
-        name = result_save_name,
-        prompt_list=prompt, # pass in [] to read prompt from filename
-        dimension_list = dimensions,
+        videos_path=video_path,
+        name=result_save_name,
+        prompt_list=prompt,  # pass in [] to read prompt from filename
+        dimension_list=dimensions,
         local=args.load_ckpt_from_local,
         read_frame=args.read_frame,
         mode=args.mode,
-        **kwargs
+        **kwargs,
     )
 
-    with open(result_save_name+'_eval_results.json', 'r') as f:
+    with open(result_save_name + "_eval_results.json", "r") as f:
         result = json.load(f)
-    
+
     avg_dict = {}
     for key, value in result.items():
         avg_dict[key] = value[0]
-    with open(os.path.join(args.output_path, 'final_results.json'), 'w') as f:
+    with open(os.path.join(args.output_path, "final_results.json"), "w") as f:
         json.dump(avg_dict, f, indent=4)
 
-    print('done')
+    print("done")
 
 
 if __name__ == "__main__":

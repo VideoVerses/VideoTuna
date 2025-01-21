@@ -33,7 +33,9 @@ class AbstractQuantizer(AbstractRegularizer):
         new = match.argmax(-1)
         unknown = match.sum(2) < 1
         if self.unknown_index == "random":
-            new[unknown] = torch.randint(0, self.re_embed, size=new[unknown].shape).to(device=new.device)
+            new[unknown] = torch.randint(0, self.re_embed, size=new[unknown].shape).to(
+                device=new.device
+            )
         else:
             new[unknown] = self.unknown_index
         return new.reshape(ishape)
@@ -50,7 +52,9 @@ class AbstractQuantizer(AbstractRegularizer):
         return back.reshape(ishape)
 
     @abstractmethod
-    def get_codebook_entry(self, indices: torch.Tensor, shape: Optional[Tuple[int, ...]] = None) -> torch.Tensor:
+    def get_codebook_entry(
+        self, indices: torch.Tensor, shape: Optional[Tuple[int, ...]] = None
+    ) -> torch.Tensor:
         raise NotImplementedError()
 
     def get_trainable_parameters(self) -> Iterator[torch.nn.Parameter]:
@@ -135,7 +139,10 @@ class GumbelQuantizer(AbstractQuantizer):
 
         # + kl divergence to the prior loss
         qy = F.softmax(logits, dim=1)
-        diff = self.kl_weight * torch.sum(qy * torch.log(qy * self.n_embed + 1e-10), dim=1).mean()
+        diff = (
+            self.kl_weight
+            * torch.sum(qy * torch.log(qy * self.n_embed + 1e-10), dim=1).mean()
+        )
         out_dict[self.loss_key] = diff
 
         ind = soft_one_hot.argmax(dim=1)
@@ -155,7 +162,9 @@ class GumbelQuantizer(AbstractQuantizer):
         indices = rearrange(indices, "(b h w) -> b h w", b=b, h=h, w=w)
         if self.remap is not None:
             indices = self.unmap_to_all(indices)
-        one_hot = F.one_hot(indices, num_classes=self.n_embed).permute(0, 3, 1, 2).float()
+        one_hot = (
+            F.one_hot(indices, num_classes=self.n_embed).permute(0, 3, 1, 2).float()
+        )
         z_q = einsum("b n h w, n d -> b d h w", one_hot, self.embed.weight)
         return z_q
 
@@ -194,7 +203,9 @@ class VectorQuantizer(AbstractQuantizer):
             self.embedding = nn.Embedding(self.n_e, self.e_dim)
             self.embedding.weight.data.uniform_(-1.0 / self.n_e, 1.0 / self.n_e)
         else:
-            self.embedding = torch.nn.utils.weight_norm(nn.Embedding(self.n_e, self.e_dim), dim=1)
+            self.embedding = torch.nn.utils.weight_norm(
+                nn.Embedding(self.n_e, self.e_dim), dim=1
+            )
 
         self.remap = remap
         if self.remap is not None:
@@ -239,18 +250,25 @@ class VectorQuantizer(AbstractQuantizer):
         d = (
             torch.sum(z_flattened**2, dim=1, keepdim=True)
             + torch.sum(self.embedding.weight**2, dim=1)
-            - 2 * torch.einsum("bd,dn->bn", z_flattened, rearrange(self.embedding.weight, "n d -> d n"))
+            - 2
+            * torch.einsum(
+                "bd,dn->bn", z_flattened, rearrange(self.embedding.weight, "n d -> d n")
+            )
         )
 
         min_encoding_indices = torch.argmin(d, dim=1)
         z_q = self.embedding(min_encoding_indices).view(z.shape)
         loss_dict = {}
         if self.log_perplexity:
-            perplexity, cluster_usage = measure_perplexity(min_encoding_indices.detach(), self.n_e)
+            perplexity, cluster_usage = measure_perplexity(
+                min_encoding_indices.detach(), self.n_e
+            )
             loss_dict.update({"perplexity": perplexity, "cluster_usage": cluster_usage})
 
         # compute loss for embedding
-        loss = self.beta * torch.mean((z_q.detach() - z) ** 2) + torch.mean((z_q - z.detach()) ** 2)
+        loss = self.beta * torch.mean((z_q.detach() - z) ** 2) + torch.mean(
+            (z_q - z.detach()) ** 2
+        )
         loss_dict[self.loss_key] = loss
 
         # preserve gradients
@@ -261,21 +279,29 @@ class VectorQuantizer(AbstractQuantizer):
             z_q = rearrange(z_q, "b h w c -> b c h w").contiguous()
 
         if self.remap is not None:
-            min_encoding_indices = min_encoding_indices.reshape(z.shape[0], -1)  # add batch axis
+            min_encoding_indices = min_encoding_indices.reshape(
+                z.shape[0], -1
+            )  # add batch axis
             min_encoding_indices = self.remap_to_used(min_encoding_indices)
             min_encoding_indices = min_encoding_indices.reshape(-1, 1)  # flatten
 
         if self.sane_index_shape:
             if do_reshape:
-                min_encoding_indices = min_encoding_indices.reshape(z_q.shape[0], z_q.shape[2], z_q.shape[3])
+                min_encoding_indices = min_encoding_indices.reshape(
+                    z_q.shape[0], z_q.shape[2], z_q.shape[3]
+                )
             else:
-                min_encoding_indices = rearrange(min_encoding_indices, "(b s) 1 -> b s", b=z_q.shape[0])
+                min_encoding_indices = rearrange(
+                    min_encoding_indices, "(b s) 1 -> b s", b=z_q.shape[0]
+                )
 
         loss_dict["min_encoding_indices"] = min_encoding_indices
 
         return z_q, loss_dict
 
-    def get_codebook_entry(self, indices: torch.Tensor, shape: Optional[Tuple[int, ...]] = None) -> torch.Tensor:
+    def get_codebook_entry(
+        self, indices: torch.Tensor, shape: Optional[Tuple[int, ...]] = None
+    ) -> torch.Tensor:
         # shape specifying (batch, height, width, channel)
         if self.remap is not None:
             assert shape is not None, "Need to give shape for remap"
@@ -309,14 +335,18 @@ class EmbeddingEMA(nn.Module):
         return F.embedding(embed_id, self.weight)
 
     def cluster_size_ema_update(self, new_cluster_size):
-        self.cluster_size.data.mul_(self.decay).add_(new_cluster_size, alpha=1 - self.decay)
+        self.cluster_size.data.mul_(self.decay).add_(
+            new_cluster_size, alpha=1 - self.decay
+        )
 
     def embed_avg_ema_update(self, new_embed_avg):
         self.embed_avg.data.mul_(self.decay).add_(new_embed_avg, alpha=1 - self.decay)
 
     def weight_update(self, num_tokens):
         n = self.cluster_size.sum()
-        smoothed_cluster_size = (self.cluster_size + self.eps) / (n + num_tokens * self.eps) * n
+        smoothed_cluster_size = (
+            (self.cluster_size + self.eps) / (n + num_tokens * self.eps) * n
+        )
         # normalize embedding average with smoothed cluster size
         embed_normalized = self.embed_avg / smoothed_cluster_size.unsqueeze(1)
         self.weight.data.copy_(embed_normalized)
@@ -446,8 +476,12 @@ class VectorQuantizerWithInputProjection(VectorQuantizer):
             if len(in_shape) == 4:
                 z_q = rearrange(z_q, "b (h w) c -> b c h w ", w=in_shape[-1])
             elif len(in_shape) == 5:
-                z_q = rearrange(z_q, "b (t h w) c -> b c t h w ", w=in_shape[-1], h=in_shape[-2])
+                z_q = rearrange(
+                    z_q, "b (t h w) c -> b c t h w ", w=in_shape[-1], h=in_shape[-2]
+                )
             else:
-                raise NotImplementedError(f"rearranging not available for {len(in_shape)}-dimensional input.")
+                raise NotImplementedError(
+                    f"rearranging not available for {len(in_shape)}-dimensional input."
+                )
 
         return z_q, loss_dict

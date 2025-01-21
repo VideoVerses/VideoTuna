@@ -1,5 +1,4 @@
 import collections.abc
-
 from itertools import repeat
 
 
@@ -11,6 +10,7 @@ def _ntuple(n):
                 x = tuple(repeat(x[0], n))
             return x
         return tuple(repeat(x, n))
+
     return parse
 
 

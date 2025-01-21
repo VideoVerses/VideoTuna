@@ -12,7 +12,9 @@ def _all_to_all(
     scatter_dim: int,
     gather_dim: int,
 ):
-    input_list = [t.contiguous() for t in torch.tensor_split(input_, world_size, scatter_dim)]
+    input_list = [
+        t.contiguous() for t in torch.tensor_split(input_, world_size, scatter_dim)
+    ]
     output_list = [torch.empty_like(input_list[0]) for _ in range(world_size)]
     dist.all_to_all(output_list, input_list, group=group)
     return torch.cat(output_list, dim=gather_dim).contiguous()
@@ -34,7 +36,9 @@ class _AllToAll(torch.autograd.Function):
         ctx.scatter_dim = scatter_dim
         ctx.gather_dim = gather_dim
         ctx.world_size = dist.get_world_size(process_group)
-        output = _all_to_all(input_, ctx.world_size, process_group, scatter_dim, gather_dim)
+        output = _all_to_all(
+            input_, ctx.world_size, process_group, scatter_dim, gather_dim
+        )
         return output
 
     @staticmethod

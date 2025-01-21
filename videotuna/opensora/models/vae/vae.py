@@ -13,7 +13,12 @@ from videotuna.opensora.utils.ckpt_utils import load_checkpoint
 @MODELS.register_module()
 class VideoAutoencoderKL(nn.Module):
     def __init__(
-        self, from_pretrained=None, micro_batch_size=None, cache_dir=None, local_files_only=False, subfolder=None
+        self,
+        from_pretrained=None,
+        micro_batch_size=None,
+        cache_dir=None,
+        local_files_only=False,
+        subfolder=None,
     ):
         super().__init__()
         self.module = AutoencoderKL.from_pretrained(
@@ -69,7 +74,11 @@ class VideoAutoencoderKL(nn.Module):
             # assert (
             #     input_size[i] is None or input_size[i] % self.patch_size[i] == 0
             # ), "Input size must be divisible by patch size"
-            latent_size.append(input_size[i] // self.patch_size[i] if input_size[i] is not None else None)
+            latent_size.append(
+                input_size[i] // self.patch_size[i]
+                if input_size[i] is not None
+                else None
+            )
         return latent_size
 
     @property
@@ -107,7 +116,11 @@ class VideoAutoencoderKLTemporalDecoder(nn.Module):
             # assert (
             #     input_size[i] is None or input_size[i] % self.patch_size[i] == 0
             # ), "Input size must be divisible by patch size"
-            latent_size.append(input_size[i] // self.patch_size[i] if input_size[i] is not None else None)
+            latent_size.append(
+                input_size[i] // self.patch_size[i]
+                if input_size[i] is not None
+                else None
+            )
         return latent_size
 
     @property
@@ -154,7 +167,9 @@ class VideoAutoencoderPipeline(PreTrainedModel):
         self.temporal_vae = build_module(config.vae_temporal, MODELS)
         self.cal_loss = config.cal_loss
         self.micro_frame_size = config.micro_frame_size
-        self.micro_z_frame_size = self.temporal_vae.get_latent_size([config.micro_frame_size, None, None])[0]
+        self.micro_z_frame_size = self.temporal_vae.get_latent_size(
+            [config.micro_frame_size, None, None]
+        )[0]
 
         if config.freeze_vae_2d:
             for param in self.spatial_vae.parameters():
@@ -202,7 +217,9 @@ class VideoAutoencoderPipeline(PreTrainedModel):
             x_z_list = []
             for i in range(0, z.size(2), self.micro_z_frame_size):
                 z_bs = z[:, :, i : i + self.micro_z_frame_size]
-                x_z_bs = self.temporal_vae.decode(z_bs, num_frames=min(self.micro_frame_size, num_frames))
+                x_z_bs = self.temporal_vae.decode(
+                    z_bs, num_frames=min(self.micro_frame_size, num_frames)
+                )
                 x_z_list.append(x_z_bs)
                 num_frames -= self.micro_frame_size
             x_z = torch.cat(x_z_list, dim=2)
@@ -221,11 +238,17 @@ class VideoAutoencoderPipeline(PreTrainedModel):
 
     def get_latent_size(self, input_size):
         if self.micro_frame_size is None or input_size[0] is None:
-            return self.temporal_vae.get_latent_size(self.spatial_vae.get_latent_size(input_size))
+            return self.temporal_vae.get_latent_size(
+                self.spatial_vae.get_latent_size(input_size)
+            )
         else:
             sub_input_size = [self.micro_frame_size, input_size[1], input_size[2]]
-            sub_latent_size = self.temporal_vae.get_latent_size(self.spatial_vae.get_latent_size(sub_input_size))
-            sub_latent_size[0] = sub_latent_size[0] * (input_size[0] // self.micro_frame_size)
+            sub_latent_size = self.temporal_vae.get_latent_size(
+                self.spatial_vae.get_latent_size(sub_input_size)
+            )
+            sub_latent_size[0] = sub_latent_size[0] * (
+                input_size[0] // self.micro_frame_size
+            )
             remain_temporal_size = [input_size[0] % self.micro_frame_size, None, None]
             if remain_temporal_size[0] > 0:
                 remain_size = self.temporal_vae.get_latent_size(remain_temporal_size)
@@ -277,7 +300,9 @@ def OpenSoraVAE_V1_2(
         scale=scale,
     )
 
-    if force_huggingface or (from_pretrained is not None and not os.path.isdir(from_pretrained)):
+    if force_huggingface or (
+        from_pretrained is not None and not os.path.isdir(from_pretrained)
+    ):
         model = VideoAutoencoderPipeline.from_pretrained(from_pretrained, **kwargs)
     else:
         config = VideoAutoencoderPipelineConfig(**kwargs)

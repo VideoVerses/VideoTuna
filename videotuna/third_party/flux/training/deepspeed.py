@@ -1,4 +1,7 @@
-import accelerate, logging, os
+import logging
+import os
+
+import accelerate
 from accelerate.state import AcceleratorState
 
 logger = logging.getLogger(__name__)

@@ -1,7 +1,9 @@
 import sys
-sys.path.append('/home/zraoac/Open-Sora')
+
+sys.path.append("/home/zraoac/Open-Sora")
 import os
 from copy import deepcopy
+
 import numpy as np
 import torch
 import torch.distributed as dist
@@ -13,7 +15,10 @@ from timm.models.vision_transformer import Mlp
 from transformers import PretrainedConfig, PreTrainedModel
 
 from videotuna.opensora.acceleration.checkpoint import auto_grad_checkpoint
-from videotuna.opensora.acceleration.communications import gather_forward_split_backward, split_forward_gather_backward
+from videotuna.opensora.acceleration.communications import (
+    gather_forward_split_backward,
+    split_forward_gather_backward,
+)
 from videotuna.opensora.acceleration.parallel_states import get_sequence_parallel_group
 from videotuna.opensora.models.layers.blocks import (
     Attention,
@@ -34,7 +39,6 @@ from videotuna.opensora.models.layers.blocks import (
 )
 from videotuna.opensora.registry import MODELS
 from videotuna.opensora.utils.ckpt_utils import load_checkpoint
-from transformers import PretrainedConfig, PreTrainedModel
 
 
 class STDiT8Block(nn.Module):
@@ -64,7 +68,9 @@ class STDiT8Block(nn.Module):
             attn_cls = Attention
             mha_cls = MultiHeadCrossAttention
 
-        self.norm1 = get_layernorm(hidden_size, eps=1e-6, affine=False, use_kernel=enable_layernorm_kernel)
+        self.norm1 = get_layernorm(
+            hidden_size, eps=1e-6, affine=False, use_kernel=enable_layernorm_kernel
+        )
         self.attn = attn_cls(
             hidden_size,
             num_heads=num_heads,
@@ -74,12 +80,19 @@ class STDiT8Block(nn.Module):
             enable_flash_attn=enable_flash_attn,
         )
         self.cross_attn = mha_cls(hidden_size, num_heads)
-        self.norm2 = get_layernorm(hidden_size, eps=1e-6, affine=False, use_kernel=enable_layernorm_kernel)
+        self.norm2 = get_layernorm(
+            hidden_size, eps=1e-6, affine=False, use_kernel=enable_layernorm_kernel
+        )
         self.mlp = Mlp(
-            in_features=hidden_size, hidden_features=int(hidden_size * mlp_ratio), act_layer=approx_gelu, drop=0
+            in_features=hidden_size,
+            hidden_features=int(hidden_size * mlp_ratio),
+            act_layer=approx_gelu,
+            drop=0,
         )
         self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
-        self.scale_shift_table = nn.Parameter(torch.randn(6, hidden_size) / hidden_size**0.5)
+        self.scale_shift_table = nn.Parameter(
+            torch.randn(6, hidden_size) / hidden_size**0.5
+        )
 
     def t_mask_select(self, x_mask, x, masked_x, T, S):
         # x: [B, (T, S), C]
@@ -109,9 +122,14 @@ class STDiT8Block(nn.Module):
             self.scale_shift_table[None] + t.reshape(B, 6, -1)
         ).chunk(6, dim=1)
         if x_mask is not None:
-            shift_msa_zero, scale_msa_zero, gate_msa_zero, shift_mlp_zero, scale_mlp_zero, gate_mlp_zero = (
-                self.scale_shift_table[None] + t0.reshape(B, 6, -1)
-            ).chunk(6, dim=1)
+            (
+                shift_msa_zero,
+                scale_msa_zero,
+                gate_msa_zero,
+                shift_mlp_zero,
+                scale_mlp_zero,
+                gate_mlp_zero,
+            ) = (self.scale_shift_table[None] + t0.reshape(B, 6, -1)).chunk(6, dim=1)
         if debug:
             x_tmp = deepcopy(x)
         # modulate (attention)
@@ -162,7 +180,7 @@ class STDiT8Block(nn.Module):
 
         # residual
         x = x + self.drop_path(x_m_s)
-        
+
         if debug:
             print(f"Block {debug} x diff: {torch.norm(x - x_tmp)}")
 
@@ -228,7 +246,9 @@ class STDiT8(PreTrainedModel):
         super().__init__(config)
         self.pred_sigma = config.pred_sigma
         self.in_channels = config.in_channels
-        self.out_channels = config.in_channels * 2 if config.pred_sigma else config.in_channels
+        self.out_channels = (
+            config.in_channels * 2 if config.pred_sigma else config.in_channels
+        )
 
         # model size related
         self.depth = config.depth
@@ -249,7 +269,9 @@ class STDiT8(PreTrainedModel):
         self.rope = RotaryEmbedding(dim=self.hidden_size // self.num_heads)
 
         # embedding
-        self.x_embedder = PatchEmbed3D(config.patch_size, config.in_channels, config.hidden_size)
+        self.x_embedder = PatchEmbed3D(
+            config.patch_size, config.in_channels, config.hidden_size
+        )
         self.t_embedder = TimestepEmbedder(config.hidden_size)
         self.fps_embedder = SizeEmbedder(self.hidden_size)
         self.t_block = nn.Sequential(
@@ -304,7 +326,9 @@ class STDiT8(PreTrainedModel):
         )
 
         # final layer
-        self.final_layer = T2IFinalLayer(config.hidden_size, np.prod(self.patch_size), self.out_channels)
+        self.final_layer = T2IFinalLayer(
+            config.hidden_size, np.prod(self.patch_size), self.out_channels
+        )
 
         # weight training config
         self.only_train_temporal = config.only_train_temporal
@@ -322,31 +346,31 @@ class STDiT8(PreTrainedModel):
             for block in self.temporal_blocks:
                 for param in block.parameters():
                     param.requires_grad = True
-        
+
         # freeze y embedder
         if self.freeze_y_embedder:
             for param in self.y_embedder.parameters():
                 param.requires_grad = False
-        
+
         # freeze previous blocks
         if self.freeze_previous_blocks is not None:
             freeze_type = self.freeze_previous_blocks[1]
-            if freeze_type == 'front':
+            if freeze_type == "front":
                 print("Freeze the front blocks")
                 for name, param in self.spatial_blocks.named_parameters():
-                    if int(name.split('.')[0]) < 28:
+                    if int(name.split(".")[0]) < 28:
                         param.requires_grad = False
                 for name, param in self.temporal_blocks.named_parameters():
-                    if int(name.split('.')[0]) < 28:
+                    if int(name.split(".")[0]) < 28:
                         param.requires_grad = False
-            elif freeze_type == 'inter':
+            elif freeze_type == "inter":
                 print("Freeze the inter blocks")
                 freeze_depth_list = [x for x in range(0, self.depth, 2)]
                 for name, param in self.spatial_blocks.named_parameters():
-                    if int(name.split('.')[0]) in freeze_depth_list:
+                    if int(name.split(".")[0]) in freeze_depth_list:
                         param.requires_grad = False
                 for name, param in self.temporal_blocks.named_parameters():
-                    if int(name.split('.')[0]) in freeze_depth_list:
+                    if int(name.split(".")[0]) in freeze_depth_list:
                         param.requires_grad = False
             else:
                 raise ValueError(f"Unknown freeze_previous_blocks type: {freeze_type}")
@@ -392,14 +416,29 @@ class STDiT8(PreTrainedModel):
             if mask.shape[0] != y.shape[0]:
                 mask = mask.repeat(y.shape[0] // mask.shape[0], 1)
             mask = mask.squeeze(1).squeeze(1)
-            y = y.squeeze(1).masked_select(mask.unsqueeze(-1) != 0).view(1, -1, self.hidden_size)
+            y = (
+                y.squeeze(1)
+                .masked_select(mask.unsqueeze(-1) != 0)
+                .view(1, -1, self.hidden_size)
+            )
             y_lens = mask.sum(dim=1).tolist()
         else:
             y_lens = [y.shape[2]] * y.shape[0]
             y = y.squeeze(1).view(1, -1, self.hidden_size)
         return y, y_lens
 
-    def forward(self, x, timestep, y, mask=None, x_mask=None, fps=None, height=None, width=None, **kwargs):
+    def forward(
+        self,
+        x,
+        timestep,
+        y,
+        mask=None,
+        x_mask=None,
+        fps=None,
+        height=None,
+        width=None,
+        **kwargs,
+    ):
         dtype = self.x_embedder.proj.weight.dtype
         B = x.size(0)
         x = x.to(dtype)
@@ -442,19 +481,29 @@ class STDiT8(PreTrainedModel):
 
         # shard over the sequence dim if sp is enabled
         if self.enable_sequence_parallelism:
-            x = split_forward_gather_backward(x, get_sequence_parallel_group(), dim=2, grad_scale="down")
+            x = split_forward_gather_backward(
+                x, get_sequence_parallel_group(), dim=2, grad_scale="down"
+            )
             S = S // dist.get_world_size(get_sequence_parallel_group())
 
         x = rearrange(x, "B T S C -> B (T S) C", T=T, S=S)
 
         # === blocks ===
-        for spatial_block, temporal_block in zip(self.spatial_blocks, self.temporal_blocks):
-            x = auto_grad_checkpoint(spatial_block, x, y, t_mlp, y_lens, x_mask, t0_mlp, T, S)
-            x = auto_grad_checkpoint(temporal_block, x, y, t_mlp, y_lens, x_mask, t0_mlp, T, S)
+        for spatial_block, temporal_block in zip(
+            self.spatial_blocks, self.temporal_blocks
+        ):
+            x = auto_grad_checkpoint(
+                spatial_block, x, y, t_mlp, y_lens, x_mask, t0_mlp, T, S
+            )
+            x = auto_grad_checkpoint(
+                temporal_block, x, y, t_mlp, y_lens, x_mask, t0_mlp, T, S
+            )
 
         if self.enable_sequence_parallelism:
             x = rearrange(x, "B (T S) C -> B T S C", T=T, S=S)
-            x = gather_forward_split_backward(x, get_sequence_parallel_group(), dim=2, grad_scale="up")
+            x = gather_forward_split_backward(
+                x, get_sequence_parallel_group(), dim=2, grad_scale="up"
+            )
             S = S * dist.get_world_size(get_sequence_parallel_group())
             x = rearrange(x, "B T S C -> B (T S) C", T=T, S=S)
 
@@ -496,10 +545,16 @@ class STDiT8(PreTrainedModel):
 # @MODELS.register_module("STDiT8-XL/2")
 def STDiT8_XL_2(from_pretrained=None, **kwargs):
     force_huggingface = kwargs.pop("force_huggingface", False)
-    if force_huggingface or from_pretrained is not None and not os.path.isdir(from_pretrained):
+    if (
+        force_huggingface
+        or from_pretrained is not None
+        and not os.path.isdir(from_pretrained)
+    ):
         model = STDiT8.from_pretrained(from_pretrained, **kwargs)
     else:
-        config = STDiT8Config(depth=28, hidden_size=1152, patch_size=(1, 2, 2), num_heads=16, **kwargs)
+        config = STDiT8Config(
+            depth=28, hidden_size=1152, patch_size=(1, 2, 2), num_heads=16, **kwargs
+        )
         model = STDiT8(config)
         if from_pretrained is not None:
             load_checkpoint(model, from_pretrained)
@@ -509,10 +564,16 @@ def STDiT8_XL_2(from_pretrained=None, **kwargs):
 # @MODELS.register_module("STDiT8-2B/2")
 def STDiT8_2B_2(from_pretrained=None, **kwargs):
     force_huggingface = kwargs.pop("force_huggingface", False)
-    if force_huggingface or from_pretrained is not None and not os.path.isdir(from_pretrained):
+    if (
+        force_huggingface
+        or from_pretrained is not None
+        and not os.path.isdir(from_pretrained)
+    ):
         model = STDiT8.from_pretrained(from_pretrained, **kwargs)
     else:
-        config = STDiT8Config(depth=56, hidden_size=1152, patch_size=(1, 2, 2), num_heads=16, **kwargs)
+        config = STDiT8Config(
+            depth=56, hidden_size=1152, patch_size=(1, 2, 2), num_heads=16, **kwargs
+        )
         model = STDiT8(config)
         if from_pretrained is not None:
             load_checkpoint(model, from_pretrained)
@@ -524,7 +585,9 @@ def STDiT8_3B_2(from_pretrained=None, **kwargs):
     if from_pretrained is not None and not os.path.isdir(from_pretrained):
         model = STDiT8.from_pretrained(from_pretrained, **kwargs)
     else:
-        config = STDiT8Config(depth=28, hidden_size=1872, patch_size=(1, 2, 2), num_heads=26, **kwargs)
+        config = STDiT8Config(
+            depth=28, hidden_size=1872, patch_size=(1, 2, 2), num_heads=26, **kwargs
+        )
         model = STDiT8(config)
         if from_pretrained is not None:
             load_checkpoint(model, from_pretrained)
@@ -532,28 +595,36 @@ def STDiT8_3B_2(from_pretrained=None, **kwargs):
 
 
 if __name__ == "__main__":
-    model = STDiT8_2B_2(
-        from_pretrained='/project/llmsvgen/share/shared_ckpts/Open-Sora/OpenSora-STDiT-2B-inter-zero/',
-        qk_norm=True,
-        enable_flash_attn=True,
-        enable_layernorm_kernel=True,
-        ).to(device='cuda', dtype=torch.bfloat16).eval()
-    
-    model2 = STDiT8_XL_2(
-        from_pretrained='/project/llmsvgen/share/shared_ckpts/Open-Sora/OpenSora-STDiT-v3/',
-        qk_norm=True,
-        enable_flash_attn=True,
-        enable_layernorm_kernel=True,
-        ).to(device='cuda', dtype=torch.bfloat16).eval()
+    model = (
+        STDiT8_2B_2(
+            from_pretrained="/project/llmsvgen/share/shared_ckpts/Open-Sora/OpenSora-STDiT-2B-inter-zero/",
+            qk_norm=True,
+            enable_flash_attn=True,
+            enable_layernorm_kernel=True,
+        )
+        .to(device="cuda", dtype=torch.bfloat16)
+        .eval()
+    )
 
-    x = torch.randn(2, 4, 15, 64, 64).to(device='cuda', dtype=torch.bfloat16)
-    y = torch.randn(2, 1, 300, 4096).to(device='cuda',dtype=torch.bfloat16)
-    timestep = torch.randn(2).to(device='cuda', dtype=torch.bfloat16)
-    mask = torch.randn(2, 300).to(device='cuda', dtype=torch.bfloat16)
+    model2 = (
+        STDiT8_XL_2(
+            from_pretrained="/project/llmsvgen/share/shared_ckpts/Open-Sora/OpenSora-STDiT-v3/",
+            qk_norm=True,
+            enable_flash_attn=True,
+            enable_layernorm_kernel=True,
+        )
+        .to(device="cuda", dtype=torch.bfloat16)
+        .eval()
+    )
 
-    fps = torch.randn(2).to(device='cuda', dtype=torch.bfloat16)
-    height = torch.randn(2).to(device='cuda', dtype=torch.bfloat16)
-    width = torch.randn(2).to(device='cuda', dtype=torch.bfloat16)
+    x = torch.randn(2, 4, 15, 64, 64).to(device="cuda", dtype=torch.bfloat16)
+    y = torch.randn(2, 1, 300, 4096).to(device="cuda", dtype=torch.bfloat16)
+    timestep = torch.randn(2).to(device="cuda", dtype=torch.bfloat16)
+    mask = torch.randn(2, 300).to(device="cuda", dtype=torch.bfloat16)
+
+    fps = torch.randn(2).to(device="cuda", dtype=torch.bfloat16)
+    height = torch.randn(2).to(device="cuda", dtype=torch.bfloat16)
+    width = torch.randn(2).to(device="cuda", dtype=torch.bfloat16)
 
     with torch.no_grad():
         out1 = model(x, timestep, y, mask, None, fps, height, width)

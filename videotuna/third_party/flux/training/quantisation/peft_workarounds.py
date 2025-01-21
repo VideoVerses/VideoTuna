@@ -18,14 +18,12 @@ import warnings
 from typing import Any, Optional
 
 import torch
-from torch import nn
-from torch.nn import functional as F
-
 from peft.import_utils import is_quanto_available
 from peft.tuners.lora.layer import LoraLayer
 from peft.tuners.tuners_utils import BaseTunerLayer, check_adapters_to_merge
 from peft.utils.other import transpose
-
+from torch import nn
+from torch.nn import functional as F
 
 if is_quanto_available:
     # ensure that there are no quanto imports unless optimum.quanto is installed

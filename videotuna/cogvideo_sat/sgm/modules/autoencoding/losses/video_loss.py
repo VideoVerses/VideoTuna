@@ -1,25 +1,23 @@
-from typing import Any, Union
 from math import log2
-from beartype import beartype
+from typing import Any, Union
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchvision
+from beartype import beartype
+from einops import einsum, rearrange, repeat
+from einops.layers.torch import Rearrange
+from kornia.filters import filter3d
+from sgm.modules.autoencoding.vqvae.movq_enc_3d import CausalConv3d, DownSample3D
+from sgm.util import instantiate_from_config
 from torch import Tensor
 from torch.autograd import grad as torch_grad
 from torch.cuda.amp import autocast
-
-import torchvision
 from torchvision.models import VGG16_Weights
-from einops import rearrange, einsum, repeat
-from einops.layers.torch import Rearrange
-from kornia.filters import filter3d
 
-from ..magvit2_pytorch import Residual, FeedForward, LinearSpaceAttention
+from ..magvit2_pytorch import FeedForward, LinearSpaceAttention, Residual
 from .lpips import LPIPS
-
-from sgm.modules.autoencoding.vqvae.movq_enc_3d import CausalConv3d, DownSample3D
-from sgm.util import instantiate_from_config
 
 
 def exists(v):
@@ -45,7 +43,12 @@ def hinge_gen_loss(fake):
 @autocast(enabled=False)
 @beartype
 def grad_layer_wrt_loss(loss: Tensor, layer: nn.Parameter):
-    return torch_grad(outputs=loss, inputs=layer, grad_outputs=torch.ones_like(loss), retain_graph=True)[0].detach()
+    return torch_grad(
+        outputs=loss,
+        inputs=layer,
+        grad_outputs=torch.ones_like(loss),
+        retain_graph=True,
+    )[0].detach()
 
 
 def pick_video_frame(video, frame_indices):
@@ -111,9 +114,13 @@ class Blur(nn.Module):
 
 
 class DiscriminatorBlock(nn.Module):
-    def __init__(self, input_channels, filters, downsample=True, antialiased_downsample=True):
+    def __init__(
+        self, input_channels, filters, downsample=True, antialiased_downsample=True
+    ):
         super().__init__()
-        self.conv_res = nn.Conv2d(input_channels, filters, 1, stride=(2 if downsample else 1))
+        self.conv_res = nn.Conv2d(
+            input_channels, filters, 1, stride=(2 if downsample else 1)
+        )
 
         self.net = nn.Sequential(
             nn.Conv2d(input_channels, filters, 3, padding=1),
@@ -126,7 +133,8 @@ class DiscriminatorBlock(nn.Module):
 
         self.downsample = (
             nn.Sequential(
-                Rearrange("b c (h p1) (w p2) -> b (c p1 p2) h w", p1=2, p2=2), nn.Conv2d(filters * 4, filters, 1)
+                Rearrange("b c (h p1) (w p2) -> b (c p1 p2) h w", p1=2, p2=2),
+                nn.Conv2d(filters * 4, filters, 1),
             )
             if downsample
             else None
@@ -185,11 +193,20 @@ class Discriminator(nn.Module):
             is_not_last = ind != (len(layer_dims_in_out) - 1)
 
             block = DiscriminatorBlock(
-                in_chan, out_chan, downsample=is_not_last, antialiased_downsample=antialiased_downsample
+                in_chan,
+                out_chan,
+                downsample=is_not_last,
+                antialiased_downsample=antialiased_downsample,
             )
 
             attn_block = nn.Sequential(
-                Residual(LinearSpaceAttention(dim=out_chan, heads=linear_attn_heads, dim_head=linear_attn_dim_head)),
+                Residual(
+                    LinearSpaceAttention(
+                        dim=out_chan,
+                        heads=linear_attn_heads,
+                        dim_head=linear_attn_dim_head,
+                    )
+                ),
                 Residual(FeedForward(dim=out_chan, mult=ff_mult, images=True)),
             )
 
@@ -242,7 +259,9 @@ class DiscriminatorBlock3D(nn.Module):
         self.maybe_blur = Blur() if antialiased_downsample else None
 
         self.downsample = nn.Sequential(
-            Rearrange("b c (f p1) (h p2) (w p3) -> b (c p1 p2 p3) f h w", p1=2, p2=2, p3=2),
+            Rearrange(
+                "b c (f p1) (h p2) (w p3) -> b (c p1 p2 p3) f h w", p1=2, p2=2, p3=2
+            ),
             nn.Conv3d(filters * 8, filters, 1),
         )
 
@@ -363,7 +382,11 @@ class Discriminator3D(nn.Module):
                 )
                 attn_block = nn.Sequential(
                     Residual(
-                        LinearSpaceAttention(dim=out_chan, heads=linear_attn_heads, dim_head=linear_attn_dim_head)
+                        LinearSpaceAttention(
+                            dim=out_chan,
+                            heads=linear_attn_heads,
+                            dim_head=linear_attn_dim_head,
+                        )
                     ),
                     Residual(FeedForward(dim=out_chan, mult=ff_mult, images=True)),
                 )
@@ -458,7 +481,11 @@ class Discriminator3DWithfirstframe(nn.Module):
                 )
                 attn_block = nn.Sequential(
                     Residual(
-                        LinearSpaceAttention(dim=out_chan, heads=linear_attn_heads, dim_head=linear_attn_dim_head)
+                        LinearSpaceAttention(
+                            dim=out_chan,
+                            heads=linear_attn_heads,
+                            dim_head=linear_attn_dim_head,
+                        )
                     ),
                     Residual(FeedForward(dim=out_chan, mult=ff_mult, images=True)),
                 )
@@ -581,11 +608,17 @@ class VideoAutoencoderLoss(nn.Module):
                 input_frames = pick_video_frame(inputs, frame_indices)
                 recon_frames = pick_video_frame(reconstructions, frame_indices)
 
-                perceptual_loss = self.perceptual_model(input_frames.contiguous(), recon_frames.contiguous()).mean()
+                perceptual_loss = self.perceptual_model(
+                    input_frames.contiguous(), recon_frames.contiguous()
+                ).mean()
             else:
                 perceptual_loss = self.zero
 
-            if global_step >= self.disc_start or not self.training or self.adversarial_loss_weight == 0:
+            if (
+                global_step >= self.disc_start
+                or not self.training
+                or self.adversarial_loss_weight == 0
+            ):
                 gen_loss = self.zero
                 adaptive_weight = 0
             else:
@@ -598,9 +631,16 @@ class VideoAutoencoderLoss(nn.Module):
 
                 adaptive_weight = 1
                 if self.perceptual_weight > 0 and last_layer is not None:
-                    norm_grad_wrt_perceptual_loss = grad_layer_wrt_loss(perceptual_loss, last_layer).norm(p=2)
-                    norm_grad_wrt_gen_loss = grad_layer_wrt_loss(gen_loss, last_layer).norm(p=2)
-                    adaptive_weight = norm_grad_wrt_perceptual_loss / norm_grad_wrt_gen_loss.clamp(min=1e-3)
+                    norm_grad_wrt_perceptual_loss = grad_layer_wrt_loss(
+                        perceptual_loss, last_layer
+                    ).norm(p=2)
+                    norm_grad_wrt_gen_loss = grad_layer_wrt_loss(
+                        gen_loss, last_layer
+                    ).norm(p=2)
+                    adaptive_weight = (
+                        norm_grad_wrt_perceptual_loss
+                        / norm_grad_wrt_gen_loss.clamp(min=1e-3)
+                    )
                     adaptive_weight.clamp_(max=1e3)
 
                     if torch.isnan(adaptive_weight).any():
@@ -697,7 +737,9 @@ class VideoAutoencoderLoss(nn.Module):
             else:
                 gradient_penalty_loss = self.zero
 
-            total_loss = discr_loss + self.grad_penalty_loss_weight * gradient_penalty_loss
+            total_loss = (
+                discr_loss + self.grad_penalty_loss_weight * gradient_penalty_loss
+            )
             # self.grad_penalty_loss_weight * gradient_penalty_loss + \
             # sum(multiscale_discr_losses) * self.multiscale_adversarial_loss_weight
 

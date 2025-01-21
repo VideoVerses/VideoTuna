@@ -1,10 +1,11 @@
-from torch.optim.lr_scheduler import LambdaLR
-import torch
-import math
-import accelerate
-import os
 import logging
-from torch.optim.lr_scheduler import LRScheduler
+import math
+import os
+
+import accelerate
+import torch
+from torch.optim.lr_scheduler import LambdaLR, LRScheduler
+
 from videotuna.third_party.flux.training.state_tracker import StateTracker
 
 logger = logging.getLogger(__name__)
@@ -503,7 +504,9 @@ def get_lr_scheduler(
         logger.warning(
             "cosine_with_restarts is currently misbehaving, and may not do what you expect. sine is recommended instead."
         )
-        from videotuna.third_party.flux.training.custom_schedule import CosineAnnealingHardRestarts
+        from videotuna.third_party.flux.training.custom_schedule import (
+            CosineAnnealingHardRestarts,
+        )
 
         lr_scheduler = CosineAnnealingHardRestarts(
             optimizer=optimizer,
@@ -584,14 +587,12 @@ def get_lr_scheduler(
 # DISCLAIMER: This code is strongly influenced by https://github.com/leffff/euler-scheduler
 
 from dataclasses import dataclass
-from typing import Tuple, Optional, Union
+from typing import Optional, Tuple, Union
 
 import torch
 from diffusers.configuration_utils import ConfigMixin, register_to_config
+from diffusers.schedulers.scheduling_utils import SchedulerMixin
 from diffusers.utils import BaseOutput
-from diffusers.schedulers.scheduling_utils import (
-    SchedulerMixin,
-)
 
 
 @dataclass

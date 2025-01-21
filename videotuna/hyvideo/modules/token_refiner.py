@@ -1,16 +1,15 @@
 from typing import Optional
 
-from einops import rearrange
 import torch
 import torch.nn as nn
+from einops import rearrange
 
 from .activation_layers import get_activation_layer
 from .attenion import attention
-from .norm_layers import get_norm_layer
-from .embed_layers import TimestepEmbedder, TextProjection
-from .attenion import attention
+from .embed_layers import TextProjection, TimestepEmbedder
 from .mlp_layers import MLP
-from .modulate_layers import modulate, apply_gate
+from .modulate_layers import apply_gate, modulate
+from .norm_layers import get_norm_layer
 
 
 class IndividualTokenRefinerBlock(nn.Module):
@@ -165,6 +164,7 @@ class SingleTokenRefiner(nn.Module):
     """
     A single token refiner block for llm text embedding refine.
     """
+
     def __init__(
         self,
         in_channels,

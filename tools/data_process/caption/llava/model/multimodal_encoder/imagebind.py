@@ -1,18 +1,19 @@
 import torch
 import torch.nn as nn
-
 from transformers import CLIPImageProcessor
 
 try:
+    from imagebind.data import load_and_transform_audio_data
     from imagebind.models import imagebind_model
     from imagebind.models.imagebind_model import ModalityType
-    from imagebind.data import load_and_transform_audio_data
 except ImportError:
     pass
 
 
 class ImageBindWrapper(nn.Module):
-    def __init__(self, vision_tower, select_layer, select_feature="patch", delay_load=False):
+    def __init__(
+        self, vision_tower, select_layer, select_feature="patch", delay_load=False
+    ):
         super().__init__()
 
         self.is_loaded = False
@@ -25,7 +26,9 @@ class ImageBindWrapper(nn.Module):
             self.load_model()
 
     def load_model(self):
-        self.image_processor = CLIPImageProcessor.from_pretrained("openai/clip-vit-large-patch14")
+        self.image_processor = CLIPImageProcessor.from_pretrained(
+            "openai/clip-vit-large-patch14"
+        )
         self.vision_tower = imagebind_model.imagebind_huge(pretrained=True)
         for p in self.vision_tower.parameters():
             p.requires_grad = False
@@ -42,7 +45,11 @@ class ImageBindWrapper(nn.Module):
     def forward(self, x):
         if type(x) == dict:
             if x["audios"] is not None:
-                inputs = {ModalityType.AUDIO: load_and_transform_audio_data(x["audios"], device=self.device).half()}
+                inputs = {
+                    ModalityType.AUDIO: load_and_transform_audio_data(
+                        x["audios"], device=self.device
+                    ).half()
+                }
                 embeddings = self.vision_tower(inputs)
                 audio_embedding = embeddings[ModalityType.AUDIO]
                 return audio_embedding.unsqueeze(1)

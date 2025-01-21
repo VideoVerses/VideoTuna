@@ -1,7 +1,8 @@
 import os
-from accelerate.logging import get_logger
+
 import accelerate
 import torch
+from accelerate.logging import get_logger
 
 logger = get_logger(__name__, log_level=os.environ.get("SIMPLETUNER_LOG_LEVEL", "INFO"))
 
@@ -10,7 +11,9 @@ logger.setLevel(target_level)
 
 is_optimi_available = False
 from videotuna.third_party.flux.training.optimizers.adamw_bfloat16 import AdamWBF16
-from videotuna.third_party.flux.training.optimizers.adamw_schedulefree import AdamWScheduleFreeKahan
+from videotuna.third_party.flux.training.optimizers.adamw_schedulefree import (
+    AdamWScheduleFreeKahan,
+)
 from videotuna.third_party.flux.training.optimizers.soap import SOAP
 
 try:
@@ -19,11 +22,11 @@ except:
     pass
 
 try:
+    from torchao.prototype.low_bit_optim import AdamFp8 as AOAdamFp8
+    from torchao.prototype.low_bit_optim import AdamW4bit as AOAdamW4Bit
+    from torchao.prototype.low_bit_optim import AdamW8bit as AOAdamW8Bit
+    from torchao.prototype.low_bit_optim import AdamWFp8 as AOAdamWFp8
     from torchao.prototype.low_bit_optim import (
-        AdamW8bit as AOAdamW8Bit,
-        AdamW4bit as AOAdamW4Bit,
-        AdamFp8 as AOAdamFp8,
-        AdamWFp8 as AOAdamWFp8,
         CPUOffloadOptimizer as AOCPUOffloadOptimizer,
     )
 

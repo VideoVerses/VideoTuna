@@ -1,7 +1,8 @@
-import torchao, torch
-
-from torch import Tensor
 from typing import Optional
+
+import torch
+import torchao
+from torch import Tensor
 from torchao.prototype.quantized_training.int8 import Int8QuantizedTrainingLinearWeight
 
 

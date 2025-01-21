@@ -1,7 +1,3 @@
-import torch
-from torch.utils.data import Dataset
-from torchvision import transforms
-
 import argparse
 import logging
 import math
@@ -10,9 +6,10 @@ import shutil
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
-
+import torch
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
+
 
 class VideoDataset(Dataset):
     def __init__(
@@ -34,7 +31,9 @@ class VideoDataset(Dataset):
     ) -> None:
         super().__init__()
 
-        self.instance_data_root = Path(instance_data_root) if instance_data_root is not None else None
+        self.instance_data_root = (
+            Path(instance_data_root) if instance_data_root is not None else None
+        )
         self.dataset_name = dataset_name
         self.dataset_config_name = dataset_config_name
         self.caption_column = caption_column
@@ -50,9 +49,13 @@ class VideoDataset(Dataset):
         self.image_to_video = image_to_video
 
         if dataset_name is not None:
-            self.instance_prompts, self.instance_video_paths = self._load_dataset_from_hub()
+            self.instance_prompts, self.instance_video_paths = (
+                self._load_dataset_from_hub()
+            )
         else:
-            self.instance_prompts, self.instance_video_paths = self._load_dataset_from_local_path()
+            self.instance_prompts, self.instance_video_paths = (
+                self._load_dataset_from_local_path()
+            )
 
         self.num_instance_videos = len(self.instance_video_paths)
         if self.num_instance_videos != len(self.instance_prompts):
@@ -119,7 +122,10 @@ class VideoDataset(Dataset):
                 )
 
         instance_prompts = dataset["train"][caption_column]
-        instance_videos = [Path(self.instance_data_root, filepath) for filepath in dataset["train"][video_column]]
+        instance_videos = [
+            Path(self.instance_data_root, filepath)
+            for filepath in dataset["train"][video_column]
+        ]
 
         return instance_prompts, instance_videos
 
@@ -140,10 +146,14 @@ class VideoDataset(Dataset):
             )
 
         with open(prompt_path, "r", encoding="utf-8") as file:
-            instance_prompts = [line.strip() for line in file.readlines() if len(line.strip()) > 0]
+            instance_prompts = [
+                line.strip() for line in file.readlines() if len(line.strip()) > 0
+            ]
         with open(video_path, "r", encoding="utf-8") as file:
             instance_videos = [
-                self.instance_data_root.joinpath(line.strip()) for line in file.readlines() if len(line.strip()) > 0
+                self.instance_data_root.joinpath(line.strip())
+                for line in file.readlines()
+                if len(line.strip()) > 0
             ]
 
         if any(not path.is_file() for path in instance_videos):
@@ -171,7 +181,9 @@ class VideoDataset(Dataset):
         )
 
         for filename in self.instance_video_paths:
-            video_reader = decord.VideoReader(uri=filename.as_posix(), width=self.width, height=self.height)
+            video_reader = decord.VideoReader(
+                uri=filename.as_posix(), width=self.width, height=self.height
+            )
             video_num_frames = len(video_reader)
 
             start_frame = min(self.skip_frames_start, video_num_frames)
@@ -181,7 +193,13 @@ class VideoDataset(Dataset):
             elif end_frame - start_frame <= self.max_num_frames:
                 frames = video_reader.get_batch(list(range(start_frame, end_frame)))
             else:
-                indices = list(range(start_frame, end_frame, (end_frame - start_frame) // self.max_num_frames))
+                indices = list(
+                    range(
+                        start_frame,
+                        end_frame,
+                        (end_frame - start_frame) // self.max_num_frames,
+                    )
+                )
                 frames = video_reader.get_batch(indices)
 
             # Ensure that we don't go over the limit
@@ -201,4 +219,3 @@ class VideoDataset(Dataset):
             frames = torch.stack([train_transforms(frame) for frame in frames], dim=0)
             videos.append(frames.permute(0, 3, 1, 2).contiguous())  # [F, C, H, W]
         return videos
-

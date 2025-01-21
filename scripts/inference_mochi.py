@@ -1,8 +1,9 @@
+import argparse
+import os
+
 import torch
 from diffusers import MochiPipeline
 from diffusers.utils import export_to_video
-import argparse
-import os
 
 # create arg parser
 parser = argparse.ArgumentParser()
@@ -19,13 +20,15 @@ args = parser.parse_args()
 
 os.makedirs(args.savedir, exist_ok=True)
 
-pipe = MochiPipeline.from_pretrained("genmo/mochi-1-preview", variant="bf16", torch_dtype=torch.bfloat16)
+pipe = MochiPipeline.from_pretrained(
+    "genmo/mochi-1-preview", variant="bf16", torch_dtype=torch.bfloat16
+)
 # Enable memory savings
 pipe.enable_model_cpu_offload()
 pipe.enable_vae_tiling()
 
 # there are many prompts in the prompt_file, we need to read them all
-with open(args.prompt_file, 'r') as file:
+with open(args.prompt_file, "r") as file:
     prompts = file.readlines()
 
 # set seed

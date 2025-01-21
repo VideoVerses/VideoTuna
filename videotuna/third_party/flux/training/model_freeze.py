@@ -1,5 +1,7 @@
 import logging
-import os, re
+import os
+import re
+
 from torch import nn
 
 logger = logging.getLogger("ModelFreeze")

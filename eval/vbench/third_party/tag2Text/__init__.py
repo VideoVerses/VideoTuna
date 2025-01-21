@@ -1,2 +1,3 @@
 import sys
-sys.path.append('third_party/grit_src')
+
+sys.path.append("third_party/grit_src")

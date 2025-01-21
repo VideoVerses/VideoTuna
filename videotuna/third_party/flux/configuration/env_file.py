@@ -68,9 +68,9 @@ env_to_args_map = {
     "DISABLE_BENCHMARK": "--disable_benchmark",
 }
 
+import logging
 import os
 import subprocess
-import logging
 
 logger = logging.getLogger("SimpleTuner")
 logger.setLevel(os.environ.get("SIMPLETUNER_LOG_LEVEL", "INFO"))

@@ -1,11 +1,10 @@
 import torch
 import torch.nn as nn
+from llava.utils import rank0_print
 
 from .eva_clip_processors import EvaClipImageTrainProcessor
 from .eva_vit import EVAEncoderWrapper
-from .factory import list_models, add_model_config, get_model_config
-
-from llava.utils import rank0_print
+from .factory import add_model_config, get_model_config, list_models
 
 
 class EvaClipVisionTower(nn.Module):
@@ -22,17 +21,26 @@ class EvaClipVisionTower(nn.Module):
             self.load_model()
         elif getattr(args, "unfreeze_mm_vision_tower", False):
             # TODO: better detector is needed.
-            rank0_print(f"The checkpoint seems to contain `vision_tower` weights: `unfreeze_mm_vision_tower`: True.")
+            rank0_print(
+                f"The checkpoint seems to contain `vision_tower` weights: `unfreeze_mm_vision_tower`: True."
+            )
             self.load_model()
-        elif hasattr(args, "mm_tunable_parts") and "mm_vision_tower" in args.mm_tunable_parts:
-            rank0_print(f"The checkpoint seems to contain `vision_tower` weights: `mm_tunable_parts` contains `mm_vision_tower`.")
+        elif (
+            hasattr(args, "mm_tunable_parts")
+            and "mm_vision_tower" in args.mm_tunable_parts
+        ):
+            rank0_print(
+                f"The checkpoint seems to contain `vision_tower` weights: `mm_tunable_parts` contains `mm_vision_tower`."
+            )
             self.load_model()
         else:
             self.cfg_only = self.config
 
     def load_model(self, device_map=None):
         rank0_print(f"Pretrained: {self.vision_tower_pretrained}")
-        self.image_processor = EvaClipImageTrainProcessor(self.config["vision_cfg"]["image_size"])
+        self.image_processor = EvaClipImageTrainProcessor(
+            self.config["vision_cfg"]["image_size"]
+        )
         self.vision_tower = EVAEncoderWrapper(self.vision_tower_pretrained, self.config)
         rank0_print(f"Loaded image processor: {self.image_processor}")
         self.vision_tower.requires_grad_(False)
@@ -42,10 +50,14 @@ class EvaClipVisionTower(nn.Module):
         if type(images) is list:
             image_features = []
             for image in images:
-                image_feature = self.vision_tower(image.to(device=self.device, dtype=self.dtype).unsqueeze(0)).to(image.dtype)
+                image_feature = self.vision_tower(
+                    image.to(device=self.device, dtype=self.dtype).unsqueeze(0)
+                ).to(image.dtype)
                 image_features.append(image_feature)
         else:
-            image_features = self.vision_tower(images.to(device=self.device, dtype=self.dtype)).to(images.dtype)
+            image_features = self.vision_tower(
+                images.to(device=self.device, dtype=self.dtype)
+            ).to(images.dtype)
 
         return image_features
 
@@ -63,11 +75,17 @@ class EvaClipVisionTower(nn.Module):
 
     @property
     def num_patches(self):
-        return (self.config["vision_cfg"]["image_size"] // self.config["vision_cfg"]["patch_size"]) ** 2
+        return (
+            self.config["vision_cfg"]["image_size"]
+            // self.config["vision_cfg"]["patch_size"]
+        ) ** 2
 
     @property
     def num_patches_per_side(self):
-        return self.config["vision_cfg"]["image_size"] // self.config["vision_cfg"]["patch_size"]
+        return (
+            self.config["vision_cfg"]["image_size"]
+            // self.config["vision_cfg"]["patch_size"]
+        )
 
     @property
     def image_size(self):

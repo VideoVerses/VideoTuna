@@ -1,7 +1,12 @@
 import os
+
 import huggingface_hub
 import torch
-from videotuna.third_party.flux.training import quantised_precision_levels, lycoris_defaults
+
+from videotuna.third_party.flux.training import (
+    lycoris_defaults,
+    quantised_precision_levels,
+)
 from videotuna.third_party.flux.training.optimizer_param import optimizer_choices
 
 bf16_only_optims = [
@@ -301,7 +306,9 @@ def configure_env():
 
             # approximate the rank of the lycoris
             lora_rank = 16
-            with open("configs/006_flux/lycoris_config.json", "w", encoding="utf-8") as f:
+            with open(
+                "configs/006_flux/lycoris_config.json", "w", encoding="utf-8"
+            ) as f:
                 f.write(json.dumps(lycoris_config, indent=4))
         else:
             env_contents["--lora_type"] = "standard"
@@ -802,10 +809,14 @@ def configure_env():
             user_prompt_library = PromptExpander.generate_prompts(
                 trigger_phrase=user_caption_trigger, num_prompts=number_of_prompts
             )
-            with open("configs/006_flux/user_prompt_library.json", "w", encoding="utf-8") as f:
+            with open(
+                "configs/006_flux/user_prompt_library.json", "w", encoding="utf-8"
+            ) as f:
                 f.write(json.dumps(user_prompt_library, indent=4))
             print("Prompt library generated successfully!")
-            env_contents["--user_prompt_library"] = "configs/006_flux/user_prompt_library.json"
+            env_contents["--user_prompt_library"] = (
+                "configs/006_flux/user_prompt_library.json"
+            )
         except Exception as e:
             print(f"(warning) Failed to generate prompt library: {e}")
 

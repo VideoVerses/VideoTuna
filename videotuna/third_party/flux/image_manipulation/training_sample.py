@@ -1,15 +1,17 @@
-from PIL import Image
-from PIL.ImageOps import exif_transpose
-from videotuna.third_party.flux.multiaspect.image import MultiaspectImage, resize_tools
-from videotuna.third_party.flux.image_manipulation.cropping import crop_handlers
-from videotuna.third_party.flux.training.state_tracker import StateTracker
-from videotuna.third_party.flux.training.multi_process import should_log
 import logging
 import os
-from tqdm import tqdm
-from math import sqrt
 import random
 import time
+from math import sqrt
+
+from PIL import Image
+from PIL.ImageOps import exif_transpose
+from tqdm import tqdm
+
+from videotuna.third_party.flux.image_manipulation.cropping import crop_handlers
+from videotuna.third_party.flux.multiaspect.image import MultiaspectImage, resize_tools
+from videotuna.third_party.flux.training.multi_process import should_log
+from videotuna.third_party.flux.training.state_tracker import StateTracker
 
 logger = logging.getLogger(__name__)
 if should_log():
@@ -80,7 +82,10 @@ class TrainingSample:
         self.resolution = self.data_backend_config.get("resolution")
         self.resolution_type = self.data_backend_config.get("resolution_type")
         self.target_size_calculator = resize_tools.get(self.resolution_type)
-        if self.target_size_calculator is None and conditioning_type not in ["mask", "controlnet"]:
+        if self.target_size_calculator is None and conditioning_type not in [
+            "mask",
+            "controlnet",
+        ]:
             raise ValueError(f"Unknown resolution type: {self.resolution_type}")
         self._set_resolution()
         self.target_downsample_size = self.data_backend_config.get(

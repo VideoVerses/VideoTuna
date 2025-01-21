@@ -5,7 +5,8 @@ import pathlib
 import re
 from copy import deepcopy
 from pathlib import Path
-from typing import Optional, Tuple, Union, Dict, Any
+from typing import Any, Dict, Optional, Tuple, Union
+
 import torch
 
 try:
@@ -14,13 +15,28 @@ except ImportError:
     deepspeed = None
 
 from .constants import OPENAI_DATASET_MEAN, OPENAI_DATASET_STD
-from .model import CLIP, CustomCLIP, convert_weights_to_lp, convert_to_custom_text_state_dict, get_cast_dtype
+from .model import (
+    CLIP,
+    CustomCLIP,
+    convert_to_custom_text_state_dict,
+    convert_weights_to_lp,
+    get_cast_dtype,
+)
 from .openai import load_openai_model
-from .pretrained import is_pretrained_cfg, get_pretrained_cfg, download_pretrained, list_pretrained_tags_by_model
-from .transform import image_transform
+from .pretrained import (
+    download_pretrained,
+    get_pretrained_cfg,
+    is_pretrained_cfg,
+    list_pretrained_tags_by_model,
+)
 from .tokenizer import HFTokenizer, tokenize
-from .utils import resize_clip_pos_embed, resize_evaclip_pos_embed, resize_visual_pos_embed, resize_eva_pos_embed
-
+from .transform import image_transform
+from .utils import (
+    resize_clip_pos_embed,
+    resize_eva_pos_embed,
+    resize_evaclip_pos_embed,
+    resize_visual_pos_embed,
+)
 
 _MODEL_CONFIG_PATHS = [Path(__file__).parent / f"model_configs/"]
 _MODEL_CONFIGS = {}  # directory (model_name: config) of model architecture configs
@@ -48,7 +64,9 @@ def _rescan_model_configs():
             if all(a in model_cfg for a in ("embed_dim", "vision_cfg", "text_cfg")):
                 _MODEL_CONFIGS[cf.stem] = model_cfg
 
-    _MODEL_CONFIGS = dict(sorted(_MODEL_CONFIGS.items(), key=lambda x: _natural_key(x[0])))
+    _MODEL_CONFIGS = dict(
+        sorted(_MODEL_CONFIGS.items(), key=lambda x: _natural_key(x[0]))
+    )
 
 
 _rescan_model_configs()  # initial populate of model config registry
@@ -76,12 +94,22 @@ def get_model_config(model_name):
 
 def get_tokenizer(model_name):
     config = get_model_config(model_name)
-    tokenizer = HFTokenizer(config["text_cfg"]["hf_tokenizer_name"]) if "hf_tokenizer_name" in config["text_cfg"] else tokenize
+    tokenizer = (
+        HFTokenizer(config["text_cfg"]["hf_tokenizer_name"])
+        if "hf_tokenizer_name" in config["text_cfg"]
+        else tokenize
+    )
     return tokenizer
 
 
 # loading openai CLIP weights when is_openai=True for training
-def load_state_dict(checkpoint_path: str, map_location: str = "cpu", model_key: str = "model|module|state_dict", is_openai: bool = False, skip_list: list = []):
+def load_state_dict(
+    checkpoint_path: str,
+    map_location: str = "cpu",
+    model_key: str = "model|module|state_dict",
+    is_openai: bool = False,
+    skip_list: list = [],
+):
     if is_openai:
         model = torch.jit.load(checkpoint_path, map_location="cpu").eval()
         state_dict = model.state_dict()
@@ -110,10 +138,14 @@ def load_state_dict(checkpoint_path: str, map_location: str = "cpu", model_key: 
     return state_dict
 
 
-def load_checkpoint(model, checkpoint_path, model_key="model|module|state_dict", strict=True):
+def load_checkpoint(
+    model, checkpoint_path, model_key="model|module|state_dict", strict=True
+):
     state_dict = load_state_dict(checkpoint_path, model_key=model_key, is_openai=False)
     # detect old format and make compatible with new format
-    if "positional_embedding" in state_dict and not hasattr(model, "positional_embedding"):
+    if "positional_embedding" in state_dict and not hasattr(
+        model, "positional_embedding"
+    ):
         state_dict = convert_to_custom_text_state_dict(state_dict)
     if "text.logit_scale" in state_dict and hasattr(model, "logit_scale"):
         state_dict["logit_scale"] = state_dict["text.logit_scale"]
@@ -132,8 +164,18 @@ def load_checkpoint(model, checkpoint_path, model_key="model|module|state_dict",
     return incompatible_keys
 
 
-def load_clip_visual_state_dict(checkpoint_path: str, map_location: str = "cpu", is_openai: bool = False, skip_list: list = []):
-    state_dict = load_state_dict(checkpoint_path, map_location=map_location, is_openai=is_openai, skip_list=skip_list)
+def load_clip_visual_state_dict(
+    checkpoint_path: str,
+    map_location: str = "cpu",
+    is_openai: bool = False,
+    skip_list: list = [],
+):
+    state_dict = load_state_dict(
+        checkpoint_path,
+        map_location=map_location,
+        is_openai=is_openai,
+        skip_list=skip_list,
+    )
 
     for k in list(state_dict.keys()):
         if not k.startswith("visual."):
@@ -146,8 +188,18 @@ def load_clip_visual_state_dict(checkpoint_path: str, map_location: str = "cpu",
     return state_dict
 
 
-def load_clip_text_state_dict(checkpoint_path: str, map_location: str = "cpu", is_openai: bool = False, skip_list: list = []):
-    state_dict = load_state_dict(checkpoint_path, map_location=map_location, is_openai=is_openai, skip_list=skip_list)
+def load_clip_text_state_dict(
+    checkpoint_path: str,
+    map_location: str = "cpu",
+    is_openai: bool = False,
+    skip_list: list = [],
+):
+    state_dict = load_state_dict(
+        checkpoint_path,
+        map_location=map_location,
+        is_openai=is_openai,
+        skip_list=skip_list,
+    )
 
     for k in list(state_dict.keys()):
         if k.startswith("visual."):
@@ -167,7 +219,13 @@ def get_pretrained_tag(pretrained_model):
         return "other"
 
 
-def load_zero_partitions(model, state_dict, is_deepspeed_zero3_enabled, pretrained_model_path, ignore_mismatched_sizes=False):
+def load_zero_partitions(
+    model,
+    state_dict,
+    is_deepspeed_zero3_enabled,
+    pretrained_model_path,
+    ignore_mismatched_sizes=False,
+):
     """
     adept from pytorch lightning and transformers
     with deepspeed.zero.Init():
@@ -192,8 +250,18 @@ def load_zero_partitions(model, state_dict, is_deepspeed_zero3_enabled, pretrain
         for checkpoint_key in loaded_keys:
             model_key = checkpoint_key
 
-            if model_key in model_state_dict and state_dict[checkpoint_key].shape != model_state_dict[model_key].shape:
-                mismatched_keys.append((checkpoint_key, state_dict[checkpoint_key].shape, model_state_dict[model_key].shape))
+            if (
+                model_key in model_state_dict
+                and state_dict[checkpoint_key].shape
+                != model_state_dict[model_key].shape
+            ):
+                mismatched_keys.append(
+                    (
+                        checkpoint_key,
+                        state_dict[checkpoint_key].shape,
+                        model_state_dict[model_key].shape,
+                    )
+                )
                 del state_dict[checkpoint_key]
     # copy state_dict so _load_from_state_dict can modify it
     metadata = getattr(state_dict, "_metadata", None)
@@ -212,7 +280,9 @@ def load_zero_partitions(model, state_dict, is_deepspeed_zero3_enabled, pretrain
             # because zero3 puts placeholders in model params, this context
             # manager gathers (unpartitions) the params of the current layer, then loads from
             # the state dict and then re-partitions them again
-            with deepspeed.zero.GatheredParameters(list(module.parameters(recurse=False)), modifier_rank=0):
+            with deepspeed.zero.GatheredParameters(
+                list(module.parameters(recurse=False)), modifier_rank=0
+            ):
                 if torch.distributed.get_rank() == 0:
                     module._load_from_state_dict(*args)
         else:
@@ -231,7 +301,9 @@ def load_zero_partitions(model, state_dict, is_deepspeed_zero3_enabled, pretrain
         error_msg = "\n\t".join(error_msgs)
         if "size mismatch" in error_msg:
             error_msg += "\n\tYou may consider adding `ignore_mismatched_sizes=True` in the model `from_pretrained` method."
-        raise RuntimeError(f"Error(s) in loading state_dict for {model.__class__.__name__}:\n\t{error_msg}")
+        raise RuntimeError(
+            f"Error(s) in loading state_dict for {model.__class__.__name__}:\n\t{error_msg}"
+        )
     if len(unexpected_keys) > 0:
         logging.warning(
             f"Some weights of the model checkpoint at {pretrained_model_path} were not used when"
@@ -243,7 +315,9 @@ def load_zero_partitions(model, state_dict, is_deepspeed_zero3_enabled, pretrain
             " (initializing a BertForSequenceClassification model from a BertForSequenceClassification model)."
         )
     else:
-        logging.info(f"All model checkpoint weights were used when initializing {model.__class__.__name__}.\n")
+        logging.info(
+            f"All model checkpoint weights were used when initializing {model.__class__.__name__}.\n"
+        )
     if len(missing_keys) > 0:
         logging.warning(
             f"Some weights of {model.__class__.__name__} were not initialized from the model checkpoint at"
@@ -258,7 +332,12 @@ def load_zero_partitions(model, state_dict, is_deepspeed_zero3_enabled, pretrain
             " training."
         )
     if len(mismatched_keys) > 0:
-        mismatched_warning = "\n".join([f"- {key}: found shape {shape1} in the checkpoint and {shape2} in the model instantiated" for key, shape1, shape2 in mismatched_keys])
+        mismatched_warning = "\n".join(
+            [
+                f"- {key}: found shape {shape1} in the checkpoint and {shape2} in the model instantiated"
+                for key, shape1, shape2 in mismatched_keys
+            ]
+        )
         logging.warning(
             f"Some weights of {model.__class__.__name__} were not initialized from the model checkpoint at"
             f" {pretrained_model_path} and are newly initialized because the shapes did not"
@@ -267,7 +346,16 @@ def load_zero_partitions(model, state_dict, is_deepspeed_zero3_enabled, pretrain
         )
 
 
-def load_pretrained_checkpoint(model, visual_checkpoint_path, text_checkpoint_path, strict=True, visual_model=None, text_model=None, model_key="model|module|state_dict", skip_list=[]):
+def load_pretrained_checkpoint(
+    model,
+    visual_checkpoint_path,
+    text_checkpoint_path,
+    strict=True,
+    visual_model=None,
+    text_model=None,
+    model_key="model|module|state_dict",
+    skip_list=[],
+):
     visual_tag = get_pretrained_tag(visual_model)
     text_tag = get_pretrained_tag(text_model)
 
@@ -275,11 +363,20 @@ def load_pretrained_checkpoint(model, visual_checkpoint_path, text_checkpoint_pa
     visual_incompatible_keys, text_incompatible_keys = None, None
     if visual_checkpoint_path:
         if visual_tag == "eva_clip" or visual_tag == "open_clip":
-            visual_state_dict = load_clip_visual_state_dict(visual_checkpoint_path, is_openai=False, skip_list=skip_list)
+            visual_state_dict = load_clip_visual_state_dict(
+                visual_checkpoint_path, is_openai=False, skip_list=skip_list
+            )
         elif visual_tag == "clip":
-            visual_state_dict = load_clip_visual_state_dict(visual_checkpoint_path, is_openai=True, skip_list=skip_list)
+            visual_state_dict = load_clip_visual_state_dict(
+                visual_checkpoint_path, is_openai=True, skip_list=skip_list
+            )
         else:
-            visual_state_dict = load_state_dict(visual_checkpoint_path, model_key=model_key, is_openai=False, skip_list=skip_list)
+            visual_state_dict = load_state_dict(
+                visual_checkpoint_path,
+                model_key=model_key,
+                is_openai=False,
+                skip_list=skip_list,
+            )
 
         # resize_clip_pos_embed for CLIP and open CLIP
         if "positional_embedding" in visual_state_dict:
@@ -288,22 +385,43 @@ def load_pretrained_checkpoint(model, visual_checkpoint_path, text_checkpoint_pa
         elif "pos_embed" in visual_state_dict:
             resize_eva_pos_embed(visual_state_dict, model)
 
-        visual_incompatible_keys = model.visual.load_state_dict(visual_state_dict, strict=strict)
-        logging.info(f"num of loaded visual_state_dict keys: {len(visual_state_dict.keys())}")
-        logging.info(f"visual_incompatible_keys.missing_keys: {visual_incompatible_keys.missing_keys}")
+        visual_incompatible_keys = model.visual.load_state_dict(
+            visual_state_dict, strict=strict
+        )
+        logging.info(
+            f"num of loaded visual_state_dict keys: {len(visual_state_dict.keys())}"
+        )
+        logging.info(
+            f"visual_incompatible_keys.missing_keys: {visual_incompatible_keys.missing_keys}"
+        )
 
     if text_checkpoint_path:
         if text_tag == "eva_clip" or text_tag == "open_clip":
-            text_state_dict = load_clip_text_state_dict(text_checkpoint_path, is_openai=False, skip_list=skip_list)
+            text_state_dict = load_clip_text_state_dict(
+                text_checkpoint_path, is_openai=False, skip_list=skip_list
+            )
         elif text_tag == "clip":
-            text_state_dict = load_clip_text_state_dict(text_checkpoint_path, is_openai=True, skip_list=skip_list)
+            text_state_dict = load_clip_text_state_dict(
+                text_checkpoint_path, is_openai=True, skip_list=skip_list
+            )
         else:
-            text_state_dict = load_state_dict(visual_checkpoint_path, model_key=model_key, is_openai=False, skip_list=skip_list)
+            text_state_dict = load_state_dict(
+                visual_checkpoint_path,
+                model_key=model_key,
+                is_openai=False,
+                skip_list=skip_list,
+            )
 
-        text_incompatible_keys = model.text.load_state_dict(text_state_dict, strict=strict)
+        text_incompatible_keys = model.text.load_state_dict(
+            text_state_dict, strict=strict
+        )
 
-        logging.info(f"num of loaded text_state_dict keys: {len(text_state_dict.keys())}")
-        logging.info(f"text_incompatible_keys.missing_keys: {text_incompatible_keys.missing_keys}")
+        logging.info(
+            f"num of loaded text_state_dict keys: {len(text_state_dict.keys())}"
+        )
+        logging.info(
+            f"text_incompatible_keys.missing_keys: {text_incompatible_keys.missing_keys}"
+        )
 
     return visual_incompatible_keys, text_incompatible_keys
 
@@ -325,7 +443,9 @@ def create_model(
     cache_dir: Optional[str] = None,
     skip_list: list = [],
 ):
-    model_name = model_name.replace("/", "-")  # for callers using old naming with / in ViT names
+    model_name = model_name.replace(
+        "/", "-"
+    )  # for callers using old naming with / in ViT names
     if isinstance(device, str):
         device = torch.device(device)
 
@@ -343,7 +463,9 @@ def create_model(
         if model_cfg is not None:
             logging.info(f"Loaded {model_name} model config.")
         else:
-            logging.error(f"Model config for {model_name} not found; available models {list_models()}.")
+            logging.error(
+                f"Model config for {model_name} not found; available models {list_models()}."
+            )
             raise RuntimeError(f"Model config for {model_name} not found.")
 
         if "rope" in model_cfg.get("vision_cfg", {}):
@@ -361,7 +483,11 @@ def create_model(
             model_cfg["vision_cfg"]["patch_dropout"] = force_patch_dropout
 
         cast_dtype = get_cast_dtype(precision)
-        custom_clip = model_cfg.pop("custom_text", False) or force_custom_clip or ("hf_model_name" in model_cfg["text_cfg"])
+        custom_clip = (
+            model_cfg.pop("custom_text", False)
+            or force_custom_clip
+            or ("hf_model_name" in model_cfg["text_cfg"])
+        )
 
         if custom_clip:
             if "hf_model_name" in model_cfg.get("text_cfg", {}):
@@ -375,15 +501,25 @@ def create_model(
             checkpoint_path = ""
             pretrained_cfg = get_pretrained_cfg(model_name, pretrained)
             if pretrained_cfg:
-                checkpoint_path = download_pretrained(pretrained_cfg, cache_dir=cache_dir)
+                checkpoint_path = download_pretrained(
+                    pretrained_cfg, cache_dir=cache_dir
+                )
             elif os.path.exists(pretrained):
                 checkpoint_path = pretrained
 
             if checkpoint_path:
                 logging.info(f"Loading pretrained {model_name} weights ({pretrained}).")
-                load_checkpoint(model, checkpoint_path, model_key="model|module|state_dict", strict=False)
+                load_checkpoint(
+                    model,
+                    checkpoint_path,
+                    model_key="model|module|state_dict",
+                    strict=False,
+                )
             else:
-                error_str = f"Pretrained weights ({pretrained}) not found for model {model_name}." f"Available pretrained tags ({list_pretrained_tags_by_model(model_name)}."
+                error_str = (
+                    f"Pretrained weights ({pretrained}) not found for model {model_name}."
+                    f"Available pretrained tags ({list_pretrained_tags_by_model(model_name)}."
+                )
                 logging.warning(error_str)
                 raise RuntimeError(error_str)
         else:
@@ -391,46 +527,85 @@ def create_model(
             text_checkpoint_path = ""
 
             if pretrained_image:
-                pretrained_visual_model = pretrained_visual_model.replace("/", "-")  # for callers using old naming with / in ViT names
-                pretrained_image_cfg = get_pretrained_cfg(pretrained_visual_model, pretrained_image)
+                pretrained_visual_model = pretrained_visual_model.replace(
+                    "/", "-"
+                )  # for callers using old naming with / in ViT names
+                pretrained_image_cfg = get_pretrained_cfg(
+                    pretrained_visual_model, pretrained_image
+                )
                 if "timm_model_name" in model_cfg.get("vision_cfg", {}):
                     # pretrained weight loading for timm models set via vision_cfg
                     model_cfg["vision_cfg"]["timm_model_pretrained"] = True
                 elif pretrained_image_cfg:
-                    visual_checkpoint_path = download_pretrained(pretrained_image_cfg, cache_dir=cache_dir)
+                    visual_checkpoint_path = download_pretrained(
+                        pretrained_image_cfg, cache_dir=cache_dir
+                    )
                 elif os.path.exists(pretrained_image):
                     visual_checkpoint_path = pretrained_image
                 else:
-                    logging.warning(f"Pretrained weights ({visual_checkpoint_path}) not found for model {model_name}.visual.")
-                    raise RuntimeError(f"Pretrained weights ({visual_checkpoint_path}) not found for model {model_name}.visual.")
+                    logging.warning(
+                        f"Pretrained weights ({visual_checkpoint_path}) not found for model {model_name}.visual."
+                    )
+                    raise RuntimeError(
+                        f"Pretrained weights ({visual_checkpoint_path}) not found for model {model_name}.visual."
+                    )
 
             if pretrained_text:
-                pretrained_text_model = pretrained_text_model.replace("/", "-")  # for callers using old naming with / in ViT names
-                pretrained_text_cfg = get_pretrained_cfg(pretrained_text_model, pretrained_text)
+                pretrained_text_model = pretrained_text_model.replace(
+                    "/", "-"
+                )  # for callers using old naming with / in ViT names
+                pretrained_text_cfg = get_pretrained_cfg(
+                    pretrained_text_model, pretrained_text
+                )
                 if pretrained_image_cfg:
-                    text_checkpoint_path = download_pretrained(pretrained_text_cfg, cache_dir=cache_dir)
+                    text_checkpoint_path = download_pretrained(
+                        pretrained_text_cfg, cache_dir=cache_dir
+                    )
                 elif os.path.exists(pretrained_text):
                     text_checkpoint_path = pretrained_text
                 else:
-                    logging.warning(f"Pretrained weights ({text_checkpoint_path}) not found for model {model_name}.text.")
-                    raise RuntimeError(f"Pretrained weights ({text_checkpoint_path}) not found for model {model_name}.text.")
+                    logging.warning(
+                        f"Pretrained weights ({text_checkpoint_path}) not found for model {model_name}.text."
+                    )
+                    raise RuntimeError(
+                        f"Pretrained weights ({text_checkpoint_path}) not found for model {model_name}.text."
+                    )
 
             if visual_checkpoint_path:
-                logging.info(f"Loading pretrained {model_name}.visual weights ({visual_checkpoint_path}).")
+                logging.info(
+                    f"Loading pretrained {model_name}.visual weights ({visual_checkpoint_path})."
+                )
             if text_checkpoint_path:
-                logging.info(f"Loading pretrained {model_name}.text weights ({text_checkpoint_path}).")
+                logging.info(
+                    f"Loading pretrained {model_name}.text weights ({text_checkpoint_path})."
+                )
 
             if visual_checkpoint_path or text_checkpoint_path:
-                load_pretrained_checkpoint(model, visual_checkpoint_path, text_checkpoint_path, strict=False, visual_model=pretrained_visual_model, text_model=pretrained_text_model, model_key="model|module|state_dict", skip_list=skip_list)
+                load_pretrained_checkpoint(
+                    model,
+                    visual_checkpoint_path,
+                    text_checkpoint_path,
+                    strict=False,
+                    visual_model=pretrained_visual_model,
+                    text_model=pretrained_text_model,
+                    model_key="model|module|state_dict",
+                    skip_list=skip_list,
+                )
 
         if "fp16" in precision or "bf16" in precision:
             logging.info(f"convert precision to {precision}")
-            model = model.to(torch.bfloat16) if "bf16" in precision else model.to(torch.float16)
+            model = (
+                model.to(torch.bfloat16)
+                if "bf16" in precision
+                else model.to(torch.float16)
+            )
 
         # model.to(device=device)
 
         # set image / mean metadata from pretrained_cfg if available, or use default
-        model.visual.image_mean = pretrained_cfg.get("mean", None) or OPENAI_DATASET_MEAN
+        model.visual.image_mean = (
+            pretrained_cfg.get("mean", None) or OPENAI_DATASET_MEAN
+        )
         model.visual.image_std = pretrained_cfg.get("std", None) or OPENAI_DATASET_STD
 
         if jit:
@@ -478,8 +653,12 @@ def create_model_and_transforms(
 
     image_mean = image_mean or getattr(model.visual, "image_mean", None)
     image_std = image_std or getattr(model.visual, "image_std", None)
-    preprocess_train = image_transform(model.visual.image_size, is_train=True, mean=image_mean, std=image_std)
-    preprocess_val = image_transform(model.visual.image_size, is_train=False, mean=image_mean, std=image_std)
+    preprocess_train = image_transform(
+        model.visual.image_size, is_train=True, mean=image_mean, std=image_std
+    )
+    preprocess_val = image_transform(
+        model.visual.image_size, is_train=False, mean=image_mean, std=image_std
+    )
 
     return model, preprocess_train, preprocess_val
 
@@ -500,7 +679,10 @@ def create_model_from_pretrained(
     is_frozen: bool = False,
 ):
     if not is_pretrained_cfg(model_name, pretrained) and not os.path.exists(pretrained):
-        raise RuntimeError(f"{pretrained} is not a valid pretrained cfg or checkpoint for {model_name}." f" Use open_clip.list_pretrained() to find one.")
+        raise RuntimeError(
+            f"{pretrained} is not a valid pretrained cfg or checkpoint for {model_name}."
+            f" Use open_clip.list_pretrained() to find one."
+        )
 
     model = create_model(
         model_name,
@@ -523,6 +705,8 @@ def create_model_from_pretrained(
 
     image_mean = image_mean or getattr(model.visual, "image_mean", None)
     image_std = image_std or getattr(model.visual, "image_std", None)
-    preprocess = image_transform(model.visual.image_size, is_train=False, mean=image_mean, std=image_std)
+    preprocess = image_transform(
+        model.visual.image_size, is_train=False, mean=image_mean, std=image_std
+    )
 
     return model, preprocess

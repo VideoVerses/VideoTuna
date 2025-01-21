@@ -1,14 +1,13 @@
-import random
-
+import gc
 import math
+import random
 from typing import Any, Dict, List, Tuple, Union
-from omegaconf import ListConfig
-import torch.nn.functional as F
 
-from sat.helpers import print_rank0
 import torch
-from torch import nn
-
+import torch.nn.functional as F
+from omegaconf import ListConfig
+from sat import mpu
+from sat.helpers import print_rank0
 from sgm.modules import UNCONDITIONAL_CONFIG
 from sgm.modules.autoencoding.temporal_ae import VideoDecoder
 from sgm.modules.diffusionmodules.wrappers import OPENAIUNETWRAPPER
@@ -19,8 +18,7 @@ from sgm.util import (
     instantiate_from_config,
     log_txt_as_img,
 )
-import gc
-from sat import mpu
+from torch import nn
 
 
 class SATVideoDiffusionEngine(nn.Module):
@@ -40,11 +38,17 @@ class SATVideoDiffusionEngine(nn.Module):
         loss_fn_config = model_config.get("loss_fn_config", None)
         scale_factor = model_config.get("scale_factor", 1.0)
         latent_input = model_config.get("latent_input", False)
-        disable_first_stage_autocast = model_config.get("disable_first_stage_autocast", False)
+        disable_first_stage_autocast = model_config.get(
+            "disable_first_stage_autocast", False
+        )
         no_cond_log = model_config.get("disable_first_stage_autocast", False)
-        not_trainable_prefixes = model_config.get("not_trainable_prefixes", ["first_stage_model", "conditioner"])
+        not_trainable_prefixes = model_config.get(
+            "not_trainable_prefixes", ["first_stage_model", "conditioner"]
+        )
         compile_model = model_config.get("compile_model", False)
-        en_and_decode_n_samples_a_time = model_config.get("en_and_decode_n_samples_a_time", None)
+        en_and_decode_n_samples_a_time = model_config.get(
+            "en_and_decode_n_samples_a_time", None
+        )
         lr_scale = model_config.get("lr_scale", None)
         lora_train = model_config.get("lora_train", False)
         self.use_pd = model_config.get("use_pd", False)  # progressive distillation
@@ -56,7 +60,9 @@ class SATVideoDiffusionEngine(nn.Module):
         self.lr_scale = lr_scale
         self.lora_train = lora_train
         self.noised_image_input = model_config.get("noised_image_input", False)
-        self.noised_image_all_concat = model_config.get("noised_image_all_concat", False)
+        self.noised_image_all_concat = model_config.get(
+            "noised_image_all_concat", False
+        )
         self.noised_image_dropout = model_config.get("noised_image_dropout", 0.0)
         if args.fp16:
             dtype = torch.float16
@@ -77,12 +83,22 @@ class SATVideoDiffusionEngine(nn.Module):
         )
 
         self.denoiser = instantiate_from_config(denoiser_config)
-        self.sampler = instantiate_from_config(sampler_config) if sampler_config is not None else None
-        self.conditioner = instantiate_from_config(default(conditioner_config, UNCONDITIONAL_CONFIG))
+        self.sampler = (
+            instantiate_from_config(sampler_config)
+            if sampler_config is not None
+            else None
+        )
+        self.conditioner = instantiate_from_config(
+            default(conditioner_config, UNCONDITIONAL_CONFIG)
+        )
 
         self._init_first_stage(first_stage_config)
 
-        self.loss_fn = instantiate_from_config(loss_fn_config) if loss_fn_config is not None else None
+        self.loss_fn = (
+            instantiate_from_config(loss_fn_config)
+            if loss_fn_config is not None
+            else None
+        )
 
         self.latent_input = latent_input
         self.scale_factor = scale_factor
@@ -112,7 +128,9 @@ class SATVideoDiffusionEngine(nn.Module):
             else:
                 total_trainable += p.numel()
 
-        print_rank0("***** Total trainable parameters: " + str(total_trainable) + " *****")
+        print_rank0(
+            "***** Total trainable parameters: " + str(total_trainable) + " *****"
+        )
 
     def reinit(self, parent_model=None):
         # reload the initial params from previous trained modules
@@ -142,8 +160,12 @@ class SATVideoDiffusionEngine(nn.Module):
     def shared_step(self, batch: Dict) -> Any:
         x = self.get_input(batch)
         if self.lr_scale is not None:
-            lr_x = F.interpolate(x, scale_factor=1 / self.lr_scale, mode="bilinear", align_corners=False)
-            lr_x = F.interpolate(lr_x, scale_factor=self.lr_scale, mode="bilinear", align_corners=False)
+            lr_x = F.interpolate(
+                x, scale_factor=1 / self.lr_scale, mode="bilinear", align_corners=False
+            )
+            lr_x = F.interpolate(
+                lr_x, scale_factor=self.lr_scale, mode="bilinear", align_corners=False
+            )
             lr_z = self.encode_first_stage(lr_x, batch)
             batch["lr_input"] = lr_z
 
@@ -190,7 +212,11 @@ class SATVideoDiffusionEngine(nn.Module):
             recons = []
             start_frame = 0
             for i in range(fake_cp_size):
-                end_frame = start_frame + latent_time // fake_cp_size + (1 if i < latent_time % fake_cp_size else 0)
+                end_frame = (
+                    start_frame
+                    + latent_time // fake_cp_size
+                    + (1 if i < latent_time % fake_cp_size else 0)
+                )
 
                 use_cp = True if i == 0 else False
                 clear_fake_cp_cache = True if i == fake_cp_size - 1 else False
@@ -220,7 +246,9 @@ class SATVideoDiffusionEngine(nn.Module):
         all_out = []
         with torch.autocast("cuda", enabled=not self.disable_first_stage_autocast):
             for n in range(n_rounds):
-                out = self.first_stage_model.encode(x[n * n_samples : (n + 1) * n_samples])
+                out = self.first_stage_model.encode(
+                    x[n * n_samples : (n + 1) * n_samples]
+                )
                 all_out.append(out)
         z = torch.cat(all_out, dim=0)
         z = self.scale_factor * z
@@ -250,16 +278,25 @@ class SATVideoDiffusionEngine(nn.Module):
         if mp_size > 1:
             global_rank = torch.distributed.get_rank() // mp_size
             src = global_rank * mp_size
-            torch.distributed.broadcast(randn, src=src, group=mpu.get_model_parallel_group())
+            torch.distributed.broadcast(
+                randn, src=src, group=mpu.get_model_parallel_group()
+            )
 
         scale = None
         scale_emb = None
 
         denoiser = lambda input, sigma, c, **addtional_model_inputs: self.denoiser(
-            self.model, input, sigma, c, concat_images=concat_images, **addtional_model_inputs
+            self.model,
+            input,
+            sigma,
+            c,
+            concat_images=concat_images,
+            **addtional_model_inputs,
         )
 
-        samples = self.sampler(denoiser, randn, cond, uc=uc, scale=scale, scale_emb=scale_emb, ofs=ofs)
+        samples = self.sampler(
+            denoiser, randn, cond, uc=uc, scale=scale, scale_emb=scale_emb, ofs=ofs
+        )
         samples = samples.to(self.dtype)
         return samples
 
@@ -273,7 +310,9 @@ class SATVideoDiffusionEngine(nn.Module):
         log = dict()
 
         for embedder in self.conditioner.embedders:
-            if ((self.log_keys is None) or (embedder.input_key in self.log_keys)) and not self.no_cond_log:
+            if (
+                (self.log_keys is None) or (embedder.input_key in self.log_keys)
+            ) and not self.no_cond_log:
                 x = batch[embedder.input_key][:n]
                 if isinstance(x, torch.Tensor):
                     if x.dim() == 1:
@@ -282,7 +321,10 @@ class SATVideoDiffusionEngine(nn.Module):
                         xc = log_txt_as_img((image_h, image_w), x, size=image_h // 4)
                     elif x.dim() == 2:
                         # size and crop cond and the like
-                        x = ["x".join([str(xx) for xx in x[i].tolist()]) for i in range(x.shape[0])]
+                        x = [
+                            "x".join([str(xx) for xx in x[i].tolist()])
+                            for i in range(x.shape[0])
+                        ]
                         xc = log_txt_as_img((image_h, image_w), x, size=image_h // 20)
                     else:
                         raise NotImplementedError()
@@ -319,7 +361,9 @@ class SATVideoDiffusionEngine(nn.Module):
 
         c, uc = self.conditioner.get_unconditional_conditioning(
             batch,
-            force_uc_zero_embeddings=ucg_keys if len(self.conditioner.embedders) > 0 else [],
+            force_uc_zero_embeddings=(
+                ucg_keys if len(self.conditioner.embedders) > 0 else []
+            ),
         )
 
         sampling_kwargs = {}
@@ -332,7 +376,9 @@ class SATVideoDiffusionEngine(nn.Module):
         z = self.encode_first_stage(x, batch)
         if not only_log_video_latents:
             log["reconstructions"] = self.decode_first_stage(z).to(torch.float32)
-            log["reconstructions"] = log["reconstructions"].permute(0, 2, 1, 3, 4).contiguous()
+            log["reconstructions"] = (
+                log["reconstructions"].permute(0, 2, 1, 3, 4).contiguous()
+            )
         z = z.permute(0, 2, 1, 3, 4).contiguous()
 
         log.update(self.log_conditionings(batch, N))
@@ -349,7 +395,9 @@ class SATVideoDiffusionEngine(nn.Module):
             image = torch.concat([image, torch.zeros_like(z[:, 1:])], dim=1)
             c["concat"] = image
             uc["concat"] = image
-            samples = self.sample(c, shape=z.shape[1:], uc=uc, batch_size=N, **sampling_kwargs)  # b t c h w
+            samples = self.sample(
+                c, shape=z.shape[1:], uc=uc, batch_size=N, **sampling_kwargs
+            )  # b t c h w
             samples = samples.permute(0, 2, 1, 3, 4).contiguous()
             if only_log_video_latents:
                 latents = 1.0 / self.scale_factor * samples
@@ -359,7 +407,9 @@ class SATVideoDiffusionEngine(nn.Module):
                 samples = samples.permute(0, 2, 1, 3, 4).contiguous()
                 log["samples"] = samples
         else:
-            samples = self.sample(c, shape=z.shape[1:], uc=uc, batch_size=N, **sampling_kwargs)  # b t c h w
+            samples = self.sample(
+                c, shape=z.shape[1:], uc=uc, batch_size=N, **sampling_kwargs
+            )  # b t c h w
             samples = samples.permute(0, 2, 1, 3, 4).contiguous()
             if only_log_video_latents:
                 latents = 1.0 / self.scale_factor * samples

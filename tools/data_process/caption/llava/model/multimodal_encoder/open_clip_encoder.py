@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
-from transformers import CLIPImageProcessor
 from llava.utils import rank0_print
+from transformers import CLIPImageProcessor
 
 try:
     import open_clip
@@ -31,19 +31,39 @@ class OpenCLIPVisionTower(nn.Module):
             self.load_model()
         elif getattr(args, "unfreeze_mm_vision_tower", False):
             # TODO: better detector is needed.
-            rank0_print(f"The checkpoint seems to contain `vision_tower` weights: `unfreeze_mm_vision_tower`: True.")
+            rank0_print(
+                f"The checkpoint seems to contain `vision_tower` weights: `unfreeze_mm_vision_tower`: True."
+            )
             self.load_model()
-        elif hasattr(args, "mm_tunable_parts") and "mm_vision_tower" in args.mm_tunable_parts:
-            rank0_print(f"The checkpoint seems to contain `vision_tower` weights: `mm_tunable_parts` contains `mm_vision_tower`.")
+        elif (
+            hasattr(args, "mm_tunable_parts")
+            and "mm_vision_tower" in args.mm_tunable_parts
+        ):
+            rank0_print(
+                f"The checkpoint seems to contain `vision_tower` weights: `mm_tunable_parts` contains `mm_vision_tower`."
+            )
             self.load_model()
 
     def load_model(self, device_map="auto"):
         rank0_print(f"Loading OpenCLIP model: {self.model_name}")
         rank0_print(f"Pretrained: {self.pretrained}")
-        vision_tower, _, image_processor = open_clip.create_model_and_transforms(model_name=self.model_name, pretrained=self.pretrained, precision="fp32", device="cuda")
+        vision_tower, _, image_processor = open_clip.create_model_and_transforms(
+            model_name=self.model_name,
+            pretrained=self.pretrained,
+            precision="fp32",
+            device="cuda",
+        )
 
-        resize_transform = [t for t in image_processor.transforms if isinstance(t, torchvision.transforms.Resize)][0]
-        normalize_transform = [t for t in image_processor.transforms if isinstance(t, torchvision.transforms.Normalize)][0]
+        resize_transform = [
+            t
+            for t in image_processor.transforms
+            if isinstance(t, torchvision.transforms.Resize)
+        ][0]
+        normalize_transform = [
+            t
+            for t in image_processor.transforms
+            if isinstance(t, torchvision.transforms.Normalize)
+        ][0]
         self.resize_transform_size = resize_transform.size  # 224 or 384
         self.patch_size = vision_tower.visual.conv1.kernel_size[0]  # 14 or 16
 
@@ -73,14 +93,20 @@ class OpenCLIPVisionTower(nn.Module):
         return image_features
 
     def forward_visual(self, x, output_hidden_states=False):
-        if hasattr(self.vision_tower, "trunk") and hasattr(self.vision_tower.trunk, "_intermediate_layers"):
-            return self.vision_tower.trunk._intermediate_layers(x, abs(self.select_layer))
+        if hasattr(self.vision_tower, "trunk") and hasattr(
+            self.vision_tower.trunk, "_intermediate_layers"
+        ):
+            return self.vision_tower.trunk._intermediate_layers(
+                x, abs(self.select_layer)
+            )
         else:
 
             def forward_openclip(self, x: torch.Tensor):
                 features = []
                 x = self.conv1(x)  # shape = [*, width, grid, grid]
-                x = x.reshape(x.shape[0], x.shape[1], -1)  # shape = [*, width, grid ** 2]
+                x = x.reshape(
+                    x.shape[0], x.shape[1], -1
+                )  # shape = [*, width, grid ** 2]
                 x = x.permute(0, 2, 1)  # shape = [*, grid ** 2, width]
 
                 # class embeddings and positional embeddings
@@ -106,11 +132,15 @@ class OpenCLIPVisionTower(nn.Module):
         if type(images) is list:
             image_features = []
             for image in images:
-                image_forward_out = self.forward_visual(image.to(self.dtype).unsqueeze(0), output_hidden_states=True)
+                image_forward_out = self.forward_visual(
+                    image.to(self.dtype).unsqueeze(0), output_hidden_states=True
+                )
                 image_feature = self.feature_select(image_forward_out).to(image.dtype)
                 image_features.append(image_feature)
         else:
-            image_forward_outs = self.forward_visual(images.to(self.dtype), output_hidden_states=True)
+            image_forward_outs = self.forward_visual(
+                images.to(self.dtype), output_hidden_states=True
+            )
             image_features = self.feature_select(image_forward_outs).to(images.dtype)
 
         return image_features
@@ -148,7 +178,11 @@ class OpenCLIPVisionTower(nn.Module):
 
     @property
     def num_patches(self):
-        image_size = self.resize_transform_size if isinstance(self.resize_transform_size, int) else self.resize_transform_size[0]
+        image_size = (
+            self.resize_transform_size
+            if isinstance(self.resize_transform_size, int)
+            else self.resize_transform_size[0]
+        )
         _num_patches = (image_size // self.patch_size) ** 2
         if "cls_patch" in self.select_feature:
             _num_patches += 1

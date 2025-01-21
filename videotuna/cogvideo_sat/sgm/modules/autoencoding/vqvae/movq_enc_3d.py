@@ -1,12 +1,12 @@
 # pytorch_diffusion + derived encoder decoder
 import math
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
-
 from beartype import beartype
-from beartype.typing import Union, Tuple, Optional, List
+from beartype.typing import List, Optional, Tuple, Union
 from einops import rearrange
 
 
@@ -51,7 +51,12 @@ def nonlinearity(x):
 class CausalConv3d(nn.Module):
     @beartype
     def __init__(
-        self, chan_in, chan_out, kernel_size: Union[int, Tuple[int, int, int]], pad_mode="constant", **kwargs
+        self,
+        chan_in,
+        chan_out,
+        kernel_size: Union[int, Tuple[int, int, int]],
+        pad_mode="constant",
+        **kwargs,
     ):
         super().__init__()
         kernel_size = cast_tuple(kernel_size, 3)
@@ -71,30 +76,59 @@ class CausalConv3d(nn.Module):
         self.height_pad = height_pad
         self.width_pad = width_pad
         self.time_pad = time_pad
-        self.time_causal_padding = (width_pad, width_pad, height_pad, height_pad, time_pad, 0)
+        self.time_causal_padding = (
+            width_pad,
+            width_pad,
+            height_pad,
+            height_pad,
+            time_pad,
+            0,
+        )
 
         stride = (stride, 1, 1)
         dilation = (dilation, 1, 1)
-        self.conv = nn.Conv3d(chan_in, chan_out, kernel_size, stride=stride, dilation=dilation, **kwargs)
+        self.conv = nn.Conv3d(
+            chan_in, chan_out, kernel_size, stride=stride, dilation=dilation, **kwargs
+        )
 
     def forward(self, x):
         if self.pad_mode == "constant":
-            causal_padding_3d = (self.time_pad, 0, self.width_pad, self.width_pad, self.height_pad, self.height_pad)
+            causal_padding_3d = (
+                self.time_pad,
+                0,
+                self.width_pad,
+                self.width_pad,
+                self.height_pad,
+                self.height_pad,
+            )
             x = F.pad(x, causal_padding_3d, mode="constant", value=0)
         elif self.pad_mode == "first":
             pad_x = torch.cat([x[:, :, :1]] * self.time_pad, dim=2)
             x = torch.cat([pad_x, x], dim=2)
-            causal_padding_2d = (self.width_pad, self.width_pad, self.height_pad, self.height_pad)
+            causal_padding_2d = (
+                self.width_pad,
+                self.width_pad,
+                self.height_pad,
+                self.height_pad,
+            )
             x = F.pad(x, causal_padding_2d, mode="constant", value=0)
         elif self.pad_mode == "reflect":
             # reflect padding
             reflect_x = x[:, :, 1 : self.time_pad + 1, :, :].flip(dims=[2])
             if reflect_x.shape[2] < self.time_pad:
                 reflect_x = torch.cat(
-                    [torch.zeros_like(x[:, :, :1, :, :])] * (self.time_pad - reflect_x.shape[2]) + [reflect_x], dim=2
+                    [torch.zeros_like(x[:, :, :1, :, :])]
+                    * (self.time_pad - reflect_x.shape[2])
+                    + [reflect_x],
+                    dim=2,
                 )
             x = torch.cat([reflect_x, x], dim=2)
-            causal_padding_2d = (self.width_pad, self.width_pad, self.height_pad, self.height_pad)
+            causal_padding_2d = (
+                self.width_pad,
+                self.width_pad,
+                self.height_pad,
+                self.height_pad,
+            )
             x = F.pad(x, causal_padding_2d, mode="constant", value=0)
         else:
             raise ValueError("Invalid pad mode")
@@ -102,7 +136,9 @@ class CausalConv3d(nn.Module):
 
 
 def Normalize3D(in_channels):  # same for 3D and 2D
-    return torch.nn.GroupNorm(num_groups=32, num_channels=in_channels, eps=1e-6, affine=True)
+    return torch.nn.GroupNorm(
+        num_groups=32, num_channels=in_channels, eps=1e-6, affine=True
+    )
 
 
 class Upsample3D(nn.Module):
@@ -110,7 +146,9 @@ class Upsample3D(nn.Module):
         super().__init__()
         self.with_conv = with_conv
         if self.with_conv:
-            self.conv = torch.nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=1, padding=1)
+            self.conv = torch.nn.Conv2d(
+                in_channels, in_channels, kernel_size=3, stride=1, padding=1
+            )
         self.compress_time = compress_time
 
     def forward(self, x):
@@ -119,8 +157,12 @@ class Upsample3D(nn.Module):
                 # split first frame
                 x_first, x_rest = x[:, :, 0], x[:, :, 1:]
 
-                x_first = torch.nn.functional.interpolate(x_first, scale_factor=2.0, mode="nearest")
-                x_rest = torch.nn.functional.interpolate(x_rest, scale_factor=2.0, mode="nearest")
+                x_first = torch.nn.functional.interpolate(
+                    x_first, scale_factor=2.0, mode="nearest"
+                )
+                x_rest = torch.nn.functional.interpolate(
+                    x_rest, scale_factor=2.0, mode="nearest"
+                )
                 x = torch.cat([x_first[:, :, None, :, :], x_rest], dim=2)
             else:
                 x = x.squeeze(2)
@@ -149,7 +191,9 @@ class DownSample3D(nn.Module):
             out_channels = in_channels
         if self.with_conv:
             # no asymmetric padding in torch conv, must do it ourselves
-            self.conv = torch.nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=2, padding=0)
+            self.conv = torch.nn.Conv2d(
+                in_channels, out_channels, kernel_size=3, stride=2, padding=0
+            )
         self.compress_time = compress_time
 
     def forward(self, x):
@@ -182,7 +226,14 @@ class DownSample3D(nn.Module):
 
 class ResnetBlock3D(nn.Module):
     def __init__(
-        self, *, in_channels, out_channels=None, conv_shortcut=False, dropout, temb_channels=512, pad_mode="constant"
+        self,
+        *,
+        in_channels,
+        out_channels=None,
+        conv_shortcut=False,
+        dropout,
+        temb_channels=512,
+        pad_mode="constant",
     ):
         super().__init__()
         self.in_channels = in_channels
@@ -196,7 +247,9 @@ class ResnetBlock3D(nn.Module):
         #                              kernel_size=3,
         #                              stride=1,
         #                              padding=1)
-        self.conv1 = CausalConv3d(in_channels, out_channels, kernel_size=3, pad_mode=pad_mode)
+        self.conv1 = CausalConv3d(
+            in_channels, out_channels, kernel_size=3, pad_mode=pad_mode
+        )
         if temb_channels > 0:
             self.temb_proj = torch.nn.Linear(temb_channels, out_channels)
         self.norm2 = Normalize3D(out_channels)
@@ -206,7 +259,9 @@ class ResnetBlock3D(nn.Module):
         #                              kernel_size=3,
         #                              stride=1,
         #                              padding=1)
-        self.conv2 = CausalConv3d(out_channels, out_channels, kernel_size=3, pad_mode=pad_mode)
+        self.conv2 = CausalConv3d(
+            out_channels, out_channels, kernel_size=3, pad_mode=pad_mode
+        )
         if self.in_channels != self.out_channels:
             if self.use_conv_shortcut:
                 # self.conv_shortcut = torch.nn.Conv3d(in_channels,
@@ -214,9 +269,13 @@ class ResnetBlock3D(nn.Module):
                 #                                      kernel_size=3,
                 #                                      stride=1,
                 #                                      padding=1)
-                self.conv_shortcut = CausalConv3d(in_channels, out_channels, kernel_size=3, pad_mode=pad_mode)
+                self.conv_shortcut = CausalConv3d(
+                    in_channels, out_channels, kernel_size=3, pad_mode=pad_mode
+                )
             else:
-                self.nin_shortcut = torch.nn.Conv3d(in_channels, out_channels, kernel_size=1, stride=1, padding=0)
+                self.nin_shortcut = torch.nn.Conv3d(
+                    in_channels, out_channels, kernel_size=1, stride=1, padding=0
+                )
                 # self.nin_shortcut = CausalConv3d(in_channels, out_channels, kernel_size=1, pad_mode=pad_mode)
 
     def forward(self, x, temb):
@@ -248,10 +307,18 @@ class AttnBlock2D(nn.Module):
         self.in_channels = in_channels
 
         self.norm = Normalize3D(in_channels)
-        self.q = torch.nn.Conv2d(in_channels, in_channels, kernel_size=1, stride=1, padding=0)
-        self.k = torch.nn.Conv2d(in_channels, in_channels, kernel_size=1, stride=1, padding=0)
-        self.v = torch.nn.Conv2d(in_channels, in_channels, kernel_size=1, stride=1, padding=0)
-        self.proj_out = torch.nn.Conv2d(in_channels, in_channels, kernel_size=1, stride=1, padding=0)
+        self.q = torch.nn.Conv2d(
+            in_channels, in_channels, kernel_size=1, stride=1, padding=0
+        )
+        self.k = torch.nn.Conv2d(
+            in_channels, in_channels, kernel_size=1, stride=1, padding=0
+        )
+        self.v = torch.nn.Conv2d(
+            in_channels, in_channels, kernel_size=1, stride=1, padding=0
+        )
+        self.proj_out = torch.nn.Conv2d(
+            in_channels, in_channels, kernel_size=1, stride=1, padding=0
+        )
 
     def forward(self, x):
         h_ = x
@@ -328,7 +395,9 @@ class Encoder3D(nn.Module):
         #                                kernel_size=3,
         #                                stride=1,
         #                                padding=1)
-        self.conv_in = CausalConv3d(in_channels, self.ch, kernel_size=3, pad_mode=pad_mode)
+        self.conv_in = CausalConv3d(
+            in_channels, self.ch, kernel_size=3, pad_mode=pad_mode
+        )
 
         curr_res = resolution
         in_ch_mult = (1,) + tuple(ch_mult)
@@ -356,21 +425,33 @@ class Encoder3D(nn.Module):
             down.attn = attn
             if i_level != self.num_resolutions - 1:
                 if i_level < self.temporal_compress_level:
-                    down.downsample = DownSample3D(block_in, resamp_with_conv, compress_time=True)
+                    down.downsample = DownSample3D(
+                        block_in, resamp_with_conv, compress_time=True
+                    )
                 else:
-                    down.downsample = DownSample3D(block_in, resamp_with_conv, compress_time=False)
+                    down.downsample = DownSample3D(
+                        block_in, resamp_with_conv, compress_time=False
+                    )
                 curr_res = curr_res // 2
             self.down.append(down)
 
         # middle
         self.mid = nn.Module()
         self.mid.block_1 = ResnetBlock3D(
-            in_channels=block_in, out_channels=block_in, temb_channels=self.temb_ch, dropout=dropout, pad_mode=pad_mode
+            in_channels=block_in,
+            out_channels=block_in,
+            temb_channels=self.temb_ch,
+            dropout=dropout,
+            pad_mode=pad_mode,
         )
         # remove attention block
         # self.mid.attn_1 = AttnBlock2D(block_in)
         self.mid.block_2 = ResnetBlock3D(
-            in_channels=block_in, out_channels=block_in, temb_channels=self.temb_ch, dropout=dropout, pad_mode=pad_mode
+            in_channels=block_in,
+            out_channels=block_in,
+            temb_channels=self.temb_ch,
+            dropout=dropout,
+            pad_mode=pad_mode,
         )
 
         # end
@@ -381,7 +462,10 @@ class Encoder3D(nn.Module):
         #                                 stride=1,
         #                                 padding=1)
         self.conv_out = CausalConv3d(
-            block_in, 2 * z_channels if double_z else z_channels, kernel_size=3, pad_mode=pad_mode
+            block_in,
+            2 * z_channels if double_z else z_channels,
+            kernel_size=3,
+            pad_mode=pad_mode,
         )
 
     def forward(self, x, use_cp=False):

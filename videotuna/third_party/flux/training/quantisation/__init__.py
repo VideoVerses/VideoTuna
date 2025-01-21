@@ -1,7 +1,10 @@
+import logging
+import os
+
+import torch
+
 from videotuna.third_party.flux.training.multi_process import should_log
 from videotuna.third_party.flux.training.state_tracker import StateTracker
-import logging
-import torch, os
 
 logger = logging.getLogger(__name__)
 if should_log():
@@ -13,13 +16,7 @@ else:
 def _quanto_type_map(model_precision: str):
     if model_precision == "no_change":
         return None
-    from optimum.quanto import (
-        qfloat8,
-        qfloat8_e4m3fnuz,
-        qint8,
-        qint4,
-        qint2,
-    )
+    from optimum.quanto import qfloat8, qfloat8_e4m3fnuz, qint2, qint4, qint8
 
     if model_precision == "int2-quanto":
         quant_level = qint2
@@ -51,12 +48,9 @@ def _quanto_model(
     quantize_activations: bool = False,
 ):
     try:
+        from optimum.quanto import QTensor, freeze, quantize
+
         from videotuna.third_party.flux.training.quantisation import quanto_workarounds
-        from optimum.quanto import (
-            freeze,
-            quantize,
-            QTensor,
-        )
     except ImportError as e:
         raise ImportError(
             f"To use Quanto, please install the optimum library: `pip install optimum-quanto`: {e}"
@@ -144,13 +138,14 @@ def _torchao_model(
         return model
 
     try:
-        from videotuna.third_party.flux.training.quantisation import torchao_workarounds
-        from torchao.float8 import convert_to_float8_training, Float8LinearConfig
+        import torchao
+        from torchao.float8 import Float8LinearConfig, convert_to_float8_training
         from torchao.prototype.quantized_training import (
             int8_weight_only_quantized_training,
         )
-        import torchao
         from torchao.quantization import quantize_
+
+        from videotuna.third_party.flux.training.quantisation import torchao_workarounds
     except ImportError as e:
         raise ImportError(
             f"To use torchao, please install the torchao library: `pip install torchao`: {e}"

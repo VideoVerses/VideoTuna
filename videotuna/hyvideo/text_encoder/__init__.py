@@ -1,14 +1,13 @@
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Optional, Tuple
-from copy import deepcopy
 
 import torch
 import torch.nn as nn
-from transformers import CLIPTextModel, CLIPTokenizer, AutoTokenizer, AutoModel
+from transformers import AutoModel, AutoTokenizer, CLIPTextModel, CLIPTokenizer
 from transformers.utils import ModelOutput
 
-from ..constants import TEXT_ENCODER_PATH, TOKENIZER_PATH
-from ..constants import PRECISION_TO_TYPE
+from ..constants import PRECISION_TO_TYPE, TEXT_ENCODER_PATH, TOKENIZER_PATH
 
 
 def use_default(value, default):

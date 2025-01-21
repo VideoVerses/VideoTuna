@@ -1,7 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Modified by Jialian Wu from https://github.com/facebookresearch/detectron2/blob/main/detectron2/utils/visualizer.py
 import torch
-
 from detectron2.engine.defaults import DefaultPredictor
 from detectron2.utils.visualizer import ColorMode, Visualizer
 
@@ -22,14 +21,17 @@ class BatchDefaultPredictor(DefaultPredictor):
             height, width = original_images.shape[1:3]
             batch_inputs = []
             for original_image in original_images:
-                image = self.aug.get_transform(original_image).apply_image(original_image)
+                image = self.aug.get_transform(original_image).apply_image(
+                    original_image
+                )
                 image = torch.as_tensor(image.astype("float32").transpose(2, 0, 1))
 
                 inputs = {"image": image, "height": height, "width": width}
                 batch_inputs.append(inputs)
             predictions = self.model(batch_inputs)[0]
             return predictions
-        
+
+
 class SingleDefaultPredictor(DefaultPredictor):
     def __call__(self, original_image):
         """
@@ -50,8 +52,8 @@ class SingleDefaultPredictor(DefaultPredictor):
             inputs = {"image": image, "height": height, "width": width}
             predictions = self.model([inputs])[0]
             return predictions
-    
-        
+
+
 class Visualizer_GRiT(Visualizer):
     def __init__(self, image, instance_mode=None):
         super().__init__(image, instance_mode=instance_mode)
@@ -59,14 +61,21 @@ class Visualizer_GRiT(Visualizer):
     def draw_instance_predictions(self, predictions):
         boxes = predictions.pred_boxes if predictions.has("pred_boxes") else None
         scores = predictions.scores if predictions.has("scores") else None
-        classes = predictions.pred_classes.tolist() if predictions.has("pred_classes") else None
+        classes = (
+            predictions.pred_classes.tolist()
+            if predictions.has("pred_classes")
+            else None
+        )
         object_description = predictions.pred_object_descriptions.data
         # uncomment to output scores in visualized images
         # object_description = [c + '|' + str(round(s.item(), 1)) for c, s in zip(object_description, scores)]
 
-        if self._instance_mode == ColorMode.SEGMENTATION and self.metadata.get("thing_colors"):
+        if self._instance_mode == ColorMode.SEGMENTATION and self.metadata.get(
+            "thing_colors"
+        ):
             colors = [
-                self._jitter([x / 255 for x in self.metadata.thing_colors[c]]) for c in classes
+                self._jitter([x / 255 for x in self.metadata.thing_colors[c]])
+                for c in classes
             ]
             alpha = 0.8
         else:

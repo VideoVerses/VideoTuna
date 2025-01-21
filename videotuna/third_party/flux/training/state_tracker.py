@@ -1,7 +1,7 @@
-from os import environ
-from pathlib import Path
 import json
 import logging
+from os import environ
+from pathlib import Path
 
 logger = logging.getLogger("StateTracker")
 logger.setLevel(environ.get("SIMPLETUNER_LOG_LEVEL", "INFO"))

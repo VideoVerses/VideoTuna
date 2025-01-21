@@ -1,20 +1,27 @@
 import os
 import sys
+
 sys.path.append(os.getcwd())
-import random
 import copy
+import random
+from typing import Dict, List, Tuple, Union
+
 import pandas as pd
-from typing import List, Union, Dict, Tuple
 import torch
-from torchvision.transforms import Compose
 from torchvision.datasets.folder import pil_loader
-from videotuna.data.transforms import get_transforms_image, get_transforms_video, CheckVideo
+from torchvision.transforms import Compose
+
 from videotuna.data.datasets_utils import (
+    is_image,
+    is_video,
+    read_image_meta,
     read_video,
     read_video_meta,
-    read_image_meta,
-    is_video,
-    is_image,
+)
+from videotuna.data.transforms import (
+    CheckVideo,
+    get_transforms_image,
+    get_transforms_video,
 )
 
 
@@ -141,10 +148,7 @@ class DatasetFromCSV(torch.utils.data.Dataset):
 
                 if data_root[i]:
                     video_path = os.path.join(data_root[i], video_path)
-                data_dict = {
-                    "path": video_path, 
-                    "caption": caption
-                }
+                data_dict = {"path": video_path, "caption": caption}
                 data_dict["fps"] = (
                     row.get("fps") / self.frame_interval
                     if row.get("fps", None)
@@ -161,7 +165,9 @@ class DatasetFromCSV(torch.utils.data.Dataset):
         path = data.pop("path")
         if is_video(path):
             video = read_video(path)
-            video = self.check_video(video, index)  # filter the video with unsatisfied resolution and frames
+            video = self.check_video(
+                video, index
+            )  # filter the video with unsatisfied resolution and frames
             video = self.transform["video"](video)
         elif is_image(path):
             video = pil_loader(path)
@@ -196,9 +202,9 @@ class DatasetFromCSV(torch.utils.data.Dataset):
 
         if "frames" in data:
             _ = data.pop("frames")
-        
+
         if self.image_to_video:
-            data["image"] = data["video"][:,:1,:,:].clone() # CTHW (3，1，H, W)
+            data["image"] = data["video"][:, :1, :, :].clone()  # CTHW (3，1，H, W)
         return data
 
     def __getitem__(self, index):
@@ -211,8 +217,9 @@ class DatasetFromCSV(torch.utils.data.Dataset):
                 return data_item
             except (ValueError, AssertionError) as e:
                 import traceback
+
                 traceback.print_exc()
-                
+
                 index = (
                     random.choice(list(self.safe_data_list))
                     if len(self.safe_data_list) > 0
@@ -260,5 +267,13 @@ class DatasetFromCSV(torch.utils.data.Dataset):
 
 if __name__ == "__main__":
     csv_path = "temp/apply_lipstick.csv"
-    dataset = DatasetFromCSV(csv_path, train=True, split_val=True, height=480, width=720, num_frames=49, image_to_video=True)
+    dataset = DatasetFromCSV(
+        csv_path,
+        train=True,
+        split_val=True,
+        height=480,
+        width=720,
+        num_frames=49,
+        image_to_video=True,
+    )
     data = dataset[0]

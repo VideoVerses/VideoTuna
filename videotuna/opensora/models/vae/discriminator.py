@@ -83,7 +83,9 @@ class BlurPool3D(nn.Module):
         filt_3d = torch.Tensor(a[:, None, None] * filt_2d[None, :, :]).to(device, dtype)
 
         filt = filt_3d / torch.sum(filt_3d)  # SCH: modified to it 3D
-        self.register_buffer("filt", filt[None, None, :, :, :].repeat((self.channels, 1, 1, 1, 1)))
+        self.register_buffer(
+            "filt", filt[None, None, :, :, :].repeat((self.channels, 1, 1, 1, 1))
+        )
 
         self.pad = get_pad_layer(pad_type)(self.pad_sizes)
 
@@ -94,7 +96,9 @@ class BlurPool3D(nn.Module):
             else:
                 return self.pad(inp)[:, :, :: self.stride, :: self.stride]
         else:
-            return F.conv3d(self.pad(inp), self.filt, stride=self.stride, groups=inp.shape[1])
+            return F.conv3d(
+                self.pad(inp), self.filt, stride=self.stride, groups=inp.shape[1]
+            )
 
 
 class ResBlockDown(nn.Module):
@@ -155,7 +159,9 @@ class NLayerDiscriminator(nn.Module):
     --> see https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/blob/master/models/networks.py
     """
 
-    def __init__(self, input_nc=3, ndf=64, n_layers=3, use_actnorm=False, from_pretrained=None):
+    def __init__(
+        self, input_nc=3, ndf=64, n_layers=3, use_actnorm=False, from_pretrained=None
+    ):
         """Construct a PatchGAN discriminator
         Parameters:
             input_nc (int)  -- the number of channels in input images
@@ -167,21 +173,33 @@ class NLayerDiscriminator(nn.Module):
 
         norm_layer = nn.BatchNorm2d
 
-        if type(norm_layer) == functools.partial:  # no need to use bias as BatchNorm2d has affine parameters
+        if (
+            type(norm_layer) == functools.partial
+        ):  # no need to use bias as BatchNorm2d has affine parameters
             use_bias = norm_layer.func != nn.BatchNorm2d
         else:
             use_bias = norm_layer != nn.BatchNorm2d
 
         kw = 4
         padw = 1
-        sequence = [nn.Conv2d(input_nc, ndf, kernel_size=kw, stride=2, padding=padw), nn.LeakyReLU(0.2, True)]
+        sequence = [
+            nn.Conv2d(input_nc, ndf, kernel_size=kw, stride=2, padding=padw),
+            nn.LeakyReLU(0.2, True),
+        ]
         nf_mult = 1
         nf_mult_prev = 1
         for n in range(1, n_layers):  # gradually increase the number of filters
             nf_mult_prev = nf_mult
             nf_mult = min(2**n, 8)
             sequence += [
-                nn.Conv2d(ndf * nf_mult_prev, ndf * nf_mult, kernel_size=kw, stride=2, padding=padw, bias=use_bias),
+                nn.Conv2d(
+                    ndf * nf_mult_prev,
+                    ndf * nf_mult,
+                    kernel_size=kw,
+                    stride=2,
+                    padding=padw,
+                    bias=use_bias,
+                ),
                 norm_layer(ndf * nf_mult),
                 nn.LeakyReLU(0.2, True),
             ]
@@ -189,7 +207,14 @@ class NLayerDiscriminator(nn.Module):
         nf_mult_prev = nf_mult
         nf_mult = min(2**n_layers, 8)
         sequence += [
-            nn.Conv2d(ndf * nf_mult_prev, ndf * nf_mult, kernel_size=kw, stride=1, padding=padw, bias=use_bias),
+            nn.Conv2d(
+                ndf * nf_mult_prev,
+                ndf * nf_mult,
+                kernel_size=kw,
+                stride=1,
+                padding=padw,
+                bias=use_bias,
+            ),
             norm_layer(ndf * nf_mult),
             nn.LeakyReLU(0.2, True),
         ]
@@ -232,7 +257,10 @@ class NLayerDiscriminator3D(nn.Module):
 
         kw = 4
         padw = 1
-        sequence = [nn.Conv3d(input_nc, ndf, kernel_size=kw, stride=2, padding=padw), nn.LeakyReLU(0.2, True)]
+        sequence = [
+            nn.Conv3d(input_nc, ndf, kernel_size=kw, stride=2, padding=padw),
+            nn.LeakyReLU(0.2, True),
+        ]
         nf_mult = 1
         nf_mult_prev = 1
         for n in range(1, n_layers):  # gradually increase the number of filters
@@ -255,7 +283,12 @@ class NLayerDiscriminator3D(nn.Module):
         nf_mult = min(2**n_layers, 8)
         sequence += [
             nn.Conv3d(
-                ndf * nf_mult_prev, ndf * nf_mult, kernel_size=(kw, kw, kw), stride=1, padding=padw, bias=use_bias
+                ndf * nf_mult_prev,
+                ndf * nf_mult,
+                kernel_size=(kw, kw, kw),
+                stride=1,
+                padding=padw,
+                bias=use_bias,
             ),
             norm_layer(ndf * nf_mult),
             nn.LeakyReLU(0.2, True),
@@ -308,9 +341,13 @@ class StyleGANDiscriminatorBlur(nn.Module):
         for i in range(self.num_blocks):
             filters = self.filters * self.channel_multipliers[i]
             self.res_block_list.append(
-                ResBlockDown(prev_filters, filters, self.activation_fn, device=device, dtype=dtype).apply(
-                    xavier_uniform_weight_init
-                )
+                ResBlockDown(
+                    prev_filters,
+                    filters,
+                    self.activation_fn,
+                    device=device,
+                    dtype=dtype,
+                ).apply(xavier_uniform_weight_init)
             )
             prev_filters = filters  # update in_channels
 
@@ -322,7 +359,9 @@ class StyleGANDiscriminatorBlur(nn.Module):
         self.norm1 = nn.GroupNorm(num_groups, prev_filters, dtype=dtype, device=device)
 
         scale_factor = 2**self.num_blocks
-        if num_frames % scale_factor != 0:  # SCH: NOTE: has first frame which would be padded before usage
+        if (
+            num_frames % scale_factor != 0
+        ):  # SCH: NOTE: has first frame which would be padded before usage
             time_scaled = num_frames // scale_factor + 1
         else:
             time_scaled = num_frames / scale_factor
@@ -333,10 +372,17 @@ class StyleGANDiscriminatorBlur(nn.Module):
         assert (
             self.input_size[1] % scale_factor == 0
         ), f"image height {self.input_size[1]} is not divisible by scale factor {scale_factor}"
-        w_scaled, h_scaled = self.input_size[0] / scale_factor, self.input_size[1] / scale_factor
+        w_scaled, h_scaled = (
+            self.input_size[0] / scale_factor,
+            self.input_size[1] / scale_factor,
+        )
         in_features = int(prev_filters * time_scaled * w_scaled * h_scaled)  # (C*T*W*H)
-        self.linear1 = nn.Linear(in_features, prev_filters, device=device, dtype=dtype)  # NOTE: init to xavier_uniform
-        self.linear2 = nn.Linear(prev_filters, 1, device=device, dtype=dtype)  # NOTE: init to xavier_uniform
+        self.linear1 = nn.Linear(
+            in_features, prev_filters, device=device, dtype=dtype
+        )  # NOTE: init to xavier_uniform
+        self.linear2 = nn.Linear(
+            prev_filters, 1, device=device, dtype=dtype
+        )  # NOTE: init to xavier_uniform
 
         # self.apply(xavier_uniform_weight_init)
 
@@ -388,7 +434,9 @@ def load_checkpoint_with_inflation(model, ckpt_path):
 
 
 @MODELS.register_module("DISCRIMINATOR_3D")
-def DISCRIMINATOR_3D(from_pretrained=None, inflate_from_2d=False, use_pretrained=True, **kwargs):
+def DISCRIMINATOR_3D(
+    from_pretrained=None, inflate_from_2d=False, use_pretrained=True, **kwargs
+):
     model = StyleGANDiscriminatorBlur(**kwargs).apply(xavier_uniform_weight_init)
     if from_pretrained is not None:
         if use_pretrained:
@@ -398,13 +446,17 @@ def DISCRIMINATOR_3D(from_pretrained=None, inflate_from_2d=False, use_pretrained
                 load_checkpoint(model, from_pretrained, model_name="discriminator")
                 print("loaded discriminator")
         else:
-            print(f"discriminator use_pretrained={use_pretrained}, initializing new discriminator")
+            print(
+                f"discriminator use_pretrained={use_pretrained}, initializing new discriminator"
+            )
 
     return model
 
 
 @MODELS.register_module("N_Layer_DISCRIMINATOR_3D")
-def DISCRIMINATOR_3D_N_Layer(from_pretrained=None, inflate_from_2d=False, use_pretrained=True, **kwargs):
+def DISCRIMINATOR_3D_N_Layer(
+    from_pretrained=None, inflate_from_2d=False, use_pretrained=True, **kwargs
+):
     model = NLayerDiscriminator3D(
         input_nc=3,
         n_layers=3,
@@ -417,6 +469,8 @@ def DISCRIMINATOR_3D_N_Layer(from_pretrained=None, inflate_from_2d=False, use_pr
                 load_checkpoint(model, from_pretrained, model_name="discriminator")
                 print("loaded discriminator")
         else:
-            print(f"discriminator use_pretrained={use_pretrained}, initializing new discriminator")
+            print(
+                f"discriminator use_pretrained={use_pretrained}, initializing new discriminator"
+            )
 
     return model

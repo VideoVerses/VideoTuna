@@ -6,7 +6,10 @@ import torch
 import torch.distributed as dist
 from colossalai.booster.plugin import LowLevelZeroPlugin
 
-from videotuna.opensora.acceleration.parallel_states import set_data_parallel_group, set_sequence_parallel_group
+from videotuna.opensora.acceleration.parallel_states import (
+    set_data_parallel_group,
+    set_sequence_parallel_group,
+)
 from videotuna.opensora.acceleration.plugin import ZeroSeqParallelPlugin
 
 from .misc import get_logger
@@ -40,7 +43,11 @@ def create_colossalai_plugin(plugin, dtype, grad_clip, sp_size):
 
 @torch.no_grad()
 def update_ema(
-    ema_model: torch.nn.Module, model: torch.nn.Module, optimizer=None, decay: float = 0.9999, sharded: bool = True
+    ema_model: torch.nn.Module,
+    model: torch.nn.Module,
+    optimizer=None,
+    decay: float = 0.9999,
+    sharded: bool = True,
 ) -> None:
     """
     Step the EMA model towards the current model.
@@ -79,7 +86,7 @@ class MaskGenerator:
             "mask_image_head",
             "mask_image_tail",
             "mask_image_head_tail",
-            "mask_inter"
+            "mask_inter",
         ]
         assert all(
             mask_name in valid_mask_names for mask_name in mask_ratios.keys()

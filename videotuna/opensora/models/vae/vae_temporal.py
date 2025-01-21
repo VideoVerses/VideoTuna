@@ -58,11 +58,20 @@ class CausalConv3d(nn.Module):
         width_pad = width_kernel_size // 2
 
         self.time_pad = time_pad
-        self.time_causal_padding = (width_pad, width_pad, height_pad, height_pad, time_pad, 0)
+        self.time_causal_padding = (
+            width_pad,
+            width_pad,
+            height_pad,
+            height_pad,
+            time_pad,
+            0,
+        )
 
         stride = strides if strides is not None else (stride, 1, 1)
         dilation = (dilation, 1, 1)
-        self.conv = nn.Conv3d(chan_in, chan_out, kernel_size, stride=stride, dilation=dilation, **kwargs)
+        self.conv = nn.Conv3d(
+            chan_in, chan_out, kernel_size, stride=stride, dilation=dilation, **kwargs
+        )
 
     def forward(self, x):
         x = F.pad(x, self.time_causal_padding, mode=self.pad_mode)
@@ -88,14 +97,22 @@ class ResBlock(nn.Module):
 
         # SCH: MAGVIT uses GroupNorm by default
         self.norm1 = nn.GroupNorm(num_groups, in_channels)
-        self.conv1 = conv_fn(in_channels, self.filters, kernel_size=(3, 3, 3), bias=False)
+        self.conv1 = conv_fn(
+            in_channels, self.filters, kernel_size=(3, 3, 3), bias=False
+        )
         self.norm2 = nn.GroupNorm(num_groups, self.filters)
-        self.conv2 = conv_fn(self.filters, self.filters, kernel_size=(3, 3, 3), bias=False)
+        self.conv2 = conv_fn(
+            self.filters, self.filters, kernel_size=(3, 3, 3), bias=False
+        )
         if in_channels != filters:
             if self.use_conv_shortcut:
-                self.conv3 = conv_fn(in_channels, self.filters, kernel_size=(3, 3, 3), bias=False)
+                self.conv3 = conv_fn(
+                    in_channels, self.filters, kernel_size=(3, 3, 3), bias=False
+                )
             else:
-                self.conv3 = conv_fn(in_channels, self.filters, kernel_size=(1, 1, 1), bias=False)
+                self.conv3 = conv_fn(
+                    in_channels, self.filters, kernel_size=(1, 1, 1), bias=False
+                )
 
     def forward(self, x):
         residual = x
@@ -181,7 +198,10 @@ class Encoder(nn.Module):
                     s_stride = 1
                     self.conv_blocks.append(
                         self.conv_fn(
-                            prev_filters, filters, kernel_size=(3, 3, 3), strides=(t_stride, s_stride, s_stride)
+                            prev_filters,
+                            filters,
+                            kernel_size=(3, 3, 3),
+                            strides=(t_stride, s_stride, s_stride),
                         )
                     )
                     prev_filters = filters  # update in_channels
@@ -199,7 +219,9 @@ class Encoder(nn.Module):
         # MAGVIT uses Group Normalization
         self.norm1 = nn.GroupNorm(self.num_groups, prev_filters)
 
-        self.conv2 = self.conv_fn(prev_filters, self.embedding_dim, kernel_size=(1, 1, 1), padding="same")
+        self.conv2 = self.conv_fn(
+            prev_filters, self.embedding_dim, kernel_size=(1, 1, 1), padding="same"
+        )
 
     def forward(self, x):
         x = self.conv_in(x)
@@ -256,7 +278,9 @@ class Decoder(nn.Module):
         prev_filters = filters
 
         # last conv
-        self.conv1 = self.conv_fn(self.embedding_dim, filters, kernel_size=(3, 3, 3), bias=True)
+        self.conv1 = self.conv_fn(
+            self.embedding_dim, filters, kernel_size=(3, 3, 3), bias=True
+        )
 
         # last layer res block
         self.res_blocks = nn.ModuleList([])
@@ -285,7 +309,9 @@ class Decoder(nn.Module):
                     self.conv_blocks.insert(
                         0,
                         self.conv_fn(
-                            prev_filters, prev_filters * t_stride * self.s_stride * self.s_stride, kernel_size=(3, 3, 3)
+                            prev_filters,
+                            prev_filters * t_stride * self.s_stride * self.s_stride,
+                            kernel_size=(3, 3, 3),
                         ),
                     )
                 else:
@@ -377,7 +403,8 @@ class VAE_Temporal(nn.Module):
                 time_padding = (
                     0
                     if (input_size[i] % self.time_downsample_factor == 0)
-                    else self.time_downsample_factor - input_size[i] % self.time_downsample_factor
+                    else self.time_downsample_factor
+                    - input_size[i] % self.time_downsample_factor
                 )
                 lsize = (input_size[i] + time_padding) // self.patch_size[i]
             else:

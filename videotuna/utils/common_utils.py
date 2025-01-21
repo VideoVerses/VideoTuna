@@ -1,6 +1,8 @@
 import importlib
+import os
+
+import cv2
 import numpy as np
-import cv2, os
 import torch
 import torch.distributed as dist
 
@@ -13,11 +15,11 @@ def count_params(model, verbose=False):
 
 
 def check_istarget(name, para_list):
-    """ 
-    name: full name of source para
-    para_list: partial name of target para 
     """
-    istarget=False
+    name: full name of source para
+    para_list: partial name of target para
+    """
+    istarget = False
     for para in para_list:
         if para in name:
             return True
@@ -26,13 +28,15 @@ def check_istarget(name, para_list):
 
 def instantiate_from_config(config):
     if not "target" in config:
-        if config == '__is_first_stage__':
+        if config == "__is_first_stage__":
             return None
         elif config == "__is_unconditional__":
             return None
         raise KeyError("Expected key `target` to instantiate.")
-    if "diffusers" in config['target'] or config['target'].startswith("transformers"):
-        return get_obj_from_str(config["target"]).from_pretrained(**config.get("params", dict()))
+    if "diffusers" in config["target"] or config["target"].startswith("transformers"):
+        return get_obj_from_str(config["target"]).from_pretrained(
+            **config.get("params", dict())
+        )
     return get_obj_from_str(config["target"])(**config.get("params", dict()))
 
 
@@ -45,15 +49,18 @@ def get_obj_from_str(string, reload=False):
 
 
 def load_npz_from_dir(data_dir):
-    data = [np.load(os.path.join(data_dir, data_name))['arr_0'] for data_name in os.listdir(data_dir)]
+    data = [
+        np.load(os.path.join(data_dir, data_name))["arr_0"]
+        for data_name in os.listdir(data_dir)
+    ]
     data = np.concatenate(data, axis=0)
     return data
 
 
 def load_npz_from_paths(data_paths):
-    data = [np.load(data_path)['arr_0'] for data_path in data_paths]
+    data = [np.load(data_path)["arr_0"] for data_path in data_paths]
     data = np.concatenate(data, axis=0)
-    return data   
+    return data
 
 
 def resize_numpy_image(image, max_resolution=512 * 512, resize_short_edge=None):
@@ -73,7 +80,4 @@ def setup_dist(args):
     if dist.is_initialized():
         return
     torch.cuda.set_device(args.local_rank)
-    torch.distributed.init_process_group(
-        'nccl',
-        init_method='env://'
-    )
+    torch.distributed.init_process_group("nccl", init_method="env://")

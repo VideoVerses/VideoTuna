@@ -2,18 +2,22 @@ import inspect
 import math
 import random
 from typing import Callable, Dict, List, Optional, Tuple, Union
+
 import PIL
 import torch
-from videotuna.cogvideo_hf.cogvideo_pl import CogVideoXWorkFlow
-from diffusers.utils.torch_utils import randn_tensor
-from diffusers.pipelines.cogvideo.pipeline_output import CogVideoXPipelineOutput
-from diffusers.image_processor import PipelineImageInput
-from diffusers.callbacks import MultiPipelineCallbacks, PipelineCallback
 from diffusers import CogVideoXDPMScheduler
+from diffusers.callbacks import MultiPipelineCallbacks, PipelineCallback
+from diffusers.image_processor import PipelineImageInput
+from diffusers.pipelines.cogvideo.pipeline_output import CogVideoXPipelineOutput
+from diffusers.utils.torch_utils import randn_tensor
+
+from videotuna.cogvideo_hf.cogvideo_pl import CogVideoXWorkFlow
 
 
 def retrieve_latents(
-    encoder_output: torch.Tensor, generator: Optional[torch.Generator] = None, sample_mode: str = "sample"
+    encoder_output: torch.Tensor,
+    generator: Optional[torch.Generator] = None,
+    sample_mode: str = "sample",
 ):
     if hasattr(encoder_output, "latent_dist") and sample_mode == "sample":
         return encoder_output.latent_dist.sample(generator)
@@ -23,6 +27,7 @@ def retrieve_latents(
         return encoder_output.latents
     else:
         raise AttributeError("Could not access latents of provided encoder_output")
+
 
 def retrieve_timesteps(
     scheduler,
@@ -56,9 +61,13 @@ def retrieve_timesteps(
         second element is the number of inference steps.
     """
     if timesteps is not None and sigmas is not None:
-        raise ValueError("Only one of `timesteps` or `sigmas` can be passed. Please choose one to set custom values")
+        raise ValueError(
+            "Only one of `timesteps` or `sigmas` can be passed. Please choose one to set custom values"
+        )
     if timesteps is not None:
-        accepts_timesteps = "timesteps" in set(inspect.signature(scheduler.set_timesteps).parameters.keys())
+        accepts_timesteps = "timesteps" in set(
+            inspect.signature(scheduler.set_timesteps).parameters.keys()
+        )
         if not accepts_timesteps:
             raise ValueError(
                 f"The current scheduler class {scheduler.__class__}'s `set_timesteps` does not support custom"
@@ -68,7 +77,9 @@ def retrieve_timesteps(
         timesteps = scheduler.timesteps
         num_inference_steps = len(timesteps)
     elif sigmas is not None:
-        accept_sigmas = "sigmas" in set(inspect.signature(scheduler.set_timesteps).parameters.keys())
+        accept_sigmas = "sigmas" in set(
+            inspect.signature(scheduler.set_timesteps).parameters.keys()
+        )
         if not accept_sigmas:
             raise ValueError(
                 f"The current scheduler class {scheduler.__class__}'s `set_timesteps` does not support custom"
@@ -89,35 +100,41 @@ class CogVideoXI2V(CogVideoXWorkFlow):
         "prompt_embeds",
         "negative_prompt_embeds",
     ]
-    def __init__(self, 
-                 first_stage_config,
-                 cond_stage_config,
-                 denoiser_config,
-                 scheduler_config,
-                 learning_rate: float = 6e-6,
-                 adapter_config=None, 
-                 noised_image_input: bool = False,
-                 noised_image_dropout: float = 0.05,
-                 logdir=None, 
-                 ):
-        super().__init__(first_stage_config,
-                         cond_stage_config,
-                         denoiser_config,
-                         scheduler_config,
-                         learning_rate,
-                         adapter_config,
-                         logdir)
+
+    def __init__(
+        self,
+        first_stage_config,
+        cond_stage_config,
+        denoiser_config,
+        scheduler_config,
+        learning_rate: float = 6e-6,
+        adapter_config=None,
+        noised_image_input: bool = False,
+        noised_image_dropout: float = 0.05,
+        logdir=None,
+    ):
+        super().__init__(
+            first_stage_config,
+            cond_stage_config,
+            denoiser_config,
+            scheduler_config,
+            learning_rate,
+            adapter_config,
+            logdir,
+        )
         self.noised_image_input = noised_image_input
         self.noised_image_dropout = noised_image_dropout
-    
+
     def encode_image(self, image):
-        image = image.to(self.device, dtype=self.dtype).unsqueeze(0) #[3, 1, 480, 720].unsqueeze(0)
+        image = image.to(self.device, dtype=self.dtype).unsqueeze(
+            0
+        )  # [3, 1, 480, 720].unsqueeze(0)
         latent_dist = self.vae.encode(image).latent_dist
         return latent_dist
 
     def get_batch_input(self, batch):
         """
-        Prepare model batch inputs 
+        Prepare model batch inputs
         """
         # videos
         videos = [self.encode_video(video) for video in batch["video"]]
@@ -127,7 +144,9 @@ class CogVideoXI2V(CogVideoXWorkFlow):
         # images
         images = [self.encode_image(image) for image in batch["image"]]
         images = [image.sample() * self.vae.config.scaling_factor for image in images]
-        images = torch.cat(images, dim=0).to(dtype=torch.float32, memory_format=torch.contiguous_format)
+        images = torch.cat(images, dim=0).to(
+            dtype=torch.float32, memory_format=torch.contiguous_format
+        )
         # prompt
         prompts = [item for item in batch["caption"]]
         return {
@@ -135,31 +154,40 @@ class CogVideoXI2V(CogVideoXWorkFlow):
             "images": images,
             "prompts": prompts,
         }
-    
+
     def training_step(self, batch, batch_idx):
         batch = self.get_batch_input(batch)
-        model_input = batch["videos"].permute(0, 2, 1, 3, 4).to(dtype=self.dtype)  # [B, F, C, H, W]
+        model_input = (
+            batch["videos"].permute(0, 2, 1, 3, 4).to(dtype=self.dtype)
+        )  # [B, F, C, H, W]
         prompts = batch["prompts"]
-        model_input_images = batch["images"].permute(0, 2, 1, 3, 4).to(dtype=self.dtype) #[2, 1, 16, 60, 90] # [B, T, C, H, W]
+        model_input_images = (
+            batch["images"].permute(0, 2, 1, 3, 4).to(dtype=self.dtype)
+        )  # [2, 1, 16, 60, 90] # [B, T, C, H, W]
         # pad conditional image
-        padding_shape = (model_input.shape[0], model_input.shape[1] - 1, * model_input.shape[2:])
+        padding_shape = (
+            model_input.shape[0],
+            model_input.shape[1] - 1,
+            *model_input.shape[2:],
+        )
         latent_padding = model_input_images.new_zeros(padding_shape)
-        image_latents = torch.cat([model_input_images, latent_padding], dim=1) # [2, 4, 16, 60, 90]
+        image_latents = torch.cat(
+            [model_input_images, latent_padding], dim=1
+        )  # [2, 4, 16, 60, 90]
         if random.random() < self.noised_image_dropout:
             image_latents = torch.zeros_like(image_latents)
-
 
         max_sequence_length = 226
         with torch.no_grad():
             prompt_embeds = self.encode_prompt(
                 prompts,
-                do_classifier_free_guidance=False,# set to false for train
+                do_classifier_free_guidance=False,  # set to false for train
                 num_videos_per_prompt=1,
                 max_sequence_length=max_sequence_length,
                 device=self.device,
                 dtype=self.dtype,
             )
-        
+
         batch_size, num_frames, num_channels, height, width = model_input.shape
 
         # Sample noise that will be added to the latents
@@ -167,16 +195,19 @@ class CogVideoXI2V(CogVideoXWorkFlow):
 
         # Sample a random timestep for each image
         timesteps = torch.randint(
-            0, self.scheduler.config.num_train_timesteps, (batch_size,), device=self.device
+            0,
+            self.scheduler.config.num_train_timesteps,
+            (batch_size,),
+            device=self.device,
         )
         timesteps = timesteps.long()
 
         # Prepare rotary embeds
         image_rotary_emb = (
-            # in the first place, we assume this function is the same during inference and train. 
+            # in the first place, we assume this function is the same during inference and train.
             self._prepare_rotary_positional_embeddings(
-                height=height*self.vae_scale_factor_spatial,
-                width=width*self.vae_scale_factor_spatial,
+                height=height * self.vae_scale_factor_spatial,
+                width=width * self.vae_scale_factor_spatial,
                 num_frames=num_frames,
                 vae_scale_factor_spatial=self.vae_scale_factor_spatial,
                 patch_size=self.model.config.patch_size,
@@ -192,12 +223,16 @@ class CogVideoXI2V(CogVideoXWorkFlow):
         noisy_video_latents = self.scheduler.add_noise(model_input, noise, timesteps)
         # concate conditional image
         noisy_model_input = torch.cat([noisy_video_latents, image_latents], dim=2)
-        model_output = self.model(hidden_states=noisy_model_input,
-                                  encoder_hidden_states=prompt_embeds,
-                                  timestep=timesteps,
-                                  image_rotary_emb=image_rotary_emb,
-                                  return_dict=False,)[0]
-        model_pred = self.scheduler.get_velocity(model_output, noisy_video_latents, timesteps)
+        model_output = self.model(
+            hidden_states=noisy_model_input,
+            encoder_hidden_states=prompt_embeds,
+            timestep=timesteps,
+            image_rotary_emb=image_rotary_emb,
+            return_dict=False,
+        )[0]
+        model_pred = self.scheduler.get_velocity(
+            model_output, noisy_video_latents, timesteps
+        )
 
         alphas_cumprod = self.scheduler.alphas_cumprod[timesteps]
         weights = 1 / (1 - alphas_cumprod)
@@ -205,11 +240,13 @@ class CogVideoXI2V(CogVideoXWorkFlow):
             weights = weights.unsqueeze(-1)
 
         target = model_input
-        # TODO: inherent loss computation from base class. 
-        loss = torch.mean((weights * (model_pred - target) ** 2).reshape(batch_size, -1), dim=1)
+        # TODO: inherent loss computation from base class.
+        loss = torch.mean(
+            (weights * (model_pred - target) ** 2).reshape(batch_size, -1), dim=1
+        )
         loss = loss.mean()
-        return loss 
-    
+        return loss
+
     def prepare_latents(
         self,
         image: torch.Tensor,
@@ -242,12 +279,18 @@ class CogVideoXI2V(CogVideoXWorkFlow):
 
         if isinstance(generator, list):
             image_latents = [
-                retrieve_latents(self.vae.encode(image[i].unsqueeze(0)), generator[i]) for i in range(batch_size)
+                retrieve_latents(self.vae.encode(image[i].unsqueeze(0)), generator[i])
+                for i in range(batch_size)
             ]
         else:
-            image_latents = [retrieve_latents(self.vae.encode(img.unsqueeze(0)), generator) for img in image]
+            image_latents = [
+                retrieve_latents(self.vae.encode(img.unsqueeze(0)), generator)
+                for img in image
+            ]
 
-        image_latents = torch.cat(image_latents, dim=0).to(dtype).permute(0, 2, 1, 3, 4)  # [B, F, C, H, W]
+        image_latents = (
+            torch.cat(image_latents, dim=0).to(dtype).permute(0, 2, 1, 3, 4)
+        )  # [B, F, C, H, W]
         image_latents = self.vae.config.scaling_factor * image_latents
 
         padding_shape = (
@@ -261,14 +304,16 @@ class CogVideoXI2V(CogVideoXWorkFlow):
         image_latents = torch.cat([image_latents, latent_padding], dim=1)
 
         if latents is None:
-            latents = randn_tensor(shape, generator=generator, device=device, dtype=dtype)
+            latents = randn_tensor(
+                shape, generator=generator, device=device, dtype=dtype
+            )
         else:
             latents = latents.to(device)
 
         # scale the initial noise by the standard deviation required by the scheduler
         latents = latents * self.scheduler.init_noise_sigma
         return latents, image_latents
-    
+
     def check_inputs(
         self,
         image,
@@ -293,10 +338,13 @@ class CogVideoXI2V(CogVideoXWorkFlow):
             )
 
         if height % 8 != 0 or width % 8 != 0:
-            raise ValueError(f"`height` and `width` have to be divisible by 8 but are {height} and {width}.")
+            raise ValueError(
+                f"`height` and `width` have to be divisible by 8 but are {height} and {width}."
+            )
 
         if callback_on_step_end_tensor_inputs is not None and not all(
-            k in self._callback_tensor_inputs for k in callback_on_step_end_tensor_inputs
+            k in self._callback_tensor_inputs
+            for k in callback_on_step_end_tensor_inputs
         ):
             raise ValueError(
                 f"`callback_on_step_end_tensor_inputs` has to be in {self._callback_tensor_inputs}, but found {[k for k in callback_on_step_end_tensor_inputs if k not in self._callback_tensor_inputs]}"
@@ -310,8 +358,12 @@ class CogVideoXI2V(CogVideoXWorkFlow):
             raise ValueError(
                 "Provide either `prompt` or `prompt_embeds`. Cannot leave both `prompt` and `prompt_embeds` undefined."
             )
-        elif prompt is not None and (not isinstance(prompt, str) and not isinstance(prompt, list)):
-            raise ValueError(f"`prompt` has to be of type `str` or `list` but is {type(prompt)}")
+        elif prompt is not None and (
+            not isinstance(prompt, str) and not isinstance(prompt, list)
+        ):
+            raise ValueError(
+                f"`prompt` has to be of type `str` or `list` but is {type(prompt)}"
+            )
 
         if prompt is not None and negative_prompt_embeds is not None:
             raise ValueError(
@@ -358,7 +410,11 @@ class CogVideoXI2V(CogVideoXWorkFlow):
         output_type: str = "pil",
         return_dict: bool = True,
         callback_on_step_end: Optional[
-            Union[Callable[[int, int, Dict], None], PipelineCallback, MultiPipelineCallbacks]
+            Union[
+                Callable[[int, int, Dict], None],
+                PipelineCallback,
+                MultiPipelineCallbacks,
+            ]
         ] = None,
         callback_on_step_end_tensor_inputs: List[str] = ["latents"],
         max_sequence_length: int = 226,
@@ -497,7 +553,9 @@ class CogVideoXI2V(CogVideoXWorkFlow):
             prompt_embeds = torch.cat([negative_prompt_embeds, prompt_embeds], dim=0)
 
         # 4. Prepare timesteps
-        timesteps, num_inference_steps = retrieve_timesteps(self.scheduler, num_inference_steps, device, timesteps)
+        timesteps, num_inference_steps = retrieve_timesteps(
+            self.scheduler, num_inference_steps, device, timesteps
+        )
         self._num_timesteps = len(timesteps)
 
         # 5. Prepare latents
@@ -524,13 +582,17 @@ class CogVideoXI2V(CogVideoXWorkFlow):
 
         # 7. Create rotary embeds if required
         image_rotary_emb = (
-            self._prepare_rotary_positional_embeddings(height, width, latents.size(1), device=device)
+            self._prepare_rotary_positional_embeddings(
+                height, width, latents.size(1), device=device
+            )
             if self.model.config.use_rotary_positional_embeddings
             else None
         )
 
         # 8. Denoising loop
-        num_warmup_steps = max(len(timesteps) - num_inference_steps * self.scheduler.order, 0)
+        num_warmup_steps = max(
+            len(timesteps) - num_inference_steps * self.scheduler.order, 0
+        )
 
         # for DPM-solver++
         old_pred_original_sample = None
@@ -538,11 +600,19 @@ class CogVideoXI2V(CogVideoXWorkFlow):
             # if self.interrupt:
             #     continue
 
-            latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
+            latent_model_input = (
+                torch.cat([latents] * 2) if do_classifier_free_guidance else latents
+            )
             latent_model_input = self.scheduler.scale_model_input(latent_model_input, t)
 
-            latent_image_input = torch.cat([image_latents] * 2) if do_classifier_free_guidance else image_latents
-            latent_model_input = torch.cat([latent_model_input, latent_image_input], dim=2)
+            latent_image_input = (
+                torch.cat([image_latents] * 2)
+                if do_classifier_free_guidance
+                else image_latents
+            )
+            latent_model_input = torch.cat(
+                [latent_model_input, latent_image_input], dim=2
+            )
 
             # broadcast to batch dimension in a way that's compatible with ONNX/Core ML
             timestep = t.expand(latent_model_input.shape[0])
@@ -560,17 +630,29 @@ class CogVideoXI2V(CogVideoXWorkFlow):
             # perform guidance
             if use_dynamic_cfg:
                 self._guidance_scale = 1 + guidance_scale * (
-                    (1 - math.cos(math.pi * ((num_inference_steps - t.item()) / num_inference_steps) ** 5.0)) / 2
+                    (
+                        1
+                        - math.cos(
+                            math.pi
+                            * ((num_inference_steps - t.item()) / num_inference_steps)
+                            ** 5.0
+                        )
+                    )
+                    / 2
                 )
             else:
                 self.guidance_scale = guidance_scale
             if do_classifier_free_guidance:
                 noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-                noise_pred = noise_pred_uncond + self.guidance_scale * (noise_pred_text - noise_pred_uncond)
+                noise_pred = noise_pred_uncond + self.guidance_scale * (
+                    noise_pred_text - noise_pred_uncond
+                )
 
             # compute the previous noisy sample x_t -> x_t-1
             if not isinstance(self.scheduler, CogVideoXDPMScheduler):
-                latents = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs, return_dict=False)[0]
+                latents = self.scheduler.step(
+                    noise_pred, t, latents, **extra_step_kwargs, return_dict=False
+                )[0]
             else:
                 latents, old_pred_original_sample = self.scheduler.step(
                     noise_pred,
@@ -592,7 +674,9 @@ class CogVideoXI2V(CogVideoXWorkFlow):
 
                 latents = callback_outputs.pop("latents", latents)
                 prompt_embeds = callback_outputs.pop("prompt_embeds", prompt_embeds)
-                negative_prompt_embeds = callback_outputs.pop("negative_prompt_embeds", negative_prompt_embeds)
+                negative_prompt_embeds = callback_outputs.pop(
+                    "negative_prompt_embeds", negative_prompt_embeds
+                )
 
             # if i == len(timesteps) - 1 or ((i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0):
             #     progress_bar.update()
@@ -602,7 +686,7 @@ class CogVideoXI2V(CogVideoXWorkFlow):
             # video = self.video_processor.postprocess_video(video=video, output_type=output_type)
         else:
             video = latents
-        
+
         self.model.cpu()
         # Offload all models
         # self.maybe_free_model_hooks()
@@ -610,9 +694,9 @@ class CogVideoXI2V(CogVideoXWorkFlow):
         # if not return_dict:
         #     return (video,)
 
-        video = video[None,...]
+        video = video[None, ...]
         video = video.cpu()
         torch.cuda.empty_cache()
-        return video 
-    
+        return video
+
         # return CogVideoXPipelineOutput(frames=video)

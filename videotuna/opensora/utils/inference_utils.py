@@ -9,20 +9,34 @@ from videotuna.opensora.datasets import IMG_FPS
 from videotuna.opensora.datasets.utils import read_from_path
 
 
-def prepare_multi_resolution_info(info_type, batch_size, image_size, num_frames, fps, device, dtype):
+def prepare_multi_resolution_info(
+    info_type, batch_size, image_size, num_frames, fps, device, dtype
+):
     if info_type is None:
         return dict()
     elif info_type == "PixArtMS":
-        hw = torch.tensor([image_size], device=device, dtype=dtype).repeat(batch_size, 1)
-        ar = torch.tensor([[image_size[0] / image_size[1]]], device=device, dtype=dtype).repeat(batch_size, 1)
+        hw = torch.tensor([image_size], device=device, dtype=dtype).repeat(
+            batch_size, 1
+        )
+        ar = torch.tensor(
+            [[image_size[0] / image_size[1]]], device=device, dtype=dtype
+        ).repeat(batch_size, 1)
         return dict(ar=ar, hw=hw)
     elif info_type in ["STDiT2", "OpenSora"]:
         fps = fps if num_frames > 1 else IMG_FPS
         fps = torch.tensor([fps], device=device, dtype=dtype).repeat(batch_size)
-        height = torch.tensor([image_size[0]], device=device, dtype=dtype).repeat(batch_size)
-        width = torch.tensor([image_size[1]], device=device, dtype=dtype).repeat(batch_size)
-        num_frames = torch.tensor([num_frames], device=device, dtype=dtype).repeat(batch_size)
-        ar = torch.tensor([image_size[0] / image_size[1]], device=device, dtype=dtype).repeat(batch_size)
+        height = torch.tensor([image_size[0]], device=device, dtype=dtype).repeat(
+            batch_size
+        )
+        width = torch.tensor([image_size[1]], device=device, dtype=dtype).repeat(
+            batch_size
+        )
+        num_frames = torch.tensor([num_frames], device=device, dtype=dtype).repeat(
+            batch_size
+        )
+        ar = torch.tensor(
+            [image_size[0] / image_size[1]], device=device, dtype=dtype
+        ).repeat(batch_size)
         return dict(height=height, width=width, num_frames=num_frames, ar=ar, fps=fps)
     else:
         raise NotImplementedError
@@ -75,7 +89,7 @@ def get_save_path_name_vbench(
     k=None,
 ):
     save_dir = Path(save_dir)
-    sub_dir = save_dir / prompt_file / f'{k}'
+    sub_dir = save_dir / prompt_file / f"{k}"
     sub_dir.mkdir(parents=True, exist_ok=True)
 
     if len(prompt) > 150:
@@ -146,7 +160,11 @@ def extract_prompts_loop(prompts, num_loop):
             for i in range(0, len(prompt_list), 2):
                 start_loop = int(prompt_list[i])
                 text = prompt_list[i + 1]
-                end_loop = int(prompt_list[i + 2]) if i + 2 < len(prompt_list) else num_loop + 1
+                end_loop = (
+                    int(prompt_list[i + 2])
+                    if i + 2 < len(prompt_list)
+                    else num_loop + 1
+                )
                 text_list.extend([text] * (end_loop - start_loop))
             prompt = text_list[num_loop]
         ret_prompts.append(prompt)
@@ -231,8 +249,12 @@ def apply_mask_strategy(z, refs_x, mask_strategys, loop_i, align=None):
             if align is not None:
                 m_ref_start = find_nearest_point(m_ref_start, align, ref.shape[1])
                 m_target_start = find_nearest_point(m_target_start, align, z.shape[2])
-            m_length = min(m_length, z.shape[2] - m_target_start, ref.shape[1] - m_ref_start)
-            z[i, :, m_target_start : m_target_start + m_length] = ref[:, m_ref_start : m_ref_start + m_length]
+            m_length = min(
+                m_length, z.shape[2] - m_target_start, ref.shape[1] - m_ref_start
+            )
+            z[i, :, m_target_start : m_target_start + m_length] = ref[
+                :, m_ref_start : m_ref_start + m_length
+            ]
             mask[m_target_start : m_target_start + m_length] = edit_ratio
         masks.append(mask)
     if no_mask:
@@ -241,7 +263,15 @@ def apply_mask_strategy(z, refs_x, mask_strategys, loop_i, align=None):
     return masks
 
 
-def append_generated(vae, generated_video, refs_x, mask_strategy, loop_i, condition_frame_length, condition_frame_edit):
+def append_generated(
+    vae,
+    generated_video,
+    refs_x,
+    mask_strategy,
+    loop_i,
+    condition_frame_length,
+    condition_frame_edit,
+):
     ref_x = vae.encode(generated_video)
     for j, refs in enumerate(refs_x):
         if refs is None:
@@ -335,7 +365,9 @@ def refine_prompts_by_openai(prompts):
         try:
             if prompt.strip() == "":
                 new_prompt = get_random_prompt_by_openai()
-                print(f"[Info] Empty prompt detected, generate random prompt: {new_prompt}")
+                print(
+                    f"[Info] Empty prompt detected, generate random prompt: {new_prompt}"
+                )
             else:
                 new_prompt = refine_prompt_by_openai(prompt)
                 print(f"[Info] Refine prompt: {prompt} -> {new_prompt}")
@@ -347,7 +379,9 @@ def refine_prompts_by_openai(prompts):
 
 
 def add_watermark(
-    input_video_path, watermark_image_path="./assets/images/watermark/watermark.png", output_video_path=None
+    input_video_path,
+    watermark_image_path="./assets/images/watermark/watermark.png",
+    output_video_path=None,
 ):
     # execute this command in terminal with subprocess
     # return if the process is successful

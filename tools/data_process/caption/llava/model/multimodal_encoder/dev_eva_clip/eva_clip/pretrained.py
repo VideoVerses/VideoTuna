@@ -25,23 +25,43 @@ def _pcfg(url="", hf_hub="", filename="", mean=None, std=None):
 
 
 _VITB32 = dict(
-    openai=_pcfg("https://openaipublic.azureedge.net/clip/models/40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af/ViT-B-32.pt"),
-    laion400m_e31=_pcfg("https://github.com/mlfoundations/open_clip/releases/download/v0.2-weights/vit_b_32-quickgelu-laion400m_e31-d867053b.pt"),
-    laion400m_e32=_pcfg("https://github.com/mlfoundations/open_clip/releases/download/v0.2-weights/vit_b_32-quickgelu-laion400m_e32-46683a32.pt"),
-    laion2b_e16=_pcfg("https://github.com/mlfoundations/open_clip/releases/download/v0.2-weights/vit_b_32-laion2b_e16-af8dbd0c.pth"),
+    openai=_pcfg(
+        "https://openaipublic.azureedge.net/clip/models/40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af/ViT-B-32.pt"
+    ),
+    laion400m_e31=_pcfg(
+        "https://github.com/mlfoundations/open_clip/releases/download/v0.2-weights/vit_b_32-quickgelu-laion400m_e31-d867053b.pt"
+    ),
+    laion400m_e32=_pcfg(
+        "https://github.com/mlfoundations/open_clip/releases/download/v0.2-weights/vit_b_32-quickgelu-laion400m_e32-46683a32.pt"
+    ),
+    laion2b_e16=_pcfg(
+        "https://github.com/mlfoundations/open_clip/releases/download/v0.2-weights/vit_b_32-laion2b_e16-af8dbd0c.pth"
+    ),
     laion2b_s34b_b79k=_pcfg(hf_hub="laion/CLIP-ViT-B-32-laion2B-s34B-b79K/"),
 )
 
 _VITB32_quickgelu = dict(
-    openai=_pcfg("https://openaipublic.azureedge.net/clip/models/40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af/ViT-B-32.pt"),
-    laion400m_e31=_pcfg("https://github.com/mlfoundations/open_clip/releases/download/v0.2-weights/vit_b_32-quickgelu-laion400m_e31-d867053b.pt"),
-    laion400m_e32=_pcfg("https://github.com/mlfoundations/open_clip/releases/download/v0.2-weights/vit_b_32-quickgelu-laion400m_e32-46683a32.pt"),
+    openai=_pcfg(
+        "https://openaipublic.azureedge.net/clip/models/40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af/ViT-B-32.pt"
+    ),
+    laion400m_e31=_pcfg(
+        "https://github.com/mlfoundations/open_clip/releases/download/v0.2-weights/vit_b_32-quickgelu-laion400m_e31-d867053b.pt"
+    ),
+    laion400m_e32=_pcfg(
+        "https://github.com/mlfoundations/open_clip/releases/download/v0.2-weights/vit_b_32-quickgelu-laion400m_e32-46683a32.pt"
+    ),
 )
 
 _VITB16 = dict(
-    openai=_pcfg("https://openaipublic.azureedge.net/clip/models/5806e77cd80f8b59890b7e101eabd078d9fb84e6937f9e85e4ecb61988df416f/ViT-B-16.pt"),
-    laion400m_e31=_pcfg("https://github.com/mlfoundations/open_clip/releases/download/v0.2-weights/vit_b_16-laion400m_e31-00efa78f.pt"),
-    laion400m_e32=_pcfg("https://github.com/mlfoundations/open_clip/releases/download/v0.2-weights/vit_b_16-laion400m_e32-55e67d44.pt"),
+    openai=_pcfg(
+        "https://openaipublic.azureedge.net/clip/models/5806e77cd80f8b59890b7e101eabd078d9fb84e6937f9e85e4ecb61988df416f/ViT-B-16.pt"
+    ),
+    laion400m_e31=_pcfg(
+        "https://github.com/mlfoundations/open_clip/releases/download/v0.2-weights/vit_b_16-laion400m_e31-00efa78f.pt"
+    ),
+    laion400m_e32=_pcfg(
+        "https://github.com/mlfoundations/open_clip/releases/download/v0.2-weights/vit_b_16-laion400m_e32-55e67d44.pt"
+    ),
     laion2b_s34b_b88k=_pcfg(hf_hub="laion/CLIP-ViT-B-16-laion2B-s34B-b88K/"),
 )
 
@@ -53,15 +73,29 @@ _EVAB16 = dict(
 )
 
 _VITB16_PLUS_240 = dict(
-    laion400m_e31=_pcfg("https://github.com/mlfoundations/open_clip/releases/download/v0.2-weights/vit_b_16_plus_240-laion400m_e31-8fb26589.pt"),
-    laion400m_e32=_pcfg("https://github.com/mlfoundations/open_clip/releases/download/v0.2-weights/vit_b_16_plus_240-laion400m_e32-699c4b84.pt"),
+    laion400m_e31=_pcfg(
+        "https://github.com/mlfoundations/open_clip/releases/download/v0.2-weights/vit_b_16_plus_240-laion400m_e31-8fb26589.pt"
+    ),
+    laion400m_e32=_pcfg(
+        "https://github.com/mlfoundations/open_clip/releases/download/v0.2-weights/vit_b_16_plus_240-laion400m_e32-699c4b84.pt"
+    ),
 )
 
 _VITL14 = dict(
-    openai=_pcfg("https://openaipublic.azureedge.net/clip/models/b8cca3fd41ae0c99ba7e8951adf17d267cdb84cd88be6f7c2e0eca1737a03836/ViT-L-14.pt"),
-    laion400m_e31=_pcfg("https://github.com/mlfoundations/open_clip/releases/download/v0.2-weights/vit_l_14-laion400m_e31-69988bb6.pt"),
-    laion400m_e32=_pcfg("https://github.com/mlfoundations/open_clip/releases/download/v0.2-weights/vit_l_14-laion400m_e32-3d133497.pt"),
-    laion2b_s32b_b82k=_pcfg(hf_hub="laion/CLIP-ViT-L-14-laion2B-s32B-b82K/", mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)),
+    openai=_pcfg(
+        "https://openaipublic.azureedge.net/clip/models/b8cca3fd41ae0c99ba7e8951adf17d267cdb84cd88be6f7c2e0eca1737a03836/ViT-L-14.pt"
+    ),
+    laion400m_e31=_pcfg(
+        "https://github.com/mlfoundations/open_clip/releases/download/v0.2-weights/vit_l_14-laion400m_e31-69988bb6.pt"
+    ),
+    laion400m_e32=_pcfg(
+        "https://github.com/mlfoundations/open_clip/releases/download/v0.2-weights/vit_l_14-laion400m_e32-3d133497.pt"
+    ),
+    laion2b_s32b_b82k=_pcfg(
+        hf_hub="laion/CLIP-ViT-L-14-laion2B-s32B-b82K/",
+        mean=(0.5, 0.5, 0.5),
+        std=(0.5, 0.5, 0.5),
+    ),
 )
 
 _EVAL14 = dict(
@@ -72,7 +106,9 @@ _EVAL14 = dict(
 )
 
 _VITL14_336 = dict(
-    openai=_pcfg("https://openaipublic.azureedge.net/clip/models/3035c92b350959924f9f00213499208652fc7ea050643e8b385c2dac08641f02/ViT-L-14-336px.pt"),
+    openai=_pcfg(
+        "https://openaipublic.azureedge.net/clip/models/3035c92b350959924f9f00213499208652fc7ea050643e8b385c2dac08641f02/ViT-L-14-336px.pt"
+    ),
 )
 
 _EVAL14_336 = dict(
@@ -180,7 +216,11 @@ def list_pretrained(as_str: bool = False):
     """returns list of pretrained models
     Returns a tuple (model_name, pretrain_tag) by default or 'name:tag' if as_str == True
     """
-    return [":".join([k, t]) if as_str else (k, t) for k in _PRETRAINED.keys() for t in _PRETRAINED[k].keys()]
+    return [
+        ":".join([k, t]) if as_str else (k, t)
+        for k in _PRETRAINED.keys()
+        for t in _PRETRAINED[k].keys()
+    ]
 
 
 def list_pretrained_models_by_tag(tag: str):
@@ -242,15 +282,26 @@ def download_pretrained_from_url(
 
     if os.path.isfile(download_target):
         if expected_sha256:
-            if hashlib.sha256(open(download_target, "rb").read()).hexdigest().startswith(expected_sha256):
+            if (
+                hashlib.sha256(open(download_target, "rb").read())
+                .hexdigest()
+                .startswith(expected_sha256)
+            ):
                 return download_target
             else:
-                warnings.warn(f"{download_target} exists, but the SHA256 checksum does not match; re-downloading the file")
+                warnings.warn(
+                    f"{download_target} exists, but the SHA256 checksum does not match; re-downloading the file"
+                )
         else:
             return download_target
 
     with urllib.request.urlopen(url) as source, open(download_target, "wb") as output:
-        with tqdm(total=int(source.headers.get("Content-Length")), ncols=80, unit="iB", unit_scale=True) as loop:
+        with tqdm(
+            total=int(source.headers.get("Content-Length")),
+            ncols=80,
+            unit="iB",
+            unit_scale=True,
+        ) as loop:
             while True:
                 buffer = source.read(8192)
                 if not buffer:
@@ -259,8 +310,12 @@ def download_pretrained_from_url(
                 output.write(buffer)
                 loop.update(len(buffer))
 
-    if expected_sha256 and not hashlib.sha256(open(download_target, "rb").read()).hexdigest().startswith(expected_sha256):
-        raise RuntimeError(f"Model has been downloaded but the SHA256 checksum does not not match")
+    if expected_sha256 and not hashlib.sha256(
+        open(download_target, "rb").read()
+    ).hexdigest().startswith(expected_sha256):
+        raise RuntimeError(
+            f"Model has been downloaded but the SHA256 checksum does not not match"
+        )
 
     return download_target
 
@@ -268,7 +323,9 @@ def download_pretrained_from_url(
 def has_hf_hub(necessary=False):
     if not _has_hf_hub and necessary:
         # if no HF Hub module installed, and it is necessary to continue, raise error
-        raise RuntimeError("Hugging Face hub model specified but package not installed. Run `pip install huggingface_hub`.")
+        raise RuntimeError(
+            "Hugging Face hub model specified but package not installed. Run `pip install huggingface_hub`."
+        )
     return _has_hf_hub
 
 
@@ -279,7 +336,9 @@ def download_pretrained_from_hf(
     cache_dir: Union[str, None] = None,
 ):
     has_hf_hub(True)
-    cached_file = hf_hub_download(model_id, filename, revision=revision, cache_dir=cache_dir)
+    cached_file = hf_hub_download(
+        model_id, filename, revision=revision, cache_dir=cache_dir
+    )
     return cached_file
 
 
@@ -307,7 +366,9 @@ def download_pretrained(
         # use 'open_clip_pytorch_model.bin' default, there must be a trailing slash 'org/model_name/'.
         model_id, filename = os.path.split(download_hf_hub)
         if filename:
-            target = download_pretrained_from_hf(model_id, filename=filename, cache_dir=cache_dir)
+            target = download_pretrained_from_hf(
+                model_id, filename=filename, cache_dir=cache_dir
+            )
         else:
             target = download_pretrained_from_hf(model_id, cache_dir=cache_dir)
 

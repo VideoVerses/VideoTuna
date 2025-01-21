@@ -1,16 +1,16 @@
 # Modified by Jialian Wu from
 # https://github.com/microsoft/GenerativeImage2Text/blob/main/generativeimage2text/layers/decoder.py
 # and https://github.com/kdexd/virtex
-from torch import nn
-import torch
 import functools
-from torch.nn import functional as F
 import warnings
+
+import torch
+from torch import nn
+from torch.nn import functional as F
 
 
 class TextualHead(nn.Module):
-    def __init__(self,
-                 visual_feature_size: int, vocab_size: int, hidden_size: int):
+    def __init__(self, visual_feature_size: int, vocab_size: int, hidden_size: int):
         super().__init__()
         self.visual_feature_size = visual_feature_size
         self.vocab_size = vocab_size
@@ -34,15 +34,13 @@ class WordAndPositionalEmbedding(nn.Module):
         self.vocab_size = vocab_size
         self.padding_idx = padding_idx
 
-        #self.words = nn.Embedding(vocab_size, hidden_size, padding_idx=padding_idx)
+        # self.words = nn.Embedding(vocab_size, hidden_size, padding_idx=padding_idx)
         self.words = nn.Embedding(vocab_size, hidden_size)
 
         # We provide no "padding index" for positional embeddings. We zero out
         # the positional embeddings of padded positions as a post-processing.
         self.positions = nn.Embedding(max_caption_length, hidden_size)
-        self.layer_norm = nn.LayerNorm(
-            hidden_size, eps=1e-8, elementwise_affine=True
-        )
+        self.layer_norm = nn.LayerNorm(hidden_size, eps=1e-8, elementwise_affine=True)
         self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, tokens: torch.Tensor):
@@ -76,14 +74,17 @@ class BertEncoderAsDecoder(nn.Module):
         super().__init__()
         self.encoder = encoder
 
-    def forward(self, tgt, memory,
-                tgt_mask=None,
-                tgt_key_padding_mask=None,
-                memory_key_padding_mask=None,
-                tgt_bi_valid_mask=None,
-                encoder_history_states=None,
-                ):
-        assert tgt_key_padding_mask is None, 'not supported'
+    def forward(
+        self,
+        tgt,
+        memory,
+        tgt_mask=None,
+        tgt_key_padding_mask=None,
+        memory_key_padding_mask=None,
+        tgt_bi_valid_mask=None,
+        encoder_history_states=None,
+    ):
+        assert tgt_key_padding_mask is None, "not supported"
         assert tgt_mask.dim() == 2
         assert tgt_mask.shape[0] == tgt_mask.shape[1]
         # tgt_mask should always be 0/negative infinity
@@ -96,20 +97,39 @@ class BertEncoderAsDecoder(nn.Module):
         device = tgt.device
         dtype = tgt.dtype
         top_left = torch.zeros((num_memory, num_memory), device=device, dtype=dtype)
-        top_right = torch.full((num_memory, num_tgt), float('-inf'), device=tgt.device, dtype=dtype,)
-        bottom_left = torch.zeros((num_tgt, num_memory), dtype=dtype, device=tgt_mask.device,)
+        top_right = torch.full(
+            (num_memory, num_tgt),
+            float("-inf"),
+            device=tgt.device,
+            dtype=dtype,
+        )
+        bottom_left = torch.zeros(
+            (num_tgt, num_memory),
+            dtype=dtype,
+            device=tgt_mask.device,
+        )
         left = torch.cat((top_left, bottom_left), dim=0)
         right = torch.cat((top_right, tgt_mask.to(dtype)), dim=0)
 
         full_attention_mask = torch.cat((left, right), dim=1)[None, :]
 
         if memory_key_padding_mask is None:
-            memory_key_padding_mask = torch.full((memory.shape[0], memory.shape[1]), fill_value=False, device=device)
+            memory_key_padding_mask = torch.full(
+                (memory.shape[0], memory.shape[1]), fill_value=False, device=device
+            )
         # if it is False, it means valid. That is, it is not a padding
         assert memory_key_padding_mask.dtype == torch.bool
-        zero_negative_infinity = torch.zeros_like(memory_key_padding_mask, dtype=tgt.dtype)
-        zero_negative_infinity[memory_key_padding_mask] = float('-inf')
-        full_attention_mask = full_attention_mask.expand((memory_key_padding_mask.shape[0], num_memory + num_tgt, num_memory + num_tgt))
+        zero_negative_infinity = torch.zeros_like(
+            memory_key_padding_mask, dtype=tgt.dtype
+        )
+        zero_negative_infinity[memory_key_padding_mask] = float("-inf")
+        full_attention_mask = full_attention_mask.expand(
+            (
+                memory_key_padding_mask.shape[0],
+                num_memory + num_tgt,
+                num_memory + num_tgt,
+            )
+        )
         full_attention_mask = full_attention_mask.clone()
         origin_left = full_attention_mask[:, :, :num_memory]
         update = zero_negative_infinity[:, None, :]
@@ -121,8 +141,12 @@ class BertEncoderAsDecoder(nn.Module):
             # during inference, tgt_bi_valid_mask's length is not changed, but
             # num_tgt can be increased
             max_valid_target = tgt_bi_valid_mask.shape[1]
-            mask = tgt_bi_valid_mask[:, None, :].expand((bs, num_memory+num_tgt, max_valid_target))
-            full_attention_mask[:, :, num_memory:(num_memory+max_valid_target)][mask] = 0
+            mask = tgt_bi_valid_mask[:, None, :].expand(
+                (bs, num_memory + num_tgt, max_valid_target)
+            )
+            full_attention_mask[:, :, num_memory : (num_memory + max_valid_target)][
+                mask
+            ] = 0
 
         # add axis for multi-head
         full_attention_mask = full_attention_mask[:, None, :, :]
@@ -153,17 +177,19 @@ class BertEncoderAsDecoder(nn.Module):
                 return result
 
 
-def create_transformer(decoder_type, norm_type,
-                   textual_feature_size,
-                   attention_heads,
-                   feedforward_size,
-                   dropout,
-                   num_layers,
-                   output_hidden_states=False,
-                   use_mlp_wrapper=None,
-                   use_act_checkpoint=True,
-                   ):
-    assert norm_type in ['post', 'pre']
+def create_transformer(
+    decoder_type,
+    norm_type,
+    textual_feature_size,
+    attention_heads,
+    feedforward_size,
+    dropout,
+    num_layers,
+    output_hidden_states=False,
+    use_mlp_wrapper=None,
+    use_act_checkpoint=True,
+):
+    assert norm_type in ["post", "pre"]
     if decoder_type is None:
         LayerClass = (
             nn.TransformerDecoderLayer
@@ -178,8 +204,9 @@ def create_transformer(decoder_type, norm_type,
             activation="gelu",
         )
         return nn.TransformerDecoder(_layer, num_layers)
-    elif decoder_type == 'bert_en':
+    elif decoder_type == "bert_en":
         from .modeling_bert import BertConfig, BertEncoder
+
         config = BertConfig(
             vocab_size_or_config_json_file=30522,
             hidden_size=textual_feature_size,
@@ -191,7 +218,7 @@ def create_transformer(decoder_type, norm_type,
             attention_probs_dropout_prob=0.1,
             layer_norm_eps=1e-12,
         )
-        config.pre_norm = (norm_type == 'pre')
+        config.pre_norm = norm_type == "pre"
         config.use_mlp_wrapper = use_mlp_wrapper
         config.output_hidden_states = output_hidden_states
         encoder = BertEncoder(config, use_act_checkpoint=use_act_checkpoint)
@@ -199,8 +226,15 @@ def create_transformer(decoder_type, norm_type,
 
 
 class PreNormTransformerDecoderLayer(nn.TransformerDecoderLayer):
-    def forward(self, tgt, memory, tgt_mask=None, memory_mask=None,
-                tgt_key_padding_mask=None, memory_key_padding_mask=None):
+    def forward(
+        self,
+        tgt,
+        memory,
+        tgt_mask=None,
+        memory_mask=None,
+        tgt_key_padding_mask=None,
+        memory_key_padding_mask=None,
+    ):
         # fmt: off
         # We use the members (modules) from super-class, just the order of
         # operations is changed here. First layernorm, then attention.
@@ -256,7 +290,8 @@ class TransformerDecoderTextualHead(TextualHead):
 
         self.object_feature_projection = nn.Sequential(
             nn.Linear(object_feature_size, self.textual_feature_size),
-            nn.LayerNorm(self.textual_feature_size))
+            nn.LayerNorm(self.textual_feature_size),
+        )
 
         self.embedding = WordAndPositionalEmbedding(
             self.vocab_size,
@@ -304,7 +339,11 @@ class TransformerDecoderTextualHead(TextualHead):
         hidden_states,
         text_tokens,
     ):
-        projected_object_features = self.object_feature_projection(hidden_states) if hidden_states is not None else None
+        projected_object_features = (
+            self.object_feature_projection(hidden_states)
+            if hidden_states is not None
+            else None
+        )
         batch_size, max_text_length = text_tokens.size()
         text_embeddings = self.embedding(text_tokens)
 
@@ -376,7 +415,9 @@ class AutoRegressiveBeamSearch(object):
 
         batch_size = begin_tokens.size()[0]
 
-        predictions = begin_tokens.unsqueeze(1).expand((batch_size, self.beam_size, begin_tokens.shape[-1]))
+        predictions = begin_tokens.unsqueeze(1).expand(
+            (batch_size, self.beam_size, begin_tokens.shape[-1])
+        )
         # Calculate the first timestep. This is done outside the main loop
         # because we are going from a single decoder input (the output from the
         # encoder) to the top `beam_size` decoder outputs. On the other hand,
@@ -397,10 +438,7 @@ class AutoRegressiveBeamSearch(object):
             self.beam_size
         )
 
-        if (
-            self.beam_size == 1
-            and (start_predicted_classes == self._eos_index).all()
-        ):
+        if self.beam_size == 1 and (start_predicted_classes == self._eos_index).all():
             warnings.warn(
                 "Empty object description predicted. You may want to increase beam"
                 "size or ensure your step function is working properly.",
@@ -416,7 +454,9 @@ class AutoRegressiveBeamSearch(object):
         last_logprobs = start_top_logprobs
 
         # shape: (batch_size, beam_size, sequence_length)
-        predictions = torch.cat([predictions, start_predicted_classes.unsqueeze(-1)], dim=-1)
+        predictions = torch.cat(
+            [predictions, start_predicted_classes.unsqueeze(-1)], dim=-1
+        )
 
         # Log probability tensor that mandates that the end token is selected.
         # shape: (batch_size * beam_size, num_classes)
@@ -432,22 +472,24 @@ class AutoRegressiveBeamSearch(object):
 
         while predictions.shape[-1] < self.max_steps:
             # shape: (batch_size * beam_size,)
-            last_predictions = predictions[:, :, -1].reshape(batch_size * self.beam_size)
+            last_predictions = predictions[:, :, -1].reshape(
+                batch_size * self.beam_size
+            )
 
             # If every predicted token from the last step is `self._eos_index`,
             # then we can stop early.
             if (last_predictions == self._eos_index).all():
                 break
 
-            predictions_so_far = predictions.view(
-                batch_size * self.beam_size, -1
-            )
+            predictions_so_far = predictions.view(batch_size * self.beam_size, -1)
             # shape: (batch_size * beam_size, num_classes)
             class_logits = step(predictions_so_far)
 
             # Set logprobs of last predicted tokens as high negative value to avoid
             # repetition in description.
-            class_logits = class_logits.scatter(1, predictions_so_far[:, -1].view((-1, 1)), -10000)
+            class_logits = class_logits.scatter(
+                1, predictions_so_far[:, -1].view((-1, 1)), -10000
+            )
 
             # shape: (batch_size * beam_size, num_classes)
             last_predictions_expanded = last_predictions.unsqueeze(-1).expand(
@@ -501,7 +543,9 @@ class AutoRegressiveBeamSearch(object):
                 .reshape(batch_size, self.beam_size * self.per_node_beam_size, -1)
             )
             # batch_size, (beam_size * per_node_beach_size), #token
-            reshaped_beam = torch.cat([reshaped_beam, reshaped_predicted_classes.unsqueeze(-1)], dim=-1)
+            reshaped_beam = torch.cat(
+                [reshaped_beam, reshaped_predicted_classes.unsqueeze(-1)], dim=-1
+            )
 
             # Keep only the top `beam_size` beam indices.
             # shape: (batch_size, beam_size), (batch_size, beam_size)
@@ -509,7 +553,10 @@ class AutoRegressiveBeamSearch(object):
                 self.beam_size
             )
             predictions = reshaped_beam.gather(
-                1, restricted_beam_indices.unsqueeze(-1).repeat(1,1,reshaped_beam.shape[-1])
+                1,
+                restricted_beam_indices.unsqueeze(-1).repeat(
+                    1, 1, reshaped_beam.shape[-1]
+                ),
             )
 
             # shape: (batch_size, beam_size)
@@ -558,13 +605,13 @@ class GRiTTextDecoder(nn.Module):
 
         if loss_type is None:
             self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_idx)
-        elif loss_type == 'smooth':
+        elif loss_type == "smooth":
             self.loss = SmoothLabelCrossEntropyLoss(ignore_index=self.padding_idx)
         else:
             raise NotImplementedError(loss_type)
 
     def forward(self, batch):
-        object_features = batch['object_features']
+        object_features = batch["object_features"]
 
         if self.training:
             caption_token_input = batch["text_tokens"]
@@ -574,11 +621,11 @@ class GRiTTextDecoder(nn.Module):
                 caption_token_input,
             )
 
-            if 'need_predict' in batch:
+            if "need_predict" in batch:
                 # in place should also be good, but we do not choose that for
                 # safety as we may use it in prediction results in future
                 target = batch["text_tokens"].clone()
-                target[batch['need_predict'] == 0] = self.padding_idx
+                target[batch["need_predict"] == 0] = self.padding_idx
             else:
                 target = batch["text_tokens"]
 
@@ -603,17 +650,15 @@ class GRiTTextDecoder(nn.Module):
             (batch_size, 1), self.begin_token_id
         ).long()
 
-        decoding_step = functools.partial(
-            self.decoding_step, object_features
-        )
+        decoding_step = functools.partial(self.decoding_step, object_features)
 
         object_description_tokens, logprobs = self.beamsearch_decode.search(
             begin_tokens, decoding_step
         )
 
         output_dict = {
-            'predictions': object_description_tokens,
-            'logprobs': logprobs,
+            "predictions": object_description_tokens,
+            "logprobs": logprobs,
         }
 
         return output_dict
@@ -642,11 +687,11 @@ class GRiTTextDecoder(nn.Module):
 
 
 class SmoothLabelCrossEntropyLoss(nn.Module):
-    def __init__(self, eps=0.1, log_prefix='', ignore_index=None):
+    def __init__(self, eps=0.1, log_prefix="", ignore_index=None):
         super().__init__()
         self.eps = eps
         self.log_soft = nn.LogSoftmax(dim=1)
-        self.kl = nn.KLDivLoss(reduction='none')
+        self.kl = nn.KLDivLoss(reduction="none")
 
         self.iter = 0
         self.max_loss = 0
@@ -669,4 +714,3 @@ class SmoothLabelCrossEntropyLoss(nn.Module):
         log_prb = self.log_soft(feature)
         loss = self.kl(log_prb, one_hot)
         return loss.sum(dim=1).mean()
-

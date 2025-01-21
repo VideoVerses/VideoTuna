@@ -1,21 +1,20 @@
-import boto3
-import os
-from os.path import splitext
-import time
-from botocore.exceptions import (
-    NoCredentialsError,
-    PartialCredentialsError,
-)
+import concurrent.futures
 import fnmatch
 import logging
-import torch
-from torch import Tensor
-import concurrent.futures
-from botocore.config import Config
-from videotuna.third_party.flux.data_backend.base import BaseDataBackend
-from videotuna.third_party.flux.training.multi_process import _get_rank as get_rank
-from videotuna.third_party.flux.image_manipulation.load import load_image
+import os
+import time
 from io import BytesIO
+from os.path import splitext
+
+import boto3
+import torch
+from botocore.config import Config
+from botocore.exceptions import NoCredentialsError, PartialCredentialsError
+from torch import Tensor
+
+from videotuna.third_party.flux.data_backend.base import BaseDataBackend
+from videotuna.third_party.flux.image_manipulation.load import load_image
+from videotuna.third_party.flux.training.multi_process import _get_rank as get_rank
 
 loggers_to_silence = [
     "botocore.hooks",
@@ -374,8 +373,9 @@ class S3DataBackend(BaseDataBackend):
                     logging.info(f"Retrying... ({i+1}/{self.read_retry_limit})")
 
     def torch_save(self, data, s3_key):
-        import torch
         from io import BytesIO
+
+        import torch
 
         # Retry the torch save within the retry limit
         for i in range(self.write_retry_limit):

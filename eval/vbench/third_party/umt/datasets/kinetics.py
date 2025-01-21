@@ -1,36 +1,60 @@
-import os
-import os
 import io
-import numpy as np
-from numpy.lib.function_base import disp
-import torch
-from torchvision import transforms
+import os
 import warnings
+
+import numpy as np
+import torch
 from decord import VideoReader, cpu
+from numpy.lib.function_base import disp
 from torch.utils.data import Dataset
+from torchvision import transforms
+
 from .random_erasing import RandomErasing
 from .video_transforms import (
-    Compose, Resize, CenterCrop, Normalize,
-    create_random_augment, random_short_side_scale_jitter, 
-    random_crop, random_resized_crop_with_shift, random_resized_crop,
-    horizontal_flip, random_short_side_scale_jitter, uniform_crop, 
+    CenterCrop,
+    Compose,
+    Normalize,
+    Resize,
+    create_random_augment,
+    horizontal_flip,
+    random_crop,
+    random_resized_crop,
+    random_resized_crop_with_shift,
+    random_short_side_scale_jitter,
+    uniform_crop,
 )
 from .volume_transforms import ClipToTensor
 
 try:
     from petrel_client.client import Client
+
     has_client = True
 except ImportError:
     has_client = False
 
+
 class VideoClsDataset(Dataset):
     """Load your own video classification dataset."""
 
-    def __init__(self, anno_path, prefix='', split=' ', mode='train', clip_len=8,
-                 frame_sample_rate=2, crop_size=224, short_side_size=256,
-                 new_height=256, new_width=340, keep_aspect_ratio=True,
-                 num_segment=1, num_crop=1, test_num_segment=10, test_num_crop=3,
-                 args=None):
+    def __init__(
+        self,
+        anno_path,
+        prefix="",
+        split=" ",
+        mode="train",
+        clip_len=8,
+        frame_sample_rate=2,
+        crop_size=224,
+        short_side_size=256,
+        new_height=256,
+        new_width=340,
+        keep_aspect_ratio=True,
+        num_segment=1,
+        num_crop=1,
+        test_num_segment=10,
+        test_num_crop=3,
+        args=None,
+    ):
         self.anno_path = anno_path
         self.prefix = prefix
         self.split = split
@@ -50,42 +74,47 @@ class VideoClsDataset(Dataset):
         self.aug = False
         self.rand_erase = False
         assert num_segment == 1
-        if self.mode in ['train']:
+        if self.mode in ["train"]:
             self.aug = True
             if self.args.reprob > 0:
                 self.rand_erase = True
         if VideoReader is None:
-            raise ImportError("Unable to import `decord` which is required to read videos.")
+            raise ImportError(
+                "Unable to import `decord` which is required to read videos."
+            )
 
         import pandas as pd
+
         cleaned = pd.read_csv(self.anno_path, header=None, delimiter=self.split)
         self.dataset_samples = list(cleaned.values[:, 0])
         self.label_array = list(cleaned.values[:, 1])
 
         self.client = None
         if has_client:
-            self.client = Client('~/petreloss.conf')
+            self.client = Client("~/petreloss.conf")
 
-        if (mode == 'train'):
+        if mode == "train":
             pass
 
-        elif (mode == 'validation'):
-            self.data_transform = Compose([
-                Resize(self.short_side_size, interpolation='bilinear'),
-                CenterCrop(size=(self.crop_size, self.crop_size)),
-                ClipToTensor(),
-                Normalize(mean=[0.485, 0.456, 0.406],
-                                           std=[0.229, 0.224, 0.225])
-            ])
-        elif mode == 'test':
-            self.data_resize = Compose([
-                Resize(size=(short_side_size), interpolation='bilinear')
-            ])
-            self.data_transform = Compose([
-                ClipToTensor(),
-                Normalize(mean=[0.485, 0.456, 0.406],
-                                           std=[0.229, 0.224, 0.225])
-            ])
+        elif mode == "validation":
+            self.data_transform = Compose(
+                [
+                    Resize(self.short_side_size, interpolation="bilinear"),
+                    CenterCrop(size=(self.crop_size, self.crop_size)),
+                    ClipToTensor(),
+                    Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                ]
+            )
+        elif mode == "test":
+            self.data_resize = Compose(
+                [Resize(size=(short_side_size), interpolation="bilinear")]
+            )
+            self.data_transform = Compose(
+                [
+                    ClipToTensor(),
+                    Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                ]
+            )
             self.test_seg = []
             self.test_dataset = []
             self.test_label_array = []
@@ -98,15 +127,17 @@ class VideoClsDataset(Dataset):
                         self.test_seg.append((ck, cp))
 
     def __getitem__(self, index):
-        if self.mode == 'train':
-            args = self.args 
+        if self.mode == "train":
+            args = self.args
             scale_t = 1
 
             sample = self.dataset_samples[index]
-            buffer = self.loadvideo_decord(sample, sample_rate_scale=scale_t) # T H W C
+            buffer = self.loadvideo_decord(sample, sample_rate_scale=scale_t)  # T H W C
             if len(buffer) == 0:
                 while len(buffer) == 0:
-                    warnings.warn("video {} not correctly loaded during training".format(sample))
+                    warnings.warn(
+                        "video {} not correctly loaded during training".format(sample)
+                    )
                     index = np.random.randint(self.__len__())
                     sample = self.dataset_samples[index]
                     buffer = self.loadvideo_decord(sample, sample_rate_scale=scale_t)
@@ -124,29 +155,34 @@ class VideoClsDataset(Dataset):
                 return frame_list, label_list, index_list, {}
             else:
                 buffer = self._aug_frame(buffer, args)
-            
+
             return buffer, self.label_array[index], index, {}
 
-        elif self.mode == 'validation':
+        elif self.mode == "validation":
             sample = self.dataset_samples[index]
             buffer = self.loadvideo_decord(sample)
             if len(buffer) == 0:
                 while len(buffer) == 0:
-                    warnings.warn("video {} not correctly loaded during validation".format(sample))
+                    warnings.warn(
+                        "video {} not correctly loaded during validation".format(sample)
+                    )
                     index = np.random.randint(self.__len__())
                     sample = self.dataset_samples[index]
                     buffer = self.loadvideo_decord(sample)
             buffer = self.data_transform(buffer)
             return buffer, self.label_array[index], sample.split("/")[-1].split(".")[0]
 
-        elif self.mode == 'test':
+        elif self.mode == "test":
             sample = self.test_dataset[index]
             chunk_nb, split_nb = self.test_seg[index]
             buffer = self.loadvideo_decord(sample, chunk_nb=chunk_nb)
 
             while len(buffer) == 0:
-                warnings.warn("video {}, temporal {}, spatial {} not found during testing".format(\
-                    str(self.test_dataset[index]), chunk_nb, split_nb))
+                warnings.warn(
+                    "video {}, temporal {}, spatial {} not found during testing".format(
+                        str(self.test_dataset[index]), chunk_nb, split_nb
+                    )
+                )
                 index = np.random.randint(self.__len__())
                 sample = self.test_dataset[index]
                 chunk_nb, split_nb = self.test_seg[index]
@@ -157,22 +193,38 @@ class VideoClsDataset(Dataset):
                 buffer = np.stack(buffer, 0)
 
             if self.test_num_crop == 1:
-                spatial_step = 1.0 * (max(buffer.shape[1], buffer.shape[2]) - self.short_side_size) / 2
+                spatial_step = (
+                    1.0
+                    * (max(buffer.shape[1], buffer.shape[2]) - self.short_side_size)
+                    / 2
+                )
                 spatial_start = int(spatial_step)
             else:
-                spatial_step = 1.0 * (max(buffer.shape[1], buffer.shape[2]) - self.short_side_size) \
-                                    / (self.test_num_crop - 1)
+                spatial_step = (
+                    1.0
+                    * (max(buffer.shape[1], buffer.shape[2]) - self.short_side_size)
+                    / (self.test_num_crop - 1)
+                )
                 spatial_start = int(split_nb * spatial_step)
             if buffer.shape[1] >= buffer.shape[2]:
-                buffer = buffer[:, spatial_start:spatial_start + self.short_side_size, :, :]
+                buffer = buffer[
+                    :, spatial_start : spatial_start + self.short_side_size, :, :
+                ]
             else:
-                buffer = buffer[:, :, spatial_start:spatial_start + self.short_side_size, :]
+                buffer = buffer[
+                    :, :, spatial_start : spatial_start + self.short_side_size, :
+                ]
 
             buffer = self.data_transform(buffer)
-            return buffer, self.test_label_array[index], sample.split("/")[-1].split(".")[0], \
-                   chunk_nb, split_nb
+            return (
+                buffer,
+                self.test_label_array[index],
+                sample.split("/")[-1].split(".")[0],
+                chunk_nb,
+                split_nb,
+            )
         else:
-            raise NameError('mode {} unkown'.format(self.mode))
+            raise NameError("mode {} unkown".format(self.mode))
 
     def _aug_frame(
         self,
@@ -186,20 +238,16 @@ class VideoClsDataset(Dataset):
             interpolation=args.train_interpolation,
         )
 
-        buffer = [
-            transforms.ToPILImage()(frame) for frame in buffer
-        ]
+        buffer = [transforms.ToPILImage()(frame) for frame in buffer]
 
         buffer = aug_transform(buffer)
 
         buffer = [transforms.ToTensor()(img) for img in buffer]
-        buffer = torch.stack(buffer) # T C H W
-        buffer = buffer.permute(0, 2, 3, 1) # T H W C 
-        
-        # T H W C 
-        buffer = tensor_normalize(
-            buffer, [0.485, 0.456, 0.406], [0.229, 0.224, 0.225]
-        )
+        buffer = torch.stack(buffer)  # T C H W
+        buffer = buffer.permute(0, 2, 3, 1)  # T H W C
+
+        # T H W C
+        buffer = tensor_normalize(buffer, [0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         # T H W C -> C T H W.
         buffer = buffer.permute(3, 0, 1, 2)
         # Perform data augmentation.
@@ -214,11 +262,11 @@ class VideoClsDataset(Dataset):
             min_scale=256,
             max_scale=320,
             crop_size=self.crop_size,
-            random_horizontal_flip=False if args.data_set == 'SSV2' else True ,
+            random_horizontal_flip=False if args.data_set == "SSV2" else True,
             inverse_uniform_sampling=False,
             aspect_ratio=asp,
             scale=scl,
-            motion_shift=False
+            motion_shift=False,
         )
 
         if self.rand_erase:
@@ -235,7 +283,6 @@ class VideoClsDataset(Dataset):
 
         return buffer
 
-
     def loadvideo_decord(self, sample, sample_rate_scale=1, chunk_nb=0):
         """Load video content using Decord"""
         fname = sample
@@ -243,35 +290,44 @@ class VideoClsDataset(Dataset):
 
         try:
             if self.keep_aspect_ratio:
-                if fname.startswith('s3'):
+                if fname.startswith("s3"):
                     video_bytes = self.client.get(fname)
-                    vr = VideoReader(io.BytesIO(video_bytes),
-                                     num_threads=1,
-                                     ctx=cpu(0))
+                    vr = VideoReader(io.BytesIO(video_bytes), num_threads=1, ctx=cpu(0))
                 else:
                     vr = VideoReader(fname, num_threads=1, ctx=cpu(0))
             else:
-                if fname.startswith('s3:'):
+                if fname.startswith("s3:"):
                     video_bytes = self.client.get(fname)
-                    vr = VideoReader(io.BytesIO(video_bytes),
-                                     width=self.new_width,
-                                     height=self.new_height,
-                                     num_threads=1,
-                                     ctx=cpu(0))
+                    vr = VideoReader(
+                        io.BytesIO(video_bytes),
+                        width=self.new_width,
+                        height=self.new_height,
+                        num_threads=1,
+                        ctx=cpu(0),
+                    )
                 else:
-                    vr = VideoReader(fname, width=self.new_width, height=self.new_height,
-                                    num_threads=1, ctx=cpu(0))
+                    vr = VideoReader(
+                        fname,
+                        width=self.new_width,
+                        height=self.new_height,
+                        num_threads=1,
+                        ctx=cpu(0),
+                    )
 
             # handle temporal segments
             converted_len = int(self.clip_len * self.frame_sample_rate)
             seg_len = len(vr) // self.num_segment
 
-            if self.mode == 'test':
-                temporal_step = max(1.0 * (len(vr) - converted_len) / (self.test_num_segment - 1), 0)
+            if self.mode == "test":
+                temporal_step = max(
+                    1.0 * (len(vr) - converted_len) / (self.test_num_segment - 1), 0
+                )
                 temporal_start = int(chunk_nb * temporal_step)
 
                 bound = min(temporal_start + converted_len, len(vr))
-                all_index = [x for x in range(temporal_start, bound, self.frame_sample_rate)]
+                all_index = [
+                    x for x in range(temporal_start, bound, self.frame_sample_rate)
+                ]
                 while len(all_index) < self.clip_len:
                     all_index.append(all_index[-1])
                 vr.seek(0)
@@ -281,21 +337,29 @@ class VideoClsDataset(Dataset):
             all_index = []
             for i in range(self.num_segment):
                 if seg_len <= converted_len:
-                    index = np.linspace(0, seg_len, num=seg_len // self.frame_sample_rate)
-                    index = np.concatenate((index, np.ones(self.clip_len - seg_len // self.frame_sample_rate) * seg_len))
+                    index = np.linspace(
+                        0, seg_len, num=seg_len // self.frame_sample_rate
+                    )
+                    index = np.concatenate(
+                        (
+                            index,
+                            np.ones(self.clip_len - seg_len // self.frame_sample_rate)
+                            * seg_len,
+                        )
+                    )
                     index = np.clip(index, 0, seg_len - 1).astype(np.int64)
                 else:
-                    if self.mode == 'validation':
+                    if self.mode == "validation":
                         end_idx = (seg_len - converted_len) // 2
                     else:
                         end_idx = np.random.randint(converted_len, seg_len)
                     str_idx = end_idx - converted_len
                     index = np.linspace(str_idx, end_idx, num=self.clip_len)
                     index = np.clip(index, str_idx, end_idx - 1).astype(np.int64)
-                index = index + i*seg_len
+                index = index + i * seg_len
                 all_index.extend(list(index))
 
-            all_index = all_index[::int(sample_rate_scale)]
+            all_index = all_index[:: int(sample_rate_scale)]
             vr.seek(0)
             buffer = vr.get_batch(all_index).asnumpy()
             return buffer
@@ -304,7 +368,7 @@ class VideoClsDataset(Dataset):
             return []
 
     def __len__(self):
-        if self.mode != 'test':
+        if self.mode != "test":
             return len(self.dataset_samples)
         else:
             return len(self.test_dataset)
@@ -360,9 +424,7 @@ def spatial_sampling(
             frames, _ = random_crop(frames, crop_size)
         else:
             transform_func = (
-                random_resized_crop_with_shift
-                if motion_shift
-                else random_resized_crop
+                random_resized_crop_with_shift if motion_shift else random_resized_crop
             )
             frames = transform_func(
                 images=frames,
@@ -377,9 +439,7 @@ def spatial_sampling(
         # The testing is deterministic and no jitter should be performed.
         # min_scale, max_scale, and crop_size are expect to be the same.
         assert len({min_scale, max_scale, crop_size}) == 1
-        frames, _ = random_short_side_scale_jitter(
-            frames, min_scale, max_scale
-        )
+        frames, _ = random_short_side_scale_jitter(frames, min_scale, max_scale)
         frames, _ = uniform_crop(frames, crop_size, spatial_idx)
     return frames
 
@@ -402,4 +462,3 @@ def tensor_normalize(tensor, mean, std):
     tensor = tensor - mean
     tensor = tensor / std
     return tensor
-

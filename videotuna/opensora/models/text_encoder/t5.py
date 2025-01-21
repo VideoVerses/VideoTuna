@@ -39,7 +39,19 @@ from videotuna.opensora.registry import MODELS
 class T5Embedder:
     available_models = ["DeepFloyd/t5-v1_1-xxl"]
     bad_punct_regex = re.compile(
-        r"[" + "#®•©™&@·º½¾¿¡§~" + "\)" + "\(" + "\]" + "\[" + "\}" + "\{" + "\|" + "\\" + "\/" + "\*" + r"]{1,}"
+        r"["
+        + "#®•©™&@·º½¾¿¡§~"
+        + "\)"
+        + "\("
+        + "\]"
+        + "\["
+        + "\}"
+        + "\{"
+        + "\|"
+        + "\\"
+        + "\/"
+        + "\*"
+        + r"]{1,}"
     )  # noqa
 
     def __init__(
@@ -60,7 +72,10 @@ class T5Embedder:
         self.cache_dir = cache_dir
 
         if t5_model_kwargs is None:
-            t5_model_kwargs = {"low_cpu_mem_usage": True, "torch_dtype": self.torch_dtype}
+            t5_model_kwargs = {
+                "low_cpu_mem_usage": True,
+                "torch_dtype": self.torch_dtype,
+            }
 
             if use_offload_folder is not None:
                 t5_model_kwargs["offload_folder"] = use_offload_folder
@@ -95,14 +110,21 @@ class T5Embedder:
                     "encoder.dropout": "disk",
                 }
             else:
-                t5_model_kwargs["device_map"] = {"shared": self.device, "encoder": self.device}
+                t5_model_kwargs["device_map"] = {
+                    "shared": self.device,
+                    "encoder": self.device,
+                }
 
         self.use_text_preprocessing = use_text_preprocessing
         self.hf_token = hf_token
 
         assert from_pretrained in self.available_models
-        self.tokenizer = AutoTokenizer.from_pretrained(from_pretrained, cache_dir=cache_dir)
-        self.model = T5EncoderModel.from_pretrained(from_pretrained, cache_dir=cache_dir, **t5_model_kwargs).eval()
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            from_pretrained, cache_dir=cache_dir
+        )
+        self.model = T5EncoderModel.from_pretrained(
+            from_pretrained, cache_dir=cache_dir, **t5_model_kwargs
+        ).eval()
         self.model_max_length = model_max_length
 
     def get_text_embeddings(self, texts):
@@ -213,13 +235,17 @@ class T5Embedder:
         # "123456.."
         caption = re.sub(r"\b\d{6,}\b", "", caption)
         # filenames:
-        caption = re.sub(r"[\S]+\.(?:png|jpg|jpeg|bmp|webp|eps|pdf|apk|mp4)", "", caption)
+        caption = re.sub(
+            r"[\S]+\.(?:png|jpg|jpeg|bmp|webp|eps|pdf|apk|mp4)", "", caption
+        )
 
         #
         caption = re.sub(r"[\"\']{2,}", r'"', caption)  # """AUSVERKAUFT"""
         caption = re.sub(r"[\.]{2,}", r" ", caption)  # """AUSVERKAUFT"""
 
-        caption = re.sub(self.bad_punct_regex, r" ", caption)  # ***AUSVERKAUFT***, #AUSVERKAUFT
+        caption = re.sub(
+            self.bad_punct_regex, r" ", caption
+        )  # ***AUSVERKAUFT***, #AUSVERKAUFT
         caption = re.sub(r"\s+\.\s+", r" ", caption)  # " . "
 
         # this-is-my-cute-cat / this_is_my_cute_cat
@@ -236,10 +262,14 @@ class T5Embedder:
         caption = re.sub(r"(worldwide\s+)?(free\s+)?shipping", "", caption)
         caption = re.sub(r"(free\s)?download(\sfree)?", "", caption)
         caption = re.sub(r"\bclick\b\s(?:for|on)\s\w+", "", caption)
-        caption = re.sub(r"\b(?:png|jpg|jpeg|bmp|webp|eps|pdf|apk|mp4)(\simage[s]?)?", "", caption)
+        caption = re.sub(
+            r"\b(?:png|jpg|jpeg|bmp|webp|eps|pdf|apk|mp4)(\simage[s]?)?", "", caption
+        )
         caption = re.sub(r"\bpage\s+\d+\b", "", caption)
 
-        caption = re.sub(r"\b\d*[a-zA-Z]+\d+[a-zA-Z]+\d+[a-zA-Z\d]*\b", r" ", caption)  # j2d1a2a...
+        caption = re.sub(
+            r"\b\d*[a-zA-Z]+\d+[a-zA-Z]+\d+[a-zA-Z\d]*\b", r" ", caption
+        )  # j2d1a2a...
 
         caption = re.sub(r"\b\d+\.?\d*[xх×]\d+\.?\d*\b", "", caption)
 
@@ -288,7 +318,6 @@ class T5Encoder:
 
     def shardformer_t5(self):
         from colossalai.shardformer import ShardConfig, ShardFormer
-
         from opensora.acceleration.shardformer.policy.t5_encoder import T5EncoderPolicy
         from opensora.utils.misc import requires_grad
 
@@ -326,7 +355,19 @@ def basic_clean(text):
 
 
 BAD_PUNCT_REGEX = re.compile(
-    r"[" + "#®•©™&@·º½¾¿¡§~" + "\)" + "\(" + "\]" + "\[" + "\}" + "\{" + "\|" + "\\" + "\/" + "\*" + r"]{1,}"
+    r"["
+    + "#®•©™&@·º½¾¿¡§~"
+    + "\)"
+    + "\("
+    + "\]"
+    + "\["
+    + "\}"
+    + "\{"
+    + "\|"
+    + "\\"
+    + "\/"
+    + "\*"
+    + r"]{1,}"
 )  # noqa]
 
 
@@ -427,10 +468,14 @@ def clean_caption(caption):
     caption = re.sub(r"(worldwide\s+)?(free\s+)?shipping", "", caption)
     caption = re.sub(r"(free\s)?download(\sfree)?", "", caption)
     caption = re.sub(r"\bclick\b\s(?:for|on)\s\w+", "", caption)
-    caption = re.sub(r"\b(?:png|jpg|jpeg|bmp|webp|eps|pdf|apk|mp4)(\simage[s]?)?", "", caption)
+    caption = re.sub(
+        r"\b(?:png|jpg|jpeg|bmp|webp|eps|pdf|apk|mp4)(\simage[s]?)?", "", caption
+    )
     caption = re.sub(r"\bpage\s+\d+\b", "", caption)
 
-    caption = re.sub(r"\b\d*[a-zA-Z]+\d+[a-zA-Z]+\d+[a-zA-Z\d]*\b", r" ", caption)  # j2d1a2a...
+    caption = re.sub(
+        r"\b\d*[a-zA-Z]+\d+[a-zA-Z]+\d+[a-zA-Z\d]*\b", r" ", caption
+    )  # j2d1a2a...
 
     caption = re.sub(r"\b\d+\.?\d*[xх×]\d+\.?\d*\b", "", caption)
 

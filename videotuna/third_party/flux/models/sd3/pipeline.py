@@ -16,29 +16,23 @@ import inspect
 from typing import Any, Callable, Dict, List, Optional, Union
 
 import torch
+from diffusers.image_processor import VaeImageProcessor
+from diffusers.loaders import FromSingleFileMixin, SD3LoraLoaderMixin
+from diffusers.models.autoencoders import AutoencoderKL
+from diffusers.models.transformers import SD3Transformer2DModel
+from diffusers.pipelines.pipeline_utils import DiffusionPipeline
+from diffusers.pipelines.stable_diffusion_3.pipeline_output import (
+    StableDiffusion3PipelineOutput,
+)
+from diffusers.schedulers import FlowMatchEulerDiscreteScheduler
+from diffusers.utils import is_torch_xla_available, logging, replace_example_docstring
+from diffusers.utils.torch_utils import randn_tensor
 from transformers import (
     CLIPTextModelWithProjection,
     CLIPTokenizer,
     T5EncoderModel,
     T5TokenizerFast,
 )
-
-from diffusers.image_processor import VaeImageProcessor
-from diffusers.loaders import FromSingleFileMixin, SD3LoraLoaderMixin
-from diffusers.models.autoencoders import AutoencoderKL
-from diffusers.models.transformers import SD3Transformer2DModel
-from diffusers.schedulers import FlowMatchEulerDiscreteScheduler
-from diffusers.utils import (
-    is_torch_xla_available,
-    logging,
-    replace_example_docstring,
-)
-from diffusers.utils.torch_utils import randn_tensor
-from diffusers.pipelines.pipeline_utils import DiffusionPipeline
-from diffusers.pipelines.stable_diffusion_3.pipeline_output import (
-    StableDiffusion3PipelineOutput,
-)
-
 
 if is_torch_xla_available():
     import torch_xla.core.xla_model as xm
@@ -1022,15 +1016,13 @@ from typing import Callable, Dict, List, Optional, Union
 
 import PIL.Image
 import torch
+from diffusers.image_processor import PipelineImageInput
 from transformers import (
     CLIPTextModelWithProjection,
     CLIPTokenizer,
     T5EncoderModel,
     T5TokenizerFast,
 )
-
-from diffusers.image_processor import PipelineImageInput
-
 
 if is_torch_xla_available():
     import torch_xla.core.xla_model as xm

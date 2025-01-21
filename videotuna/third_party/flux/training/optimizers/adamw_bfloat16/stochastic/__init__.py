@@ -1,5 +1,5 @@
 import torch
-from torch import Tensor, FloatTensor
+from torch import FloatTensor, Tensor
 
 
 def swap_first_and_last_dims(tensor: torch.Tensor) -> torch.Tensor:

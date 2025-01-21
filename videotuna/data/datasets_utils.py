@@ -1,19 +1,19 @@
-import decord
-from decord import VideoReader, cpu
-from einops import rearrange
 import cv2
+import decord
 import numpy as np
 import torch
+import torchvision.transforms as transforms
+from decord import VideoReader, cpu
+from einops import rearrange
 from PIL import Image
 from torchvision.io import write_video
 from torchvision.utils import save_image
-import torchvision.transforms as transforms
 
 from . import transforms
 
+IMG_EXTS = {"jpg", "bmp", "png", "jpeg", "rgb", "tif"}
+VIDEO_EXTS = {"mp4", "avi", "mov", "flv", "mkv", "webm", "wmv", "mov"}
 
-IMG_EXTS = {'jpg','bmp','png','jpeg','rgb','tif'}
-VIDEO_EXTS = {'mp4','avi','mov','flv','mkv','webm','wmv','mov'}
 
 def save_sample(x, fps=8, save_path=None, normalize=True, value_range=(-1, 1)):
     """
@@ -33,7 +33,13 @@ def save_sample(x, fps=8, save_path=None, normalize=True, value_range=(-1, 1)):
             x.clamp_(min=low, max=high)
             x.sub_(low).div_(max(high - low, 1e-5))
 
-        x = x.mul(255).add_(0.5).clamp_(0, 255).permute(1, 2, 3, 0).to("cpu", torch.uint8)
+        x = (
+            x.mul(255)
+            .add_(0.5)
+            .clamp_(0, 255)
+            .permute(1, 2, 3, 0)
+            .to("cpu", torch.uint8)
+        )
         write_video(save_path, x, fps=fps, video_codec="h264")
     print(f"Saved to {save_path}")
     return save_path
@@ -45,15 +51,21 @@ def center_crop_arr(pil_image, image_size):
     https://github.com/openai/guided-diffusion/blob/8fb3ad9197f16bbc40620447b2742e13458d2831/guided_diffusion/image_datasets.py#L126
     """
     while min(*pil_image.size) >= 2 * image_size:
-        pil_image = pil_image.resize(tuple(x // 2 for x in pil_image.size), resample=Image.BOX)
+        pil_image = pil_image.resize(
+            tuple(x // 2 for x in pil_image.size), resample=Image.BOX
+        )
 
     scale = image_size / min(*pil_image.size)
-    pil_image = pil_image.resize(tuple(round(x * scale) for x in pil_image.size), resample=Image.BICUBIC)
+    pil_image = pil_image.resize(
+        tuple(round(x * scale) for x in pil_image.size), resample=Image.BICUBIC
+    )
 
     arr = np.array(pil_image)
     crop_y = (arr.shape[0] - image_size) // 2
     crop_x = (arr.shape[1] - image_size) // 2
-    return Image.fromarray(arr[crop_y : crop_y + image_size, crop_x : crop_x + image_size])
+    return Image.fromarray(
+        arr[crop_y : crop_y + image_size, crop_x : crop_x + image_size]
+    )
 
 
 def read_video(video_path, fps=False):

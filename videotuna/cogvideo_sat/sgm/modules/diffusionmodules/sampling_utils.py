@@ -1,13 +1,15 @@
 import torch
+from einops import rearrange
 from scipy import integrate
 
 from ...util import append_dims
-from einops import rearrange
 
 
 class NoDynamicThresholding:
     def __call__(self, uncond, cond, scale):
-        scale = append_dims(scale, cond.ndim) if isinstance(scale, torch.Tensor) else scale
+        scale = (
+            append_dims(scale, cond.ndim) if isinstance(scale, torch.Tensor) else scale
+        )
         return uncond + scale * (cond - uncond)
 
 

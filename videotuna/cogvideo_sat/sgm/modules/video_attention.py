@@ -49,7 +49,9 @@ class VideoTransformerBlock(nn.Module):
 
         if self.ff_in:
             self.norm_in = nn.LayerNorm(dim)
-            self.ff_in = FeedForward(dim, dim_out=inner_dim, dropout=dropout, glu=gated_ff)
+            self.ff_in = FeedForward(
+                dim, dim_out=inner_dim, dropout=dropout, glu=gated_ff
+            )
 
         self.timesteps = timesteps
         self.disable_self_attn = disable_self_attn
@@ -96,7 +98,9 @@ class VideoTransformerBlock(nn.Module):
         if self.checkpoint:
             print(f"{self.__class__.__name__} is using checkpointing")
 
-    def forward(self, x: torch.Tensor, context: torch.Tensor = None, timesteps: int = None) -> torch.Tensor:
+    def forward(
+        self, x: torch.Tensor, context: torch.Tensor = None, timesteps: int = None
+    ) -> torch.Tensor:
         if self.checkpoint:
             return checkpoint(self._forward, x, context, timesteps)
         else:
@@ -130,7 +134,9 @@ class VideoTransformerBlock(nn.Module):
         if self.is_res:
             x += x_skip
 
-        x = rearrange(x, "(b s) t c -> (b t) s c", s=S, b=B // timesteps, c=C, t=timesteps)
+        x = rearrange(
+            x, "(b s) t c -> (b t) s c", s=S, b=B // timesteps, c=C, t=timesteps
+        )
         return x
 
     def get_last_layer(self):
@@ -221,7 +227,9 @@ class SpatialVideoTransformer(SpatialTransformer):
             linear(time_embed_dim, self.in_channels),
         )
 
-        self.time_mixer = AlphaBlender(alpha=merge_factor, merge_strategy=merge_strategy)
+        self.time_mixer = AlphaBlender(
+            alpha=merge_factor, merge_strategy=merge_strategy
+        )
         self.dtype = str_to_dtype[dtype]
 
     def forward(
@@ -239,11 +247,15 @@ class SpatialVideoTransformer(SpatialTransformer):
             spatial_context = context
 
         if self.use_spatial_context:
-            assert context.ndim == 3, f"n dims of spatial context should be 3 but are {context.ndim}"
+            assert (
+                context.ndim == 3
+            ), f"n dims of spatial context should be 3 but are {context.ndim}"
 
             time_context = context
             time_context_first_timestep = time_context[::timesteps]
-            time_context = repeat(time_context_first_timestep, "b ... -> (b n) ...", n=h * w)
+            time_context = repeat(
+                time_context_first_timestep, "b ... -> (b n) ...", n=h * w
+            )
         elif time_context is not None and not self.use_spatial_context:
             time_context = repeat(time_context, "b ... -> (b n) ...", n=h * w)
             if time_context.ndim == 2:
@@ -269,7 +281,9 @@ class SpatialVideoTransformer(SpatialTransformer):
         emb = self.time_pos_embed(t_emb)
         emb = emb[:, None, :]
 
-        for it_, (block, mix_block) in enumerate(zip(self.transformer_blocks, self.time_stack)):
+        for it_, (block, mix_block) in enumerate(
+            zip(self.transformer_blocks, self.time_stack)
+        ):
             x = block(
                 x,
                 context=spatial_context,

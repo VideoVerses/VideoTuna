@@ -1,9 +1,8 @@
+import argparse
+import json
 import os
 import shutil
-import json
-import argparse
 from pathlib import Path
-
 
 SEMANTIC_WEIGHT = 1
 QUALITY_WEIGHT = 4
@@ -94,9 +93,8 @@ ordered_scaled_res = [
 def main(args):
     ori_result_path = args.result_path
     output_dir = os.path.dirname(ori_result_path)
-    with open(ori_result_path, 'r') as f:
+    with open(ori_result_path, "r") as f:
         full_results = json.load(f)
-
 
     scaled_results = {}
     dims = set()
@@ -109,14 +107,17 @@ def main(args):
         scaled_results[dim] = scaled_score
         dims.add(dim)
 
-
-    quality_score = sum([scaled_results[i] for i in QUALITY_LIST]) / sum([DIM_WEIGHT[i] for i in QUALITY_LIST])
-    semantic_score = sum([scaled_results[i] for i in SEMANTIC_LIST]) / sum([DIM_WEIGHT[i] for i in SEMANTIC_LIST])
+    quality_score = sum([scaled_results[i] for i in QUALITY_LIST]) / sum(
+        [DIM_WEIGHT[i] for i in QUALITY_LIST]
+    )
+    semantic_score = sum([scaled_results[i] for i in SEMANTIC_LIST]) / sum(
+        [DIM_WEIGHT[i] for i in SEMANTIC_LIST]
+    )
     scaled_results["quality score"] = quality_score
     scaled_results["semantic score"] = semantic_score
-    scaled_results["total score"] = (quality_score * QUALITY_WEIGHT + semantic_score * SEMANTIC_WEIGHT) / (
-        QUALITY_WEIGHT + SEMANTIC_WEIGHT
-    )
+    scaled_results["total score"] = (
+        quality_score * QUALITY_WEIGHT + semantic_score * SEMANTIC_WEIGHT
+    ) / (QUALITY_WEIGHT + SEMANTIC_WEIGHT)
 
     formated_scaled_results = {"items": []}
     for key in ordered_scaled_res:
@@ -136,7 +137,9 @@ def main(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='VBench', formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description="VBench", formatter_class=argparse.RawTextHelpFormatter
+    )
     parser.add_argument(
         "--result_path",
         type=str,

@@ -1,7 +1,9 @@
-import torch
-from torch.optim.optimizer import Optimizer
 import math
 from typing import Iterable
+
+import torch
+from torch.optim.optimizer import Optimizer
+
 from videotuna.third_party.flux.training.state_tracker import StateTracker
 
 

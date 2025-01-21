@@ -1,29 +1,33 @@
-from videotuna.third_party.flux.data_backend.local import LocalDataBackend
-from videotuna.third_party.flux.data_backend.aws import S3DataBackend
-from videotuna.third_party.flux.data_backend.csv_url_list import CSVDataBackend
-from videotuna.third_party.flux.data_backend.base import BaseDataBackend
-from videotuna.third_party.flux.training.default_settings import default, latest_config_version
-from videotuna.third_party.flux.caching.text_embeds import TextEmbeddingCache
+import io
+import json
+import logging
+import os
+import queue
+import threading
+import time
+from math import sqrt
 
-from videotuna.third_party.flux.training.exceptions import MultiDatasetExhausted
+import torch
+from tqdm import tqdm
+
+from videotuna.third_party.flux.caching.text_embeds import TextEmbeddingCache
+from videotuna.third_party.flux.caching.vae import VAECache
+from videotuna.third_party.flux.data_backend.aws import S3DataBackend
+from videotuna.third_party.flux.data_backend.base import BaseDataBackend
+from videotuna.third_party.flux.data_backend.csv_url_list import CSVDataBackend
+from videotuna.third_party.flux.data_backend.local import LocalDataBackend
 from videotuna.third_party.flux.multiaspect.dataset import MultiAspectDataset
 from videotuna.third_party.flux.multiaspect.sampler import MultiAspectSampler
 from videotuna.third_party.flux.prompts import PromptHandler
-from videotuna.third_party.flux.caching.vae import VAECache
-from videotuna.third_party.flux.training.multi_process import should_log, rank_info, _get_rank as get_rank
 from videotuna.third_party.flux.training.collate import collate_fn
+from videotuna.third_party.flux.training.default_settings import (
+    default,
+    latest_config_version,
+)
+from videotuna.third_party.flux.training.exceptions import MultiDatasetExhausted
+from videotuna.third_party.flux.training.multi_process import _get_rank as get_rank
+from videotuna.third_party.flux.training.multi_process import rank_info, should_log
 from videotuna.third_party.flux.training.state_tracker import StateTracker
-
-import json
-import os
-import torch
-import logging
-import io
-import time
-import threading
-from tqdm import tqdm
-import queue
-from math import sqrt
 
 logger = logging.getLogger("DataBackendFactory")
 if should_log():
@@ -703,11 +707,15 @@ def configure_multi_databackend(args: dict, accelerator, text_encoders, tokenize
         metadata_backend_args = {}
         metadata_backend = backend.get("metadata_backend", "discovery")
         if metadata_backend == "json" or metadata_backend == "discovery":
-            from videotuna.third_party.flux.metadata.backends.discovery import DiscoveryMetadataBackend
+            from videotuna.third_party.flux.metadata.backends.discovery import (
+                DiscoveryMetadataBackend,
+            )
 
             BucketManager_cls = DiscoveryMetadataBackend
         elif metadata_backend == "parquet":
-            from videotuna.third_party.flux.metadata.backends.parquet import ParquetMetadataBackend
+            from videotuna.third_party.flux.metadata.backends.parquet import (
+                ParquetMetadataBackend,
+            )
 
             BucketManager_cls = ParquetMetadataBackend
             metadata_backend_args["parquet_config"] = backend.get("parquet", None)

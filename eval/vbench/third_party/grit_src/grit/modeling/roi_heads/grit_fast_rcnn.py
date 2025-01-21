@@ -1,15 +1,16 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Modified by Jialian Wu from https://github.com/facebookresearch/Detic/blob/main/detic/modeling/roi_heads/detic_fast_rcnn.py
+import fvcore.nn.weight_init as weight_init
 import torch
+from detectron2.config import configurable
+from detectron2.layers import ShapeSpec, batched_nms, cat, cross_entropy, nonzero_tuple
+from detectron2.modeling.roi_heads.fast_rcnn import (
+    FastRCNNOutputLayers,
+    _log_classification_stats,
+)
 from fvcore.nn import giou_loss, smooth_l1_loss
 from torch import nn
 from torch.nn import functional as F
-import fvcore.nn.weight_init as weight_init
-from detectron2.config import configurable
-from detectron2.layers import ShapeSpec, batched_nms, cat, cross_entropy, nonzero_tuple
-from detectron2.modeling.roi_heads.fast_rcnn import FastRCNNOutputLayers
-from detectron2.modeling.roi_heads.fast_rcnn import _log_classification_stats
-
 
 __all__ = ["GRiTFastRCNNOutputLayers"]
 
@@ -17,22 +18,23 @@ __all__ = ["GRiTFastRCNNOutputLayers"]
 class GRiTFastRCNNOutputLayers(FastRCNNOutputLayers):
     @configurable
     def __init__(
-        self, 
+        self,
         input_shape: ShapeSpec,
         **kwargs,
     ):
         super().__init__(
-            input_shape=input_shape, 
+            input_shape=input_shape,
             **kwargs,
         )
 
-        input_size = input_shape.channels * \
-            (input_shape.width or 1) * (input_shape.height or 1)
+        input_size = (
+            input_shape.channels * (input_shape.width or 1) * (input_shape.height or 1)
+        )
 
         self.bbox_pred = nn.Sequential(
             nn.Linear(input_size, input_size),
             nn.ReLU(inplace=True),
-            nn.Linear(input_size, 4)
+            nn.Linear(input_size, 4),
         )
         weight_init.c2_xavier_fill(self.bbox_pred[0])
         nn.init.normal_(self.bbox_pred[-1].weight, std=0.001)
@@ -46,40 +48,54 @@ class GRiTFastRCNNOutputLayers(FastRCNNOutputLayers):
     def losses(self, predictions, proposals):
         scores, proposal_deltas = predictions
         gt_classes = (
-            cat([p.gt_classes for p in proposals], dim=0) if len(proposals) else torch.empty(0)
+            cat([p.gt_classes for p in proposals], dim=0)
+            if len(proposals)
+            else torch.empty(0)
         )
         num_classes = self.num_classes
         _log_classification_stats(scores, gt_classes)
 
         if len(proposals):
-            proposal_boxes = cat([p.proposal_boxes.tensor for p in proposals], dim=0)  # Nx4
-            assert not proposal_boxes.requires_grad, "Proposals should not require gradients!"
+            proposal_boxes = cat(
+                [p.proposal_boxes.tensor for p in proposals], dim=0
+            )  # Nx4
+            assert (
+                not proposal_boxes.requires_grad
+            ), "Proposals should not require gradients!"
             gt_boxes = cat(
-                [(p.gt_boxes if p.has("gt_boxes") else p.proposal_boxes).tensor for p in proposals],
+                [
+                    (p.gt_boxes if p.has("gt_boxes") else p.proposal_boxes).tensor
+                    for p in proposals
+                ],
                 dim=0,
             )
         else:
-            proposal_boxes = gt_boxes = torch.empty((0, 4), device=proposal_deltas.device)
+            proposal_boxes = gt_boxes = torch.empty(
+                (0, 4), device=proposal_deltas.device
+            )
 
         loss_cls = self.softmax_cross_entropy_loss(scores, gt_classes)
         return {
-            "loss_cls": loss_cls, 
+            "loss_cls": loss_cls,
             "loss_box_reg": self.box_reg_loss(
-                proposal_boxes, gt_boxes, proposal_deltas, gt_classes, 
-                num_classes=num_classes)
+                proposal_boxes,
+                gt_boxes,
+                proposal_deltas,
+                gt_classes,
+                num_classes=num_classes,
+            ),
         }
-    
+
     def softmax_cross_entropy_loss(self, pred_class_logits, gt_classes):
         if pred_class_logits.numel() == 0:
             return pred_class_logits.new_zeros([1])[0]
 
-        loss = F.cross_entropy(
-            pred_class_logits, gt_classes, reduction="mean")
+        loss = F.cross_entropy(pred_class_logits, gt_classes, reduction="mean")
         return loss
 
     def box_reg_loss(
-        self, proposal_boxes, gt_boxes, pred_deltas, gt_classes, 
-        num_classes=-1):
+        self, proposal_boxes, gt_boxes, pred_deltas, gt_classes, num_classes=-1
+    ):
         num_classes = num_classes if num_classes > 0 else self.num_classes
         box_dim = proposal_boxes.shape[1]
         fg_inds = nonzero_tuple((gt_classes >= 0) & (gt_classes < num_classes))[0]

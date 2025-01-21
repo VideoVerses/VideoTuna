@@ -3,15 +3,24 @@ from typing import Optional, Sequence, Tuple
 import torch
 import torch.nn as nn
 import torchvision.transforms.functional as F
-
-from torchvision.transforms import Normalize, Compose, RandomResizedCrop, InterpolationMode, ToTensor, Resize, CenterCrop
+from torchvision.transforms import (
+    CenterCrop,
+    Compose,
+    InterpolationMode,
+    Normalize,
+    RandomResizedCrop,
+    Resize,
+    ToTensor,
+)
 
 from .constants import OPENAI_DATASET_MEAN, OPENAI_DATASET_STD
 
 
 class ResizeMaxSize(nn.Module):
 
-    def __init__(self, max_size, interpolation=InterpolationMode.BICUBIC, fn="max", fill=0):
+    def __init__(
+        self, max_size, interpolation=InterpolationMode.BICUBIC, fn="max", fill=0
+    ):
         super().__init__()
         if not isinstance(max_size, int):
             raise TypeError(f"Size should be int. Got {type(max_size)}")
@@ -31,7 +40,16 @@ class ResizeMaxSize(nn.Module):
             img = F.resize(img, new_size, self.interpolation)
             pad_h = self.max_size - new_size[0]
             pad_w = self.max_size - new_size[1]
-            img = F.pad(img, padding=[pad_w // 2, pad_h // 2, pad_w - pad_w // 2, pad_h - pad_h // 2], fill=self.fill)
+            img = F.pad(
+                img,
+                padding=[
+                    pad_w // 2,
+                    pad_h // 2,
+                    pad_w - pad_w // 2,
+                    pad_h - pad_h // 2,
+                ],
+                fill=self.fill,
+            )
         return img
 
 
@@ -80,7 +98,11 @@ def image_transform(
     if is_train:
         return Compose(
             [
-                RandomResizedCrop(image_size, scale=(0.9, 1.0), interpolation=InterpolationMode.BICUBIC),
+                RandomResizedCrop(
+                    image_size,
+                    scale=(0.9, 1.0),
+                    interpolation=InterpolationMode.BICUBIC,
+                ),
                 _convert_to_rgb,
                 ToTensor(),
                 normalize,

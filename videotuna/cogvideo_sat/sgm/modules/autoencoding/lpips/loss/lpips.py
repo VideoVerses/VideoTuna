@@ -27,7 +27,9 @@ class LPIPS(nn.Module):
 
     def load_from_pretrained(self, name="vgg_lpips"):
         ckpt = get_ckpt_path(name, "sgm/modules/autoencoding/lpips/loss")
-        self.load_state_dict(torch.load(ckpt, map_location=torch.device("cpu")), strict=False)
+        self.load_state_dict(
+            torch.load(ckpt, map_location=torch.device("cpu")), strict=False
+        )
         print("loaded pretrained LPIPS loss from {}".format(ckpt))
 
     @classmethod
@@ -36,7 +38,9 @@ class LPIPS(nn.Module):
             raise NotImplementedError
         model = cls()
         ckpt = get_ckpt_path(name)
-        model.load_state_dict(torch.load(ckpt, map_location=torch.device("cpu")), strict=False)
+        model.load_state_dict(
+            torch.load(ckpt, map_location=torch.device("cpu")), strict=False
+        )
         return model
 
     def forward(self, input, target):
@@ -45,10 +49,15 @@ class LPIPS(nn.Module):
         feats0, feats1, diffs = {}, {}, {}
         lins = [self.lin0, self.lin1, self.lin2, self.lin3, self.lin4]
         for kk in range(len(self.chns)):
-            feats0[kk], feats1[kk] = normalize_tensor(outs0[kk]), normalize_tensor(outs1[kk])
+            feats0[kk], feats1[kk] = normalize_tensor(outs0[kk]), normalize_tensor(
+                outs1[kk]
+            )
             diffs[kk] = (feats0[kk] - feats1[kk]) ** 2
 
-        res = [spatial_average(lins[kk].model(diffs[kk]), keepdim=True) for kk in range(len(self.chns))]
+        res = [
+            spatial_average(lins[kk].model(diffs[kk]), keepdim=True)
+            for kk in range(len(self.chns))
+        ]
         val = res[0]
         for l in range(1, len(self.chns)):
             val += res[l]
@@ -58,8 +67,12 @@ class LPIPS(nn.Module):
 class ScalingLayer(nn.Module):
     def __init__(self):
         super(ScalingLayer, self).__init__()
-        self.register_buffer("shift", torch.Tensor([-0.030, -0.088, -0.188])[None, :, None, None])
-        self.register_buffer("scale", torch.Tensor([0.458, 0.448, 0.450])[None, :, None, None])
+        self.register_buffer(
+            "shift", torch.Tensor([-0.030, -0.088, -0.188])[None, :, None, None]
+        )
+        self.register_buffer(
+            "scale", torch.Tensor([0.458, 0.448, 0.450])[None, :, None, None]
+        )
 
     def forward(self, inp):
         return (inp - self.shift) / self.scale
@@ -118,7 +131,9 @@ class vgg16(torch.nn.Module):
         h_relu4_3 = h
         h = self.slice5(h)
         h_relu5_3 = h
-        vgg_outputs = namedtuple("VggOutputs", ["relu1_2", "relu2_2", "relu3_3", "relu4_3", "relu5_3"])
+        vgg_outputs = namedtuple(
+            "VggOutputs", ["relu1_2", "relu2_2", "relu3_3", "relu4_3", "relu5_3"]
+        )
         out = vgg_outputs(h_relu1_2, h_relu2_2, h_relu3_3, h_relu4_3, h_relu5_3)
         return out
 

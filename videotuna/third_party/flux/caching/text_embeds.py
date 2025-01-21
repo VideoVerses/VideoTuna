@@ -1,19 +1,21 @@
-import os
-import torch
+import gc
 import hashlib
 import logging
-import time
-import gc
-from tqdm import tqdm
-from videotuna.third_party.flux.data_backend.base import BaseDataBackend
-from videotuna.third_party.flux.training.state_tracker import StateTracker
-from videotuna.third_party.flux.prompts import PromptHandler
-from videotuna.third_party.flux.training.multi_process import rank_info
-from queue import Queue
+import os
 import queue
-from threading import Thread
+import time
 from concurrent.futures import ThreadPoolExecutor
-from videotuna.third_party.flux.training.multi_process import _get_rank as get_rank, should_log
+from queue import Queue
+from threading import Thread
+
+import torch
+from tqdm import tqdm
+
+from videotuna.third_party.flux.data_backend.base import BaseDataBackend
+from videotuna.third_party.flux.prompts import PromptHandler
+from videotuna.third_party.flux.training.multi_process import _get_rank as get_rank
+from videotuna.third_party.flux.training.multi_process import rank_info, should_log
+from videotuna.third_party.flux.training.state_tracker import StateTracker
 from videotuna.third_party.flux.webhooks.mixin import WebhookMixin
 
 logger = logging.getLogger("TextEmbeddingCache")
@@ -249,9 +251,13 @@ class TextEmbeddingCache(WebhookMixin):
                     if len(batch) > 0:
                         self.process_write_batch(batch)
                         self.write_thread_bar.update(len(batch))
-                    logger.debug(f"Exiting batch write thread, no more work to do after writing {written_elements} elements")
+                    logger.debug(
+                        f"Exiting batch write thread, no more work to do after writing {written_elements} elements"
+                    )
                     break
-                logger.debug(f"Queue is empty. Retrieving new entries. Should retrieve? {self.process_write_batches}")
+                logger.debug(
+                    f"Queue is empty. Retrieving new entries. Should retrieve? {self.process_write_batches}"
+                )
                 pass
             except Exception:
                 logger.exception("An error occurred while writing embeddings to disk.")
@@ -525,9 +531,7 @@ class TextEmbeddingCache(WebhookMixin):
                 prompt,
                 is_validation,
                 zero_padding_tokens=(
-                    True
-                    if StateTracker.get_args().t5_padding == "zero"
-                    else False
+                    True if StateTracker.get_args().t5_padding == "zero" else False
                 ),
             )
         else:
@@ -1320,7 +1324,9 @@ class TextEmbeddingCache(WebhookMixin):
                         )
                 if should_encode:
                     # If load_from_cache is True, should_encode would be False unless we failed to load.
-                    self.debug_log(f"Encoding filename {filename} :: device {self.text_encoders[0].device} :: prompt {prompt}")
+                    self.debug_log(
+                        f"Encoding filename {filename} :: device {self.text_encoders[0].device} :: prompt {prompt}"
+                    )
                     prompt_embeds, pooled_prompt_embeds = self.encode_sd3_prompt(
                         self.text_encoders,
                         self.tokenizers,

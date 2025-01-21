@@ -45,7 +45,9 @@ class GeneralLPIPSWithDiscriminator(nn.Module):
         self.perceptual_loss = LPIPS().eval()
         self.perceptual_weight = perceptual_weight
         # output log variance
-        self.logvar = nn.Parameter(torch.full((), logvar_init), requires_grad=learn_logvar)
+        self.logvar = nn.Parameter(
+            torch.full((), logvar_init), requires_grad=learn_logvar
+        )
         self.learn_logvar = learn_logvar
 
         discriminator_config = default(
@@ -60,7 +62,9 @@ class GeneralLPIPSWithDiscriminator(nn.Module):
             },
         )
 
-        self.discriminator = instantiate_from_config(discriminator_config).apply(weights_init)
+        self.discriminator = instantiate_from_config(discriminator_config).apply(
+            weights_init
+        )
         self.discriminator_iter_start = disc_start
         self.disc_loss = hinge_d_loss if disc_loss == "hinge" else vanilla_d_loss
         self.disc_factor = disc_factor
@@ -87,7 +91,9 @@ class GeneralLPIPSWithDiscriminator(nn.Module):
         yield from ()
 
     @torch.no_grad()
-    def log_images(self, inputs: torch.Tensor, reconstructions: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def log_images(
+        self, inputs: torch.Tensor, reconstructions: torch.Tensor
+    ) -> Dict[str, torch.Tensor]:
         # calc logits of real/fake
         logits_real = self.discriminator(inputs.contiguous().detach())
         if len(logits_real.shape) < 4:
@@ -148,7 +154,9 @@ class GeneralLPIPSWithDiscriminator(nn.Module):
         # -> (3, h, w)
 
         grid_images_real = torchvision.utils.make_grid(0.5 * inputs + 0.5, nrow=4)
-        grid_images_fake = torchvision.utils.make_grid(0.5 * reconstructions + 0.5, nrow=4)
+        grid_images_fake = torchvision.utils.make_grid(
+            0.5 * reconstructions + 0.5, nrow=4
+        )
         grid_images = torch.cat((grid_images_real, grid_images_fake), dim=1)
         # -> (3, h, w) in range [0, 1]
 
@@ -209,7 +217,9 @@ class GeneralLPIPSWithDiscriminator(nn.Module):
         weights: Union[None, float, torch.Tensor] = None,
     ) -> Tuple[torch.Tensor, dict]:
         if self.scale_input_to_tgt_size:
-            inputs = torch.nn.functional.interpolate(inputs, reconstructions.shape[2:], mode="bicubic", antialias=True)
+            inputs = torch.nn.functional.interpolate(
+                inputs, reconstructions.shape[2:], mode="bicubic", antialias=True
+            )
 
         if self.dims > 2:
             inputs, reconstructions = map(
@@ -219,14 +229,18 @@ class GeneralLPIPSWithDiscriminator(nn.Module):
 
         rec_loss = torch.abs(inputs.contiguous() - reconstructions.contiguous())
         if self.perceptual_weight > 0:
-            frame_indices = torch.randn((inputs.shape[0], inputs.shape[2])).topk(1, dim=-1).indices
+            frame_indices = (
+                torch.randn((inputs.shape[0], inputs.shape[2])).topk(1, dim=-1).indices
+            )
 
             from sgm.modules.autoencoding.losses.video_loss import pick_video_frame
 
             input_frames = pick_video_frame(inputs, frame_indices)
             recon_frames = pick_video_frame(reconstructions, frame_indices)
 
-            p_loss = self.perceptual_loss(input_frames.contiguous(), recon_frames.contiguous()).mean()
+            p_loss = self.perceptual_loss(
+                input_frames.contiguous(), recon_frames.contiguous()
+            ).mean()
             rec_loss = rec_loss + self.perceptual_weight * p_loss
 
         nll_loss, weighted_nll_loss = self.get_nll_loss(rec_loss, weights)
@@ -238,7 +252,9 @@ class GeneralLPIPSWithDiscriminator(nn.Module):
                 logits_fake = self.discriminator(reconstructions.contiguous())
                 g_loss = -torch.mean(logits_fake)
                 if self.training:
-                    d_weight = self.calculate_adaptive_weight(nll_loss, g_loss, last_layer=last_layer)
+                    d_weight = self.calculate_adaptive_weight(
+                        nll_loss, g_loss, last_layer=last_layer
+                    )
                 else:
                     d_weight = torch.tensor(1.0)
             else:

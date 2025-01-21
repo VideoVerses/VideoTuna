@@ -1,24 +1,28 @@
-import os
-import torch
 import logging
+import os
 import traceback
-from concurrent.futures import ThreadPoolExecutor
-from random import shuffle
-from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from hashlib import sha256
 from pathlib import Path
-from PIL import Image
+from queue import Queue
+from random import shuffle
+
+import torch
 from numpy import str_ as numpy_str
-from videotuna.third_party.flux.multiaspect.image import MultiaspectImage
-from videotuna.third_party.flux.image_manipulation.training_sample import TrainingSample, PreparedSample
+from PIL import Image
+from tqdm import tqdm
+
 from videotuna.third_party.flux.data_backend.base import BaseDataBackend
+from videotuna.third_party.flux.image_manipulation.training_sample import (
+    PreparedSample,
+    TrainingSample,
+)
 from videotuna.third_party.flux.metadata.backends.base import MetadataBackend
-from videotuna.third_party.flux.training.state_tracker import StateTracker
+from videotuna.third_party.flux.multiaspect.image import MultiaspectImage
+from videotuna.third_party.flux.training import image_file_extensions
 from videotuna.third_party.flux.training.multi_process import _get_rank as get_rank
 from videotuna.third_party.flux.training.multi_process import rank_info
-from queue import Queue
-from concurrent.futures import as_completed
-from hashlib import sha256
-from videotuna.third_party.flux.training import image_file_extensions
+from videotuna.third_party.flux.training.state_tracker import StateTracker
 from videotuna.third_party.flux.webhooks.mixin import WebhookMixin
 
 logger = logging.getLogger("VAECache")

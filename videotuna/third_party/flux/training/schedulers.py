@@ -1,6 +1,6 @@
 import os
-from accelerate.logging import get_logger
 
+from accelerate.logging import get_logger
 
 logger = get_logger(__name__, log_level=os.environ.get("SIMPLETUNER_LOG_LEVEL", "INFO"))
 

@@ -44,7 +44,9 @@ class AbstractEncoder(nn.Module):
 class FrozenCLIPEmbedder(AbstractEncoder):
     """Uses the CLIP transformer encoder for text (from Hugging Face)"""
 
-    def __init__(self, path="openai/clip-vit-huge-patch14", device="cuda", max_length=77):
+    def __init__(
+        self, path="openai/clip-vit-huge-patch14", device="cuda", max_length=77
+    ):
         super().__init__()
         self.tokenizer = CLIPTokenizer.from_pretrained(path)
         self.transformer = CLIPTextModel.from_pretrained(path)
@@ -94,7 +96,9 @@ class ClipEncoder:
         super().__init__()
         assert from_pretrained is not None, "Please specify the path to the T5 model"
 
-        self.text_encoder = FrozenCLIPEmbedder(path=from_pretrained, max_length=model_max_length).to(device, dtype)
+        self.text_encoder = FrozenCLIPEmbedder(
+            path=from_pretrained, max_length=model_max_length
+        ).to(device, dtype)
         self.y_embedder = None
 
         self.model_max_length = model_max_length

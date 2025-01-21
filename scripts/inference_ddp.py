@@ -1,6 +1,6 @@
+import argparse
 import datetime
-import argparse, importlib
-
+import importlib
 
 import torch
 import torch.distributed as dist
@@ -11,7 +11,7 @@ def setup_dist(local_rank):
     if dist.is_initialized():
         return
     torch.cuda.set_device(local_rank)
-    torch.distributed.init_process_group('nccl', init_method='env://')
+    torch.distributed.init_process_group("nccl", init_method="env://")
 
 
 def get_dist_info():
@@ -28,7 +28,7 @@ def get_dist_info():
     return rank, world_size
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     now = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     parser = argparse.ArgumentParser()
     parser.add_argument("--module", type=str, help="module name", default="inference")
@@ -44,5 +44,5 @@ if __name__ == '__main__':
     torch.backends.cudnn.benchmark = True
     rank, gpu_num = get_dist_info()
 
-    print("@CoLVDM Inference [rank%d]: %s"%(rank, now))
+    print("@CoLVDM Inference [rank%d]: %s" % (rank, now))
     inference_api.run_inference(inference_args, gpu_num, rank)

@@ -1,13 +1,13 @@
-from itertools import repeat
 import collections.abc
 import logging
 import math
-import numpy as np
+from itertools import repeat
 
+import numpy as np
 import torch
+import torch.nn.functional as F
 from torch import nn as nn
 from torchvision.ops.misc import FrozenBatchNorm2d
-import torch.nn.functional as F
 
 
 # open CLIP
@@ -17,26 +17,37 @@ def resize_clip_pos_embed(state_dict, model, interpolation: str = "bicubic", seq
     if old_pos_embed is None or not hasattr(model.visual, "grid_size"):
         return
     grid_size = to_2tuple(model.visual.grid_size)
-    extra_tokens = 1  # FIXME detect different token configs (ie no class token, or more)
+    extra_tokens = (
+        1  # FIXME detect different token configs (ie no class token, or more)
+    )
     new_seq_len = grid_size[0] * grid_size[1] + extra_tokens
     if new_seq_len == old_pos_embed.shape[0]:
         return
 
     if extra_tokens:
-        pos_emb_tok, pos_emb_img = old_pos_embed[:extra_tokens], old_pos_embed[extra_tokens:]
+        pos_emb_tok, pos_emb_img = (
+            old_pos_embed[:extra_tokens],
+            old_pos_embed[extra_tokens:],
+        )
     else:
         pos_emb_tok, pos_emb_img = None, old_pos_embed
     old_grid_size = to_2tuple(int(math.sqrt(len(pos_emb_img))))
 
-    logging.info("Resizing position embedding grid-size from %s to %s", old_grid_size, grid_size)
-    pos_emb_img = pos_emb_img.reshape(1, old_grid_size[0], old_grid_size[1], -1).permute(0, 3, 1, 2)
+    logging.info(
+        "Resizing position embedding grid-size from %s to %s", old_grid_size, grid_size
+    )
+    pos_emb_img = pos_emb_img.reshape(
+        1, old_grid_size[0], old_grid_size[1], -1
+    ).permute(0, 3, 1, 2)
     pos_emb_img = F.interpolate(
         pos_emb_img,
         size=grid_size,
         mode=interpolation,
         align_corners=True,
     )
-    pos_emb_img = pos_emb_img.permute(0, 2, 3, 1).reshape(1, grid_size[0] * grid_size[1], -1)[0]
+    pos_emb_img = pos_emb_img.permute(0, 2, 3, 1).reshape(
+        1, grid_size[0] * grid_size[1], -1
+    )[0]
     if pos_emb_tok is not None:
         new_pos_embed = torch.cat([pos_emb_tok, pos_emb_img], dim=0)
     else:
@@ -44,32 +55,45 @@ def resize_clip_pos_embed(state_dict, model, interpolation: str = "bicubic", seq
     state_dict["visual.positional_embedding"] = new_pos_embed
 
 
-def resize_visual_pos_embed(state_dict, model, interpolation: str = "bicubic", seq_dim=1):
+def resize_visual_pos_embed(
+    state_dict, model, interpolation: str = "bicubic", seq_dim=1
+):
     # Rescale the grid of position embeddings when loading from state_dict
     old_pos_embed = state_dict.get("positional_embedding", None)
     if old_pos_embed is None or not hasattr(model.visual, "grid_size"):
         return
     grid_size = to_2tuple(model.visual.grid_size)
-    extra_tokens = 1  # FIXME detect different token configs (ie no class token, or more)
+    extra_tokens = (
+        1  # FIXME detect different token configs (ie no class token, or more)
+    )
     new_seq_len = grid_size[0] * grid_size[1] + extra_tokens
     if new_seq_len == old_pos_embed.shape[0]:
         return
 
     if extra_tokens:
-        pos_emb_tok, pos_emb_img = old_pos_embed[:extra_tokens], old_pos_embed[extra_tokens:]
+        pos_emb_tok, pos_emb_img = (
+            old_pos_embed[:extra_tokens],
+            old_pos_embed[extra_tokens:],
+        )
     else:
         pos_emb_tok, pos_emb_img = None, old_pos_embed
     old_grid_size = to_2tuple(int(math.sqrt(len(pos_emb_img))))
 
-    logging.info("Resizing position embedding grid-size from %s to %s", old_grid_size, grid_size)
-    pos_emb_img = pos_emb_img.reshape(1, old_grid_size[0], old_grid_size[1], -1).permute(0, 3, 1, 2)
+    logging.info(
+        "Resizing position embedding grid-size from %s to %s", old_grid_size, grid_size
+    )
+    pos_emb_img = pos_emb_img.reshape(
+        1, old_grid_size[0], old_grid_size[1], -1
+    ).permute(0, 3, 1, 2)
     pos_emb_img = F.interpolate(
         pos_emb_img,
         size=grid_size,
         mode=interpolation,
         align_corners=True,
     )
-    pos_emb_img = pos_emb_img.permute(0, 2, 3, 1).reshape(1, grid_size[0] * grid_size[1], -1)[0]
+    pos_emb_img = pos_emb_img.permute(0, 2, 3, 1).reshape(
+        1, grid_size[0] * grid_size[1], -1
+    )[0]
     if pos_emb_tok is not None:
         new_pos_embed = torch.cat([pos_emb_tok, pos_emb_img], dim=0)
     else:
@@ -77,7 +101,9 @@ def resize_visual_pos_embed(state_dict, model, interpolation: str = "bicubic", s
     state_dict["positional_embedding"] = new_pos_embed
 
 
-def resize_evaclip_pos_embed(state_dict, model, interpolation: str = "bicubic", seq_dim=1):
+def resize_evaclip_pos_embed(
+    state_dict, model, interpolation: str = "bicubic", seq_dim=1
+):
     all_keys = list(state_dict.keys())
     # interpolate position embedding
     if "visual.pos_embed" in state_dict:
@@ -85,26 +111,45 @@ def resize_evaclip_pos_embed(state_dict, model, interpolation: str = "bicubic", 
         embedding_size = pos_embed_checkpoint.shape[-1]
         num_patches = model.visual.patch_embed.num_patches
         # num_extra_tokens = model.visual.pos_embed.shape[-2] - num_patches
-        num_extra_tokens = 1  # FIXME detect different token configs (ie no class token, or more)
+        num_extra_tokens = (
+            1  # FIXME detect different token configs (ie no class token, or more)
+        )
         # height (== width) for the checkpoint position embedding
         orig_size = int((pos_embed_checkpoint.shape[-2] - num_extra_tokens) ** 0.5)
         # height (== width) for the new position embedding
         new_size = int(num_patches**0.5)
         # class_token and dist_token are kept unchanged
         if orig_size != new_size:
-            print("Position interpolate from %dx%d to %dx%d" % (orig_size, orig_size, new_size, new_size))
+            print(
+                "Position interpolate from %dx%d to %dx%d"
+                % (orig_size, orig_size, new_size, new_size)
+            )
             extra_tokens = pos_embed_checkpoint[:, :num_extra_tokens]
             # only the position tokens are interpolated
             pos_tokens = pos_embed_checkpoint[:, num_extra_tokens:]
-            pos_tokens = pos_tokens.reshape(-1, orig_size, orig_size, embedding_size).permute(0, 3, 1, 2)
-            pos_tokens = torch.nn.functional.interpolate(pos_tokens, size=(new_size, new_size), mode="bicubic", align_corners=False)
+            pos_tokens = pos_tokens.reshape(
+                -1, orig_size, orig_size, embedding_size
+            ).permute(0, 3, 1, 2)
+            pos_tokens = torch.nn.functional.interpolate(
+                pos_tokens,
+                size=(new_size, new_size),
+                mode="bicubic",
+                align_corners=False,
+            )
             pos_tokens = pos_tokens.permute(0, 2, 3, 1).flatten(1, 2)
             new_pos_embed = torch.cat((extra_tokens, pos_tokens), dim=1)
             state_dict["visual.pos_embed"] = new_pos_embed
 
             patch_embed_proj = state_dict["visual.patch_embed.proj.weight"]
             patch_size = model.visual.patch_embed.patch_size
-            state_dict["visual.patch_embed.proj.weight"] = torch.nn.functional.interpolate(patch_embed_proj.float(), size=patch_size, mode="bicubic", align_corners=False)
+            state_dict["visual.patch_embed.proj.weight"] = (
+                torch.nn.functional.interpolate(
+                    patch_embed_proj.float(),
+                    size=patch_size,
+                    mode="bicubic",
+                    align_corners=False,
+                )
+            )
 
 
 def resize_eva_pos_embed(state_dict, model, interpolation: str = "bicubic", seq_dim=1):
@@ -115,26 +160,43 @@ def resize_eva_pos_embed(state_dict, model, interpolation: str = "bicubic", seq_
         embedding_size = pos_embed_checkpoint.shape[-1]
         num_patches = model.visual.patch_embed.num_patches
         # num_extra_tokens = model.visual.pos_embed.shape[-2] - num_patches
-        num_extra_tokens = 1  # FIXME detect different token configs (ie no class token, or more)
+        num_extra_tokens = (
+            1  # FIXME detect different token configs (ie no class token, or more)
+        )
         # height (== width) for the checkpoint position embedding
         orig_size = int((pos_embed_checkpoint.shape[-2] - num_extra_tokens) ** 0.5)
         # height (== width) for the new position embedding
         new_size = int(num_patches**0.5)
         # class_token and dist_token are kept unchanged
         if orig_size != new_size:
-            print("Position interpolate from %dx%d to %dx%d" % (orig_size, orig_size, new_size, new_size))
+            print(
+                "Position interpolate from %dx%d to %dx%d"
+                % (orig_size, orig_size, new_size, new_size)
+            )
             extra_tokens = pos_embed_checkpoint[:, :num_extra_tokens]
             # only the position tokens are interpolated
             pos_tokens = pos_embed_checkpoint[:, num_extra_tokens:]
-            pos_tokens = pos_tokens.reshape(-1, orig_size, orig_size, embedding_size).permute(0, 3, 1, 2)
-            pos_tokens = torch.nn.functional.interpolate(pos_tokens, size=(new_size, new_size), mode="bicubic", align_corners=False)
+            pos_tokens = pos_tokens.reshape(
+                -1, orig_size, orig_size, embedding_size
+            ).permute(0, 3, 1, 2)
+            pos_tokens = torch.nn.functional.interpolate(
+                pos_tokens,
+                size=(new_size, new_size),
+                mode="bicubic",
+                align_corners=False,
+            )
             pos_tokens = pos_tokens.permute(0, 2, 3, 1).flatten(1, 2)
             new_pos_embed = torch.cat((extra_tokens, pos_tokens), dim=1)
             state_dict["pos_embed"] = new_pos_embed
 
             patch_embed_proj = state_dict["patch_embed.proj.weight"]
             patch_size = model.visual.patch_embed.patch_size
-            state_dict["patch_embed.proj.weight"] = torch.nn.functional.interpolate(patch_embed_proj.float(), size=patch_size, mode="bicubic", align_corners=False)
+            state_dict["patch_embed.proj.weight"] = torch.nn.functional.interpolate(
+                patch_embed_proj.float(),
+                size=patch_size,
+                mode="bicubic",
+                align_corners=False,
+            )
 
 
 def resize_rel_pos_embed(state_dict, model, interpolation: str = "bicubic", seq_dim=1):
@@ -150,11 +212,16 @@ def resize_rel_pos_embed(state_dict, model, interpolation: str = "bicubic", seq_
             dst_patch_shape = model.visual.patch_embed.patch_shape
             if dst_patch_shape[0] != dst_patch_shape[1]:
                 raise NotImplementedError()
-            num_extra_tokens = dst_num_pos - (dst_patch_shape[0] * 2 - 1) * (dst_patch_shape[1] * 2 - 1)
+            num_extra_tokens = dst_num_pos - (dst_patch_shape[0] * 2 - 1) * (
+                dst_patch_shape[1] * 2 - 1
+            )
             src_size = int((src_num_pos - num_extra_tokens) ** 0.5)
             dst_size = int((dst_num_pos - num_extra_tokens) ** 0.5)
             if src_size != dst_size:
-                print("Position interpolate for %s from %dx%d to %dx%d" % (key, src_size, src_size, dst_size, dst_size))
+                print(
+                    "Position interpolate for %s from %dx%d to %dx%d"
+                    % (key, src_size, src_size, dst_size, dst_size)
+                )
                 extra_tokens = rel_pos_bias[-num_extra_tokens:, :]
                 rel_pos_bias = rel_pos_bias[:-num_extra_tokens, :]
 
@@ -196,7 +263,12 @@ def resize_rel_pos_embed(state_dict, model, interpolation: str = "bicubic", seq_
                 for i in range(num_attn_heads):
                     z = rel_pos_bias[:, i].view(src_size, src_size).float().numpy()
                     f = F.interpolate.interp2d(x, y, z, kind="cubic")
-                    all_rel_pos_bias.append(torch.Tensor(f(dx, dy)).contiguous().view(-1, 1).to(rel_pos_bias.device))
+                    all_rel_pos_bias.append(
+                        torch.Tensor(f(dx, dy))
+                        .contiguous()
+                        .view(-1, 1)
+                        .to(rel_pos_bias.device)
+                    )
 
                 rel_pos_bias = torch.cat(all_rel_pos_bias, dim=-1)
 
@@ -215,19 +287,34 @@ def resize_rel_pos_embed(state_dict, model, interpolation: str = "bicubic", seq_
         new_size = int(num_patches**0.5)
         # class_token and dist_token are kept unchanged
         if orig_size != new_size:
-            print("Position interpolate from %dx%d to %dx%d" % (orig_size, orig_size, new_size, new_size))
+            print(
+                "Position interpolate from %dx%d to %dx%d"
+                % (orig_size, orig_size, new_size, new_size)
+            )
             extra_tokens = pos_embed_checkpoint[:, :num_extra_tokens]
             # only the position tokens are interpolated
             pos_tokens = pos_embed_checkpoint[:, num_extra_tokens:]
-            pos_tokens = pos_tokens.reshape(-1, orig_size, orig_size, embedding_size).permute(0, 3, 1, 2)
-            pos_tokens = torch.nn.functional.interpolate(pos_tokens, size=(new_size, new_size), mode="bicubic", align_corners=False)
+            pos_tokens = pos_tokens.reshape(
+                -1, orig_size, orig_size, embedding_size
+            ).permute(0, 3, 1, 2)
+            pos_tokens = torch.nn.functional.interpolate(
+                pos_tokens,
+                size=(new_size, new_size),
+                mode="bicubic",
+                align_corners=False,
+            )
             pos_tokens = pos_tokens.permute(0, 2, 3, 1).flatten(1, 2)
             new_pos_embed = torch.cat((extra_tokens, pos_tokens), dim=1)
             state_dict["pos_embed"] = new_pos_embed
 
             patch_embed_proj = state_dict["patch_embed.proj.weight"]
             patch_size = model.visual.patch_embed.patch_size
-            state_dict["patch_embed.proj.weight"] = torch.nn.functional.interpolate(patch_embed_proj.float(), size=patch_size, mode="bicubic", align_corners=False)
+            state_dict["patch_embed.proj.weight"] = torch.nn.functional.interpolate(
+                patch_embed_proj.float(),
+                size=patch_size,
+                mode="bicubic",
+                align_corners=False,
+            )
 
 
 def freeze_batch_norm_2d(module, module_match={}, name=""):
@@ -250,7 +337,9 @@ def freeze_batch_norm_2d(module, module_match={}, name=""):
     is_match = True
     if module_match:
         is_match = name in module_match
-    if is_match and isinstance(module, (nn.modules.batchnorm.BatchNorm2d, nn.modules.batchnorm.SyncBatchNorm)):
+    if is_match and isinstance(
+        module, (nn.modules.batchnorm.BatchNorm2d, nn.modules.batchnorm.SyncBatchNorm)
+    ):
         res = FrozenBatchNorm2d(module.num_features)
         res.num_features = module.num_features
         res.affine = module.affine
@@ -315,7 +404,11 @@ class AllGather(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, grad_output):
-        return (grad_output[ctx.batch_size * ctx.rank : ctx.batch_size * (ctx.rank + 1)], None, None)
+        return (
+            grad_output[ctx.batch_size * ctx.rank : ctx.batch_size * (ctx.rank + 1)],
+            None,
+            None,
+        )
 
 
 allgather = AllGather.apply

@@ -2,13 +2,11 @@ import argparse
 import gc
 import operator
 import os
-
 from typing import Any, Dict, Optional, Union
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 from diffusers.configuration_utils import ConfigMixin, register_to_config
 from diffusers.loaders import FromOriginalModelMixin, PeftAdapterMixin
 from diffusers.models.attention import FeedForward, _chunked_feed_forward
@@ -29,7 +27,6 @@ from diffusers.utils import (
     unscale_lora_layers,
 )
 from diffusers.utils.torch_utils import maybe_allow_in_graph
-
 
 ORIG_DEPTH = 24
 FINAL_DEPTH = 36

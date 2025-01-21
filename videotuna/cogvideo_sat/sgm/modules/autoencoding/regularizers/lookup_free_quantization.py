@@ -6,22 +6,23 @@ In the simplest setup, each dimension is quantized into {-1, 1}.
 An entropy penalty is used to encourage utilization.
 """
 
-from math import log2, ceil
 from collections import namedtuple
+from math import ceil, log2
 
 import torch
-from torch import nn, einsum
 import torch.nn.functional as F
-from torch.nn import Module
+from einops import pack, rearrange, reduce, unpack
+from torch import einsum, nn
 from torch.cuda.amp import autocast
-
-from einops import rearrange, reduce, pack, unpack
+from torch.nn import Module
 
 # constants
 
 Return = namedtuple("Return", ["quantized", "indices", "entropy_aux_loss"])
 
-LossBreakdown = namedtuple("LossBreakdown", ["per_sample_entropy", "batch_entropy", "commitment"])
+LossBreakdown = namedtuple(
+    "LossBreakdown", ["per_sample_entropy", "batch_entropy", "commitment"]
+)
 
 # helper functions
 
@@ -78,7 +79,9 @@ class LFQ(Module):
 
         # some assert validations
 
-        assert exists(dim) or exists(codebook_size), "either dim or codebook_size must be specified for LFQ"
+        assert exists(dim) or exists(
+            codebook_size
+        ), "either dim or codebook_size must be specified for LFQ"
         assert (
             not exists(codebook_size) or log2(codebook_size).is_integer()
         ), f"your codebook size must be a power of 2 for lookup free quantization (suggested {2 ** ceil(log2(codebook_size))})"
@@ -90,8 +93,12 @@ class LFQ(Module):
         dim = default(dim, codebook_dims)
 
         has_projections = dim != codebook_dims
-        self.project_in = nn.Linear(dim, codebook_dims) if has_projections else nn.Identity()
-        self.project_out = nn.Linear(codebook_dims, dim) if has_projections else nn.Identity()
+        self.project_in = (
+            nn.Linear(dim, codebook_dims) if has_projections else nn.Identity()
+        )
+        self.project_out = (
+            nn.Linear(codebook_dims, dim) if has_projections else nn.Identity()
+        )
         self.has_projections = has_projections
 
         self.dim = dim
@@ -195,7 +202,9 @@ class LFQ(Module):
             x = rearrange(x, "b d ... -> b ... d")
             x, ps = pack_one(x, "b * d")
 
-        assert x.shape[-1] == self.dim, f"expected dimension of {self.dim} but received {x.shape[-1]}"
+        assert (
+            x.shape[-1] == self.dim
+        ), f"expected dimension of {self.dim} but received {x.shape[-1]}"
 
         x = self.project_in(x)
 
@@ -226,7 +235,9 @@ class LFQ(Module):
 
         if self.training:
             # the same as euclidean distance up to a constant
-            distance = -2 * einsum("... i d, j d -> ... i j", original_input, self.codebook)
+            distance = -2 * einsum(
+                "... i d, j d -> ... i j", original_input, self.codebook
+            )
 
             prob = (-distance * inv_temperature).softmax(dim=-1)
 
@@ -259,7 +270,9 @@ class LFQ(Module):
             # 1. entropy will be nudged to be low for each code, to encourage the network to output confident predictions
             # 2. codebook entropy will be nudged to be high, to encourage all codes to be uniformly used within the batch
 
-            entropy_aux_loss = per_sample_entropy - self.diversity_gamma * codebook_entropy
+            entropy_aux_loss = (
+                per_sample_entropy - self.diversity_gamma * codebook_entropy
+            )
         else:
             # if not training, just return dummy 0
             entropy_aux_loss = per_sample_entropy = codebook_entropy = self.zero
@@ -267,7 +280,9 @@ class LFQ(Module):
         # commit loss
 
         if self.training:
-            commit_loss = F.mse_loss(original_input, quantized.detach(), reduction="none")
+            commit_loss = F.mse_loss(
+                original_input, quantized.detach(), reduction="none"
+            )
 
             if exists(mask):
                 commit_loss = commit_loss[mask]
@@ -299,7 +314,10 @@ class LFQ(Module):
 
         # complete aux loss
 
-        aux_loss = entropy_aux_loss * self.entropy_loss_weight + commit_loss * self.commitment_loss_weight
+        aux_loss = (
+            entropy_aux_loss * self.entropy_loss_weight
+            + commit_loss * self.commitment_loss_weight
+        )
 
         ret = Return(x, indices, aux_loss)
 

@@ -1,23 +1,28 @@
-import torch
-import os
-from vbench import VBench
-from datetime import datetime
 import argparse
 import json
+import os
+from datetime import datetime
+
+import torch
+from vbench import VBench
 
 CUR_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
 def register_subparsers(subparser):
-    parser = subparser.add_parser('evaluate', formatter_class=argparse.RawTextHelpFormatter)
+    parser = subparser.add_parser(
+        "evaluate", formatter_class=argparse.RawTextHelpFormatter
+    )
     parser.add_argument(
         "--output_path",
         type=str,
-        default='./evaluation_results/',
+        default="./evaluation_results/",
         help="output path to save the evaluation results",
     )
     parser.add_argument(
         "--full_json_dir",
         type=str,
-        default=f'{CUR_DIR}/../VBench_full_info.json',
+        default=f"{CUR_DIR}/../VBench_full_info.json",
         help="path to save the json file that contains the prompt and dimension information",
     )
     parser.add_argument(
@@ -28,7 +33,7 @@ def register_subparsers(subparser):
     )
     parser.add_argument(
         "--dimension",
-        nargs='+',
+        nargs="+",
         required=True,
         help="list of evaluation dimensions, usage: --dimension <dim_1> <dim_2>",
     )
@@ -46,8 +51,8 @@ def register_subparsers(subparser):
     )
     parser.add_argument(
         "--mode",
-        choices=['custom_input', 'vbench_standard', 'vbench_category'],
-        default='vbench_standard',
+        choices=["custom_input", "vbench_standard", "vbench_category"],
+        default="vbench_standard",
         help="""This flags determine the mode of evaluations, choose one of the following:
         1. "custom_input": receive input prompt from either --prompt/--prompt_file flags or the filename
         2. "vbench_standard": evaluate on standard prompt suite of VBench
@@ -58,7 +63,7 @@ def register_subparsers(subparser):
         "--custom_input",
         action="store_true",
         required=False,
-        help="(deprecated) use --mode=\"custom_input\" instead",
+        help='(deprecated) use --mode="custom_input" instead',
     )
     parser.add_argument(
         "--prompt",
@@ -68,7 +73,7 @@ def register_subparsers(subparser):
         If not specified, filenames will be used as input prompts
         * Mutually exclusive to --prompt_file.
         ** This option must be used with --custom_input flag
-        """
+        """,
     )
     parser.add_argument(
         "--prompt_file",
@@ -78,7 +83,7 @@ def register_subparsers(subparser):
         If not specified, filenames will be used as input prompts
         * Mutually exclusive to --prompt.
         ** This option must be used with --custom_input flag
-        """
+        """,
     )
     parser.add_argument(
         "--category",
@@ -94,7 +99,7 @@ def register_subparsers(subparser):
         "--imaging_quality_preprocessing_mode",
         type=str,
         required=False,
-        default='longer',
+        default="longer",
         help="""This is for setting preprocessing in imaging_quality
         1. 'shorter': if the shorter side is more than 512, the image is resized so that the shorter side is 512.
         2. 'longer': if the longer side is more than 512, the image is resized so that the longer side is 512.
@@ -105,48 +110,54 @@ def register_subparsers(subparser):
     )
     parser.set_defaults(func=evaluate)
 
+
 def evaluate(args):
-    print(f'args: {args}')
+    print(f"args: {args}")
 
     device = torch.device("cuda")
     my_VBench = VBench(device, args.full_json_dir, args.output_path)
-    
-    print(f'start evaluation')
-    
-    current_time = datetime.now().strftime('%Y-%m-%d-%H:%M:%S')
+
+    print(f"start evaluation")
+
+    current_time = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
 
     kwargs = {}
 
     prompt = []
 
     assert args.custom_input == False, "(Deprecated) use --mode=custom_input instead"
-    
+
     if (args.prompt_file is not None) and (args.prompt != ""):
         raise Exception("--prompt_file and --prompt cannot be used together")
-    if (args.prompt_file is not None or args.prompt != "") and (not args.mode=='custom_input'):
+    if (args.prompt_file is not None or args.prompt != "") and (
+        not args.mode == "custom_input"
+    ):
         raise Exception("must set --mode=custom_input for using external prompt")
 
     if args.prompt_file:
-        with open(args.prompt_file, 'r') as f:
+        with open(args.prompt_file, "r") as f:
             prompt = json.load(f)
-        assert type(prompt) == dict, "Invalid prompt file format. The correct format is {\"video_path\": prompt, ... }"
+        assert (
+            type(prompt) == dict
+        ), 'Invalid prompt file format. The correct format is {"video_path": prompt, ... }'
     elif args.prompt != "":
         prompt = [args.prompt]
 
     if args.category != "":
-        kwargs['category'] = args.category
+        kwargs["category"] = args.category
 
-    kwargs['imaging_quality_preprocessing_mode'] = args.imaging_quality_preprocessing_mode
+    kwargs["imaging_quality_preprocessing_mode"] = (
+        args.imaging_quality_preprocessing_mode
+    )
 
     my_VBench.evaluate(
-        videos_path = args.videos_path,
-        name = f'results_{current_time}',
-        prompt_list=prompt, # pass in [] to read prompt from filename
-        dimension_list = args.dimension,
+        videos_path=args.videos_path,
+        name=f"results_{current_time}",
+        prompt_list=prompt,  # pass in [] to read prompt from filename
+        dimension_list=args.dimension,
         local=args.load_ckpt_from_local,
         read_frame=args.read_frame,
         mode=args.mode,
-        **kwargs
+        **kwargs,
     )
-    print('done')
-
+    print("done")

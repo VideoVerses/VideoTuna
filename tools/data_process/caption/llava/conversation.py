@@ -1,9 +1,10 @@
-import dataclasses
-from enum import auto, Enum
-from typing import List, Any, Dict, Union, Tuple
-import re
 import base64
+import dataclasses
+import re
+from enum import Enum, auto
 from io import BytesIO
+from typing import Any, Dict, List, Tuple, Union
+
 from PIL import Image
 from transformers import AutoTokenizer
 
@@ -104,7 +105,9 @@ class Conversation:
                     chat_template_messages.append({"role": role, "content": message})
 
             # print(chat_template_messages)
-            return self.tokenizer.apply_chat_template(chat_template_messages, tokenize=False, add_generation_prompt=True)
+            return self.tokenizer.apply_chat_template(
+                chat_template_messages, tokenize=False, add_generation_prompt=True
+            )
             # ret = "" if self.system == "" else self.system + self.sep + "\n"
             # for role, message in messages:
             #     if message:
@@ -129,7 +132,9 @@ class Conversation:
         elif self.sep_style == SeparatorStyle.GEMMA:
             ret = ""
             for i, (role, message) in enumerate(messages):
-                assert role == self.roles[i % 2], "Conversation should alternate user/assistant/user/assistant/..."
+                assert (
+                    role == self.roles[i % 2]
+                ), "Conversation should alternate user/assistant/user/assistant/..."
                 if message:
                     if type(message) is tuple:
                         message, _, _ = message
@@ -138,7 +143,9 @@ class Conversation:
                     ret += role
 
         elif self.sep_style == SeparatorStyle.LLAMA_2:
-            wrap_sys = lambda msg: f"<<SYS>>\n{msg}\n<</SYS>>\n\n" if len(msg) > 0 else msg
+            wrap_sys = lambda msg: (
+                f"<<SYS>>\n{msg}\n<</SYS>>\n\n" if len(msg) > 0 else msg
+            )
             wrap_inst = lambda msg: f"[INST] {msg} [/INST]"
             ret = ""
 
@@ -178,7 +185,9 @@ class Conversation:
     def append_message(self, role, message):
         self.messages.append([role, message])
 
-    def process_image(self, image, image_process_mode, return_pil=False, image_format="PNG"):
+    def process_image(
+        self, image, image_process_mode, return_pil=False, image_format="PNG"
+    ):
         if image_process_mode == "Pad":
 
             def expand2square(pil_img, background_color=(122, 116, 104)):
@@ -234,7 +243,9 @@ class Conversation:
                         image = [image]
                     for img in image:
                         if not return_path and self.is_image_file(img):
-                            img = self.process_image(img, image_process_mode, return_pil=return_pil)
+                            img = self.process_image(
+                                img, image_process_mode, return_pil=return_pil
+                            )
                         else:
                             images.append(img)
         return images
@@ -244,7 +255,16 @@ class Conversation:
         return any(filename.lower().endswith(ext) for ext in image_extensions)
 
     def is_video_file(self, filename):
-        video_extensions = [".mp4", ".mov", ".avi", ".mkv", ".wmv", ".flv", ".mpeg", ".mpg"]
+        video_extensions = [
+            ".mp4",
+            ".mov",
+            ".avi",
+            ".mkv",
+            ".wmv",
+            ".flv",
+            ".mpeg",
+            ".mpg",
+        ]
         return any(filename.lower().endswith(ext) for ext in video_extensions)
 
     def to_gradio_chatbot(self):
@@ -260,10 +280,12 @@ class Conversation:
                     else:
                         msg = re.sub(r"(<image>)\n(?=<image>)", r"\1 ", msg)
 
-                    img_str_list = []                         
+                    img_str_list = []
                     for img in image:
                         if self.is_image_file(img):
-                            img_b64_str = self.process_image(img, "Default", return_pil=False, image_format="JPEG")
+                            img_b64_str = self.process_image(
+                                img, "Default", return_pil=False, image_format="JPEG"
+                            )
                             img_str = f'<img src="data:image/jpeg;base64,{img_b64_str}" style="max-width: 256px; max-height: 256px; width: auto; height: auto; object-fit: contain;"/>'
                             img_str_list.append(img_str)
                         elif self.is_video_file(img):
@@ -286,14 +308,25 @@ class Conversation:
         return ret
 
     def copy(self):
-        return Conversation(system=self.system, roles=self.roles, messages=[[x, y] for x, y in self.messages], offset=self.offset, sep_style=self.sep_style, sep=self.sep, sep2=self.sep2, version=self.version)
+        return Conversation(
+            system=self.system,
+            roles=self.roles,
+            messages=[[x, y] for x, y in self.messages],
+            offset=self.offset,
+            sep_style=self.sep_style,
+            sep=self.sep,
+            sep2=self.sep2,
+            version=self.version,
+        )
 
     def dict(self):
         if len(self.get_images()) > 0:
             return {
                 "system": self.system,
                 "roles": self.roles,
-                "messages": [[x, y[0] if type(y) is tuple else y] for x, y in self.messages],
+                "messages": [
+                    [x, y[0] if type(y) is tuple else y] for x, y in self.messages
+                ],
                 "offset": self.offset,
                 "sep": self.sep,
                 "sep2": self.sep2,
@@ -309,10 +342,14 @@ class Conversation:
 
 
 conv_vicuna_v0 = Conversation(
-    system="A chat between a curious human and an artificial intelligence assistant. " "The assistant gives helpful, detailed, and polite answers to the human's questions.",
+    system="A chat between a curious human and an artificial intelligence assistant. "
+    "The assistant gives helpful, detailed, and polite answers to the human's questions.",
     roles=("Human", "Assistant"),
     messages=[
-        ["Human", "What are the key differences between renewable and non-renewable energy sources?"],
+        [
+            "Human",
+            "What are the key differences between renewable and non-renewable energy sources?",
+        ],
         [
             "Assistant",
             "Renewable energy sources are those that can be replenished naturally in a relatively "
@@ -341,7 +378,8 @@ conv_vicuna_v0 = Conversation(
 )
 
 conv_vicuna_v1 = Conversation(
-    system="A chat between a curious user and an artificial intelligence assistant. " "The assistant gives helpful, detailed, and polite answers to the user's questions.",
+    system="A chat between a curious user and an artificial intelligence assistant. "
+    "The assistant gives helpful, detailed, and polite answers to the user's questions.",
     roles=("USER", "ASSISTANT"),
     version="v1",
     messages=[],
@@ -365,7 +403,9 @@ If a question does not make any sense, or is not factually coherent, explain why
 )
 
 conv_llava_llama_2 = Conversation(
-    system="You are a helpful language and vision assistant. " "You are able to understand the visual content that the user provides, " "and assist the user with a variety of tasks using natural language.",
+    system="You are a helpful language and vision assistant. "
+    "You are able to understand the visual content that the user provides, "
+    "and assist the user with a variety of tasks using natural language.",
     roles=("USER", "ASSISTANT"),
     version="llama_v2",
     messages=[],
@@ -376,7 +416,9 @@ conv_llava_llama_2 = Conversation(
 )
 
 conv_llava_llama_3 = Conversation(
-    system="You are a helpful language and vision assistant. " "You are able to understand the visual content that the user provides, " "and assist the user with a variety of tasks using natural language.",
+    system="You are a helpful language and vision assistant. "
+    "You are able to understand the visual content that the user provides, "
+    "and assist the user with a variety of tasks using natural language.",
     roles=("user", "assistant"),
     version="llama_v3",
     messages=[],
@@ -411,7 +453,8 @@ conv_llava_llama_2_simple = Conversation(
 )
 
 conv_llava_llama_2_mmtag = Conversation(
-    system="Answer the questions about the visual content that the user provides." "The visual content will be provided with the following format: <Image>visual content</Image>.",
+    system="Answer the questions about the visual content that the user provides."
+    "The visual content will be provided with the following format: <Image>visual content</Image>.",
     roles=("USER", "ASSISTANT"),
     version="llama_v2_mmtag",
     messages=[],
@@ -443,7 +486,15 @@ You are a helpful assistant.""",
     sep="<|im_end|>",
 )
 
-conv_gemma_instruct = Conversation(system="", roles=("<start_of_turn>user\n", "<start_of_turn>model\n"), version="gemma", messages=[], offset=0, sep_style=SeparatorStyle.GEMMA, sep="<end_of_turn>\n")
+conv_gemma_instruct = Conversation(
+    system="",
+    roles=("<start_of_turn>user\n", "<start_of_turn>model\n"),
+    version="gemma",
+    messages=[],
+    offset=0,
+    sep_style=SeparatorStyle.GEMMA,
+    sep="<end_of_turn>\n",
+)
 
 conv_llava_plain = Conversation(
     system="",
@@ -455,7 +506,8 @@ conv_llava_plain = Conversation(
 )
 
 conv_llava_v0 = Conversation(
-    system="A chat between a curious human and an artificial intelligence assistant. " "The assistant gives helpful, detailed, and polite answers to the human's questions.",
+    system="A chat between a curious human and an artificial intelligence assistant. "
+    "The assistant gives helpful, detailed, and polite answers to the human's questions.",
     roles=("Human", "Assistant"),
     messages=[],
     offset=0,
@@ -476,7 +528,8 @@ conv_llava_v0_mmtag = Conversation(
 )
 
 conv_llava_v1 = Conversation(
-    system="A chat between a curious human and an artificial intelligence assistant. " "The assistant gives helpful, detailed, and polite answers to the human's questions.",
+    system="A chat between a curious human and an artificial intelligence assistant. "
+    "The assistant gives helpful, detailed, and polite answers to the human's questions.",
     roles=("USER", "ASSISTANT"),
     version="v1",
     messages=[],

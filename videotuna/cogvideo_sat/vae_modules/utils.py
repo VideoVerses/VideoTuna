@@ -7,9 +7,9 @@ from inspect import isfunction
 import fsspec
 import numpy as np
 import torch
+import torch.distributed
 from PIL import Image, ImageDraw, ImageFont
 from safetensors.torch import load_file as load_safetensors
-import torch.distributed
 
 _CONTEXT_PARALLEL_GROUP = None
 _CONTEXT_PARALLEL_SIZE = None
@@ -26,7 +26,9 @@ def initialize_context_parallel(context_parallel_size):
     global _CONTEXT_PARALLEL_GROUP
     global _CONTEXT_PARALLEL_SIZE
 
-    assert _CONTEXT_PARALLEL_GROUP is None, "context parallel group is already initialized"
+    assert (
+        _CONTEXT_PARALLEL_GROUP is None
+    ), "context parallel group is already initialized"
     _CONTEXT_PARALLEL_SIZE = context_parallel_size
 
     rank = torch.distributed.get_rank()
@@ -41,19 +43,25 @@ def initialize_context_parallel(context_parallel_size):
 
 
 def get_context_parallel_group():
-    assert _CONTEXT_PARALLEL_GROUP is not None, "context parallel group is not initialized"
+    assert (
+        _CONTEXT_PARALLEL_GROUP is not None
+    ), "context parallel group is not initialized"
 
     return _CONTEXT_PARALLEL_GROUP
 
 
 def get_context_parallel_world_size():
-    assert _CONTEXT_PARALLEL_SIZE is not None, "context parallel size is not initialized"
+    assert (
+        _CONTEXT_PARALLEL_SIZE is not None
+    ), "context parallel size is not initialized"
 
     return _CONTEXT_PARALLEL_SIZE
 
 
 def get_context_parallel_rank():
-    assert _CONTEXT_PARALLEL_SIZE is not None, "context parallel size is not initialized"
+    assert (
+        _CONTEXT_PARALLEL_SIZE is not None
+    ), "context parallel size is not initialized"
 
     rank = torch.distributed.get_rank()
     cp_rank = rank % _CONTEXT_PARALLEL_SIZE
@@ -61,7 +69,9 @@ def get_context_parallel_rank():
 
 
 def get_context_parallel_group_rank():
-    assert _CONTEXT_PARALLEL_SIZE is not None, "context parallel size is not initialized"
+    assert (
+        _CONTEXT_PARALLEL_SIZE is not None
+    ), "context parallel size is not initialized"
 
     rank = torch.distributed.get_rank()
     cp_group_rank = rank // _CONTEXT_PARALLEL_SIZE
@@ -78,7 +88,13 @@ class SafeConv3d(torch.nn.Conv3d):
             input_chunks = torch.chunk(input, part_num, dim=2)  # NCTHW
             if kernel_size > 1:
                 input_chunks = [input_chunks[0]] + [
-                    torch.cat((input_chunks[i - 1][:, :, -kernel_size + 1 :], input_chunks[i]), dim=2)
+                    torch.cat(
+                        (
+                            input_chunks[i - 1][:, :, -kernel_size + 1 :],
+                            input_chunks[i],
+                        ),
+                        dim=2,
+                    )
                     for i in range(1, len(input_chunks))
                 ]
 
@@ -159,7 +175,9 @@ def log_txt_as_img(wh, xc, size=10):
             text_seq = xc[bi][0]
         else:
             text_seq = xc[bi]
-        lines = "\n".join(text_seq[start : start + nc] for start in range(0, len(text_seq), nc))
+        lines = "\n".join(
+            text_seq[start : start + nc] for start in range(0, len(text_seq), nc)
+        )
 
         try:
             draw.text((0, 0), lines, fill="black", font=font)
@@ -271,7 +289,9 @@ def append_dims(x, target_dims):
     """Appends dimensions to the end of a tensor until it has target_dims dimensions."""
     dims_to_append = target_dims - x.ndim
     if dims_to_append < 0:
-        raise ValueError(f"input has {x.ndim} dims but target_dims is {target_dims}, which is less")
+        raise ValueError(
+            f"input has {x.ndim} dims but target_dims is {target_dims}, which is less"
+        )
     return x[(...,) + (None,) * dims_to_append]
 
 

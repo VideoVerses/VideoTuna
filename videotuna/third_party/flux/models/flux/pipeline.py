@@ -17,17 +17,11 @@ from typing import Any, Callable, Dict, List, Optional, Union
 
 import numpy as np
 import torch
-from transformers import (
-    CLIPTextModel,
-    CLIPTokenizer,
-    T5EncoderModel,
-    T5TokenizerFast,
-)
-
 from diffusers.image_processor import VaeImageProcessor
 from diffusers.loaders import FluxLoraLoaderMixin
 from diffusers.models.autoencoders import AutoencoderKL
 from diffusers.models.transformers import FluxTransformer2DModel
+from diffusers.pipelines.pipeline_utils import DiffusionPipeline
 from diffusers.schedulers import FlowMatchEulerDiscreteScheduler
 from diffusers.utils import (
     USE_PEFT_BACKEND,
@@ -38,8 +32,7 @@ from diffusers.utils import (
     unscale_lora_layers,
 )
 from diffusers.utils.torch_utils import randn_tensor
-from diffusers.pipelines.pipeline_utils import DiffusionPipeline
-
+from transformers import CLIPTextModel, CLIPTokenizer, T5EncoderModel, T5TokenizerFast
 
 if is_torch_xla_available():
     import torch_xla.core.xla_model as xm
@@ -824,16 +817,16 @@ class FluxPipeline(DiffusionPipeline, FluxLoraLoaderMixin):
 
                 noise_pred = self.transformer(
                     hidden_states=latents.to(
-                        device=self.transformer.device # , dtype=self.transformer.dtype     # can't cast dtype like this because of NF4
+                        device=self.transformer.device  # , dtype=self.transformer.dtype     # can't cast dtype like this because of NF4
                     ),
                     # YiYi notes: divide it by 1000 for now because we scale it by 1000 in the transforme rmodel (we should not keep it but I want to keep the inputs same for the model for testing)
                     timestep=timestep / 1000,
                     guidance=guidance,
                     pooled_projections=pooled_prompt_embeds.to(
-                        device=self.transformer.device # , dtype=self.transformer.dtype     # can't cast dtype like this because of NF4
+                        device=self.transformer.device  # , dtype=self.transformer.dtype     # can't cast dtype like this because of NF4
                     ),
                     encoder_hidden_states=prompt_embeds.to(
-                        device=self.transformer.device # , dtype=self.transformer.dtype     # can't cast dtype like this because of NF4
+                        device=self.transformer.device  # , dtype=self.transformer.dtype     # can't cast dtype like this because of NF4
                     ),
                     txt_ids=text_ids,
                     img_ids=latent_image_ids,
@@ -846,16 +839,16 @@ class FluxPipeline(DiffusionPipeline, FluxLoraLoaderMixin):
                 if guidance_scale_real > 1.0 and i >= no_cfg_until_timestep:
                     noise_pred_uncond = self.transformer(
                         hidden_states=latents.to(
-                            device=self.transformer.device # , dtype=self.transformer.dtype     # can't cast dtype like this because of NF4
+                            device=self.transformer.device  # , dtype=self.transformer.dtype     # can't cast dtype like this because of NF4
                         ),
                         # YiYi notes: divide it by 1000 for now because we scale it by 1000 in the transforme rmodel (we should not keep it but I want to keep the inputs same for the model for testing)
                         timestep=timestep / 1000,
                         guidance=guidance,
                         pooled_projections=negative_pooled_prompt_embeds.to(
-                            device=self.transformer.device # , dtype=self.transformer.dtype     # can't cast dtype like this because of NF4
+                            device=self.transformer.device  # , dtype=self.transformer.dtype     # can't cast dtype like this because of NF4
                         ),
                         encoder_hidden_states=negative_prompt_embeds.to(
-                            device=self.transformer.device # , dtype=self.transformer.dtype     # can't cast dtype like this because of NF4
+                            device=self.transformer.device  # , dtype=self.transformer.dtype     # can't cast dtype like this because of NF4
                         ),
                         txt_ids=negative_text_ids.to(device=self.transformer.device),
                         img_ids=latent_image_ids.to(device=self.transformer.device),
@@ -924,6 +917,7 @@ class FluxPipeline(DiffusionPipeline, FluxLoraLoaderMixin):
 
 from dataclasses import dataclass
 from typing import List, Union
+
 import PIL.Image
 from diffusers.utils import BaseOutput
 

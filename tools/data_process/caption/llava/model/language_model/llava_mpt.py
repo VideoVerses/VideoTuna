@@ -16,9 +16,15 @@
 from typing import Optional, Tuple
 
 import torch
-
-from transformers import AutoConfig, AutoModelForCausalLM, MptConfig, MptForCausalLM, MptModel, GenerationConfig
-from llava.model.llava_arch import LlavaMetaModel, LlavaMetaForCausalLM
+from llava.model.llava_arch import LlavaMetaForCausalLM, LlavaMetaModel
+from transformers import (
+    AutoConfig,
+    AutoModelForCausalLM,
+    GenerationConfig,
+    MptConfig,
+    MptForCausalLM,
+    MptModel,
+)
 
 
 class LlavaMptConfig(MptConfig):
@@ -53,7 +59,9 @@ class LlavaMptForCausalLM(MptForCausalLM, LlavaMetaForCausalLM):
         )
 
         self.transformer = LlavaMptModel(config)
-        self.lm_head = torch.nn.Linear(config.hidden_size, config.vocab_size, bias=False)
+        self.lm_head = torch.nn.Linear(
+            config.hidden_size, config.vocab_size, bias=False
+        )
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -80,7 +88,11 @@ class LlavaMptForCausalLM(MptForCausalLM, LlavaMetaForCausalLM):
         images=None,
     ):
 
-        input_ids, attention_mask, past_key_values, inputs_embeds, labels = self.prepare_inputs_labels_for_multimodal(input_ids, attention_mask, past_key_values, labels, images)
+        input_ids, attention_mask, past_key_values, inputs_embeds, labels = (
+            self.prepare_inputs_labels_for_multimodal(
+                input_ids, attention_mask, past_key_values, labels, images
+            )
+        )
 
         return super().forward(
             input_ids,
@@ -94,9 +106,16 @@ class LlavaMptForCausalLM(MptForCausalLM, LlavaMetaForCausalLM):
             return_dict=return_dict,
         )
 
-    def prepare_inputs_for_generation(self, input_ids, past_key_values=None, inputs_embeds=None, **kwargs):
+    def prepare_inputs_for_generation(
+        self, input_ids, past_key_values=None, inputs_embeds=None, **kwargs
+    ):
         images = kwargs.pop("images", None)
-        _inputs = super().prepare_inputs_for_generation(input_ids, past_key_values=past_key_values, inputs_embeds=inputs_embeds, **kwargs)
+        _inputs = super().prepare_inputs_for_generation(
+            input_ids,
+            past_key_values=past_key_values,
+            inputs_embeds=inputs_embeds,
+            **kwargs,
+        )
         _inputs["images"] = images
         return _inputs
 

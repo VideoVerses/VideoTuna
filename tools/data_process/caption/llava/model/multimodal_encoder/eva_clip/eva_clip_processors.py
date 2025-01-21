@@ -2,10 +2,10 @@
 # Adapted from https://github.com/baaivision/EVA/tree/master/EVA-CLIP
 """
 
+from PIL import Image
 from torchvision import transforms
 from torchvision.transforms.functional import InterpolationMode
 from transformers.image_processing_utils import BatchFeature
-from PIL import Image
 from transformers.image_transforms import convert_to_rgb
 
 
@@ -31,7 +31,9 @@ class EvaClipImageBaseProcessor(BaseProcessor):
 
 
 class EvaClipImageTrainProcessor(EvaClipImageBaseProcessor):
-    def __init__(self, image_size=224, mean=None, std=None, min_scale=0.5, max_scale=1.0):
+    def __init__(
+        self, image_size=224, mean=None, std=None, min_scale=0.5, max_scale=1.0
+    ):
         super().__init__(mean=mean, std=std)
 
         self.transform = transforms.Compose(

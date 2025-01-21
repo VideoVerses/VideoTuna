@@ -1,5 +1,6 @@
+from typing import List, Tuple, Union
+
 import torch
-from typing import Union, Tuple, List
 
 
 def _to_tuple(x, dim=2):

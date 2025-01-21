@@ -1,10 +1,11 @@
-from typing import Any, Callable, cast, Dict, List, Tuple, Type, TypeVar, Union
 import inspect
 from argparse import ArgumentParser
+from typing import Any, Callable, Dict, List, Tuple, Type, TypeVar, Union, cast
 
 import pytorch_lightning as pl
 
 _ARGPARSE_CLS = Union[Type["pl.LightningDataModule"], Type["pl.Trainer"]]
+
 
 def _get_abbrev_qualified_cls_name(cls: _ARGPARSE_CLS) -> str:
     assert isinstance(cls, type), repr(cls)
@@ -13,6 +14,7 @@ def _get_abbrev_qualified_cls_name(cls: _ARGPARSE_CLS) -> str:
         return f"pl.{cls.__name__}"
     # Fully qualified.
     return f"{cls.__module__}.{cls.__qualname__}"
+
 
 def get_init_arguments_and_types(cls: _ARGPARSE_CLS) -> List[Tuple[str, Tuple, Any]]:
     r"""Scans the class signature and returns argument names, types and default values.
@@ -41,6 +43,7 @@ def get_init_arguments_and_types(cls: _ARGPARSE_CLS) -> List[Tuple[str, Tuple, A
 
     return name_type_default
 
+
 def _parse_args_from_docstring(docstring: str) -> Dict[str, str]:
     arg_block_indent = None
     current_arg = ""
@@ -63,10 +66,12 @@ def _parse_args_from_docstring(docstring: str) -> Dict[str, str]:
             parsed[current_arg] += f" {stripped}"
     return parsed
 
+
 def _gpus_allowed_type(x: str) -> Union[int, str]:
     if "," in x:
         return str(x)
     return int(x)
+
 
 def _precision_allowed_type(x: Union[int, str]) -> Union[int, str]:
     """
@@ -80,6 +85,7 @@ def _precision_allowed_type(x: Union[int, str]) -> Union[int, str]:
     except ValueError:
         return x
 
+
 def str_to_bool_or_str(val: str) -> Union[str, bool]:
     """Possibly convert a string representation of truth to bool. Returns the input otherwise. Based on the python
     implementation distutils.utils.strtobool.
@@ -92,6 +98,7 @@ def str_to_bool_or_str(val: str) -> Union[str, bool]:
     if lower in ("n", "no", "f", "false", "off", "0"):
         return False
     return val
+
 
 def str_to_bool(val: str) -> bool:
     """Convert a string representation of truth to bool.
@@ -109,6 +116,7 @@ def str_to_bool(val: str) -> bool:
     if isinstance(val_converted, bool):
         return val_converted
     raise ValueError(f"invalid truth value {val_converted}")
+
 
 def str_to_bool_or_int(val: str) -> Union[bool, int, str]:
     """Convert a string representation to truth of bool if possible, or otherwise try to convert it to an int.
@@ -129,10 +137,12 @@ def str_to_bool_or_int(val: str) -> Union[bool, int, str]:
     except ValueError:
         return val_converted
 
+
 def _int_or_float_type(x: Union[int, float, str]) -> Union[int, float]:
     if "." in str(x):
         return float(x)
     return int(x)
+
 
 def add_trainer_args_to_parser(cls, parent_parser, use_argument_group=True):
     if not isinstance(parent_parser, ArgumentParser):
@@ -191,7 +201,7 @@ def add_trainer_args_to_parser(cls, parent_parser, use_argument_group=True):
         # hack for precision
         if arg == "precision":
             use_type = _precision_allowed_type
-        
+
         try:
             parser.add_argument(
                 f"--{arg}",
@@ -203,10 +213,9 @@ def add_trainer_args_to_parser(cls, parent_parser, use_argument_group=True):
                 **arg_kwargs,
             )
         except:
-            #TODO: check the argument appending to the parser
+            # TODO: check the argument appending to the parser
             pass
 
     if use_argument_group:
         return parent_parser
     return parser
-

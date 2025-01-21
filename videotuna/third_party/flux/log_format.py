@@ -1,6 +1,7 @@
 import logging
 import os
-from colorama import Fore, Back, Style, init
+
+from colorama import Back, Fore, Style, init
 
 
 class ColorizedFormatter(logging.Formatter):

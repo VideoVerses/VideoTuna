@@ -1,9 +1,9 @@
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
-from torch import einsum
 from einops import rearrange
+from torch import einsum
 
 
 class VectorQuantizer2(nn.Module):
@@ -15,7 +15,16 @@ class VectorQuantizer2(nn.Module):
     # NOTE: due to a bug the beta term was applied to the wrong term. for
     # backwards compatibility we use the buggy version by default, but you can
     # specify legacy=False to fix it.
-    def __init__(self, n_e, e_dim, beta, remap=None, unknown_index="random", sane_index_shape=False, legacy=True):
+    def __init__(
+        self,
+        n_e,
+        e_dim,
+        beta,
+        remap=None,
+        unknown_index="random",
+        sane_index_shape=False,
+        legacy=True,
+    ):
         super().__init__()
         self.n_e = n_e
         self.e_dim = e_dim
@@ -51,7 +60,9 @@ class VectorQuantizer2(nn.Module):
         new = match.argmax(-1)
         unknown = match.sum(2) < 1
         if self.unknown_index == "random":
-            new[unknown] = torch.randint(0, self.re_embed, size=new[unknown].shape).to(device=new.device)
+            new[unknown] = torch.randint(0, self.re_embed, size=new[unknown].shape).to(
+                device=new.device
+            )
         else:
             new[unknown] = self.unknown_index
         return new.reshape(ishape)
@@ -78,7 +89,10 @@ class VectorQuantizer2(nn.Module):
         d = (
             torch.sum(z_flattened**2, dim=1, keepdim=True)
             + torch.sum(self.embedding.weight**2, dim=1)
-            - 2 * torch.einsum("bd,dn->bn", z_flattened, rearrange(self.embedding.weight, "n d -> d n"))
+            - 2
+            * torch.einsum(
+                "bd,dn->bn", z_flattened, rearrange(self.embedding.weight, "n d -> d n")
+            )
         )
 
         min_encoding_indices = torch.argmin(d, dim=1)
@@ -88,9 +102,13 @@ class VectorQuantizer2(nn.Module):
 
         # compute loss for embedding
         if not self.legacy:
-            loss = self.beta * torch.mean((z_q.detach() - z) ** 2) + torch.mean((z_q - z.detach()) ** 2)
+            loss = self.beta * torch.mean((z_q.detach() - z) ** 2) + torch.mean(
+                (z_q - z.detach()) ** 2
+            )
         else:
-            loss = torch.mean((z_q.detach() - z) ** 2) + self.beta * torch.mean((z_q - z.detach()) ** 2)
+            loss = torch.mean((z_q.detach() - z) ** 2) + self.beta * torch.mean(
+                (z_q - z.detach()) ** 2
+            )
 
         # preserve gradients
         z_q = z + (z_q - z).detach()
@@ -99,12 +117,16 @@ class VectorQuantizer2(nn.Module):
         z_q = rearrange(z_q, "b h w c -> b c h w").contiguous()
 
         if self.remap is not None:
-            min_encoding_indices = min_encoding_indices.reshape(z.shape[0], -1)  # add batch axis
+            min_encoding_indices = min_encoding_indices.reshape(
+                z.shape[0], -1
+            )  # add batch axis
             min_encoding_indices = self.remap_to_used(min_encoding_indices)
             min_encoding_indices = min_encoding_indices.reshape(-1, 1)  # flatten
 
         if self.sane_index_shape:
-            min_encoding_indices = min_encoding_indices.reshape(z_q.shape[0], z_q.shape[2], z_q.shape[3])
+            min_encoding_indices = min_encoding_indices.reshape(
+                z_q.shape[0], z_q.shape[2], z_q.shape[3]
+            )
 
         return z_q, loss, (perplexity, min_encodings, min_encoding_indices)
 
@@ -184,7 +206,9 @@ class GumbelQuantize(nn.Module):
         new = match.argmax(-1)
         unknown = match.sum(2) < 1
         if self.unknown_index == "random":
-            new[unknown] = torch.randint(0, self.re_embed, size=new[unknown].shape).to(device=new.device)
+            new[unknown] = torch.randint(0, self.re_embed, size=new[unknown].shape).to(
+                device=new.device
+            )
         else:
             new[unknown] = self.unknown_index
         return new.reshape(ishape)
@@ -219,7 +243,10 @@ class GumbelQuantize(nn.Module):
 
         # + kl divergence to the prior loss
         qy = F.softmax(logits, dim=1)
-        diff = self.kl_weight * torch.sum(qy * torch.log(qy * self.n_embed + 1e-10), dim=1).mean()
+        diff = (
+            self.kl_weight
+            * torch.sum(qy * torch.log(qy * self.n_embed + 1e-10), dim=1).mean()
+        )
 
         ind = soft_one_hot.argmax(dim=1)
         if self.remap is not None:
@@ -236,6 +263,8 @@ class GumbelQuantize(nn.Module):
         indices = rearrange(indices, "(b h w) -> b h w", b=b, h=h, w=w)
         if self.remap is not None:
             indices = self.unmap_to_all(indices)
-        one_hot = F.one_hot(indices, num_classes=self.n_embed).permute(0, 3, 1, 2).float()
+        one_hot = (
+            F.one_hot(indices, num_classes=self.n_embed).permute(0, 3, 1, 2).float()
+        )
         z_q = einsum("b n h w, n d -> b d h w", one_hot, self.embed.weight)
         return z_q

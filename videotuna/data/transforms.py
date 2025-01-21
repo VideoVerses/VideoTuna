@@ -16,18 +16,20 @@
 
 
 import numbers
-import numpy as np
 import random
-from PIL import Image
+
 import decord
-from decord import VideoReader, cpu
-from einops import rearrange
+import numpy as np
 import torch
 import torch.nn.functional as F
 import torchvision.transforms as torch_transforms
+from decord import VideoReader, cpu
+from einops import rearrange
+from PIL import Image
 from torchvision.datasets.folder import pil_loader
 from torchvision.io import write_video
-from .datasets_utils import VIDEO_EXTS, IMG_EXTS
+
+from .datasets_utils import IMG_EXTS, VIDEO_EXTS
 
 
 def _is_tensor_video_clip(clip):
@@ -325,6 +327,7 @@ class CenterCropResizeVideo:
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(size={self.size}, interpolation_mode={self.interpolation_mode}"
 
+
 class ResizeCenterCropVideo:
     """
     First resize to the specified size in equal proportion to the short edge,
@@ -350,7 +353,7 @@ class ResizeCenterCropVideo:
         """
         Args:
             clip (Tensor): Tensor of shape (T, C, H, W) representing video frames.
-        
+
         Returns:
             Tensor: Processed video of shape (T, C, target_H, target_W).
         """
@@ -377,10 +380,7 @@ class ResizeCenterCropVideo:
 
         # Resize each frame in the video clip
         resized_clip = F.interpolate(
-            clip,
-            size=(new_h, new_w),
-            mode=self.interpolation_mode,
-            align_corners=False
+            clip, size=(new_h, new_w), mode=self.interpolation_mode, align_corners=False
         )
         return resized_clip
 
@@ -390,17 +390,20 @@ class ResizeCenterCropVideo:
         """
         T, C, H, W = clip.shape
         target_h, target_w = self.size
-        assert H >= target_h and W >= target_w, "Video dimensions should be larger than crop size"  
+        assert (
+            H >= target_h and W >= target_w
+        ), "Video dimensions should be larger than crop size"
         # Compute cropping indices
         top = (H - target_h) // 2
         left = (W - target_w) // 2
 
         # Perform cropping
-        cropped_clip = clip[:, :, top:top + target_h, left:left + target_w]
+        cropped_clip = clip[:, :, top : top + target_h, left : left + target_w]
         return cropped_clip
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(size={self.size}, interpolation_mode={self.interpolation_mode}"
+
 
 class UCFCenterCropVideo:
     """
@@ -412,7 +415,7 @@ class UCFCenterCropVideo:
         self,
         size,
         interpolation_mode="bilinear",
-    ):  
+    ):
         if not isinstance(size, int):
             assert len(size) == 2 or len(size) == 1, "size should be int or tuple"
 
@@ -656,7 +659,7 @@ class CheckVideo:
         self.frame_limit = num_frames * frame_interval
 
     def __call__(self, vframes, index):
-        length = vframes.shape[0] # [F, C, H, W]
+        length = vframes.shape[0]  # [F, C, H, W]
         h = vframes.shape[2]
         w = vframes.shape[3]
         if length <= self.frame_limit:

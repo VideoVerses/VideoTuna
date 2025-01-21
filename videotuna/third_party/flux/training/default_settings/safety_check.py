@@ -1,6 +1,10 @@
-import logging, sys, os
+import logging
+import os
+import sys
 from os import environ
+
 from diffusers.utils import is_wandb_available
+
 from videotuna.third_party.flux.training.multi_process import _get_rank as get_rank
 from videotuna.third_party.flux.training.state_tracker import StateTracker
 
@@ -9,7 +13,9 @@ if get_rank() == 0:
     logger.setLevel(environ.get("SIMPLETUNER_LOG_LEVEL", "INFO"))
 else:
     logger.setLevel(logging.ERROR)
-from videotuna.third_party.flux.training.error_handling import validate_deepspeed_compat_from_args
+from videotuna.third_party.flux.training.error_handling import (
+    validate_deepspeed_compat_from_args,
+)
 
 
 def safety_check(args, accelerator):
@@ -109,7 +115,8 @@ def safety_check(args, accelerator):
         sys.exit(1)
 
     if (
-        args.flux_schedule_shift is not None and args.flux_schedule_shift > 0
+        args.flux_schedule_shift is not None
+        and args.flux_schedule_shift > 0
         and args.flux_schedule_auto_shift
     ):
         logger.error(

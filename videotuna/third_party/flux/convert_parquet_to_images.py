@@ -1,15 +1,14 @@
-import pandas as pd
-import numpy as np
-import os
-from PIL import Image
 import io
+import os
+
+import numpy as np
+import pandas as pd
+from PIL import Image
 
 # Step 1: Load Parquet File
 parquet_file_path = "/disk1/xuelei/SimpleTuner_flux/SimpleTuner/VideoTuna-internal/cartoon-blip-captions/data/train-00000-of-00001-dfb0d9df7ebab67e.parquet"  # Replace with your Parquet file path
 output_directory = "/disk1/xuelei/SimpleTuner_flux/SimpleTuner/VideoTuna-internal/cartoon-blip-captions"  # Directory to save the images
 import pandas as pd
-
-
 
 # Load the Parquet file into a DataFrame
 df = pd.read_parquet(parquet_file_path)
@@ -25,11 +24,11 @@ df = pd.read_parquet(parquet_file_path)
 # Step 2: Process DataFrame Rows
 for index, row in df.iterrows():
     # Extract the 'text' column as the filename (without extension)
-    text_filename = row['text']
+    text_filename = row["text"]
 
     # Extract image data - assuming the image data is in a column called 'image_data'
     # This data should be in a format suitable to create an image (e.g., 2D numpy array)
-    image_data = row['image']  # Replace with the actual column name for image data
+    image_data = row["image"]  # Replace with the actual column name for image data
     # print(image_data.items())
     image_bytes = image_data["bytes"]
 
@@ -39,7 +38,6 @@ for index, row in df.iterrows():
     # Step 3: Save the image to disk or process it further
     output_path = os.path.join(output_directory, text_filename + ".png")
     image.save(output_path)
-
 
     print(f"Saved image: {output_path}")
 

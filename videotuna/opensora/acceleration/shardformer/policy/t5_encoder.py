@@ -1,6 +1,12 @@
 from colossalai.shardformer.modeling.jit import get_jit_fused_dropout_add_func
-from colossalai.shardformer.modeling.t5 import get_jit_fused_T5_layer_ff_forward, get_T5_layer_self_attention_forward
-from colossalai.shardformer.policies.base_policy import Policy, SubModuleReplacementDescription
+from colossalai.shardformer.modeling.t5 import (
+    get_jit_fused_T5_layer_ff_forward,
+    get_T5_layer_self_attention_forward,
+)
+from colossalai.shardformer.policies.base_policy import (
+    Policy,
+    SubModuleReplacementDescription,
+)
 
 
 class T5EncoderPolicy(Policy):
@@ -12,7 +18,11 @@ class T5EncoderPolicy(Policy):
         return self.model
 
     def module_policy(self):
-        from transformers.models.t5.modeling_t5 import T5LayerFF, T5LayerSelfAttention, T5Stack
+        from transformers.models.t5.modeling_t5 import (
+            T5LayerFF,
+            T5LayerSelfAttention,
+            T5Stack,
+        )
 
         policy = {}
 
@@ -30,12 +40,16 @@ class T5EncoderPolicy(Policy):
                 target_key=T5LayerFF,
             )
             self.append_or_create_submodule_replacement(
-                description=SubModuleReplacementDescription(suffix="layer_norm", target_module=T5LayerNorm),
+                description=SubModuleReplacementDescription(
+                    suffix="layer_norm", target_module=T5LayerNorm
+                ),
                 policy=policy,
                 target_key=T5LayerSelfAttention,
             )
             self.append_or_create_submodule_replacement(
-                description=SubModuleReplacementDescription(suffix="final_layer_norm", target_module=T5LayerNorm),
+                description=SubModuleReplacementDescription(
+                    suffix="final_layer_norm", target_module=T5LayerNorm
+                ),
                 policy=policy,
                 target_key=T5Stack,
             )

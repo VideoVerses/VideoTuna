@@ -3,13 +3,14 @@ import logging
 import logging.handlers
 import os
 import sys
+
 import numpy as np
-
 import requests
-
 from llava.constants import LOGDIR
 
-server_error_msg = "**NETWORK ERROR DUE TO HIGH TRAFFIC. PLEASE REGENERATE OR REFRESH THIS PAGE.**"
+server_error_msg = (
+    "**NETWORK ERROR DUE TO HIGH TRAFFIC. PLEASE REGENERATE OR REFRESH THIS PAGE.**"
+)
 moderation_msg = "I am sorry. Your input may violate our content moderation guidelines. Please avoid using harmful or offensive content."
 
 handler = None
@@ -22,21 +23,25 @@ try:
 except ImportError:
     print("Please install pyav to use video processing functions.")
 
+
 def process_video_with_decord(video_file, data_args):
     vr = VideoReader(video_file, ctx=cpu(0), num_threads=1)
     total_frame_num = len(vr)
     avg_fps = round(vr.get_avg_fps() / data_args.video_fps)
     frame_idx = [i for i in range(0, total_frame_num, avg_fps)]
-    
+
     if data_args.frames_upbound > 0:
         if len(frame_idx) > data_args.frames_upbound:
-            uniform_sampled_frames = np.linspace(0, total_frame_num - 1, data_args.frames_upbound, dtype=int)
+            uniform_sampled_frames = np.linspace(
+                0, total_frame_num - 1, data_args.frames_upbound, dtype=int
+            )
             frame_idx = uniform_sampled_frames.tolist()
-    
+
     video = vr.get_batch(frame_idx).asnumpy()
     # https://github.com/dmlc/decord/issues/208
     vr.seek(0)
     return video
+
 
 def process_video_with_pyav(video_file, data_args):
     container = av.open(video_file)
@@ -45,7 +50,7 @@ def process_video_with_pyav(video_file, data_args):
 
     video_frames = []
     for packet in container.demux():
-        if packet.stream.type == 'video':
+        if packet.stream.type == "video":
             for frame in packet.decode():
                 video_frames.append(frame)
     total_frame_num = len(video_frames)
@@ -55,9 +60,10 @@ def process_video_with_pyav(video_file, data_args):
 
     if data_args.frames_upbound > 0:
         if len(frame_idx) > data_args.frames_upbound:
-            uniform_sampled_frames = np.linspace(0, total_frame_num - 1, data_args.frames_upbound, dtype=int)
+            uniform_sampled_frames = np.linspace(
+                0, total_frame_num - 1, data_args.frames_upbound, dtype=int
+            )
             frame_idx = uniform_sampled_frames.tolist()
-
 
     frames = [video_frames[i] for i in frame_idx]
     return np.stack([x.to_ndarray(format="rgb24") for x in frames])
@@ -76,6 +82,7 @@ def rank_print(*args):
         print(f"Rank {dist.get_rank()}: ", *args)
     else:
         print(*args)
+
 
 def build_logger(logger_name, logger_filename):
     global handler
@@ -109,7 +116,9 @@ def build_logger(logger_name, logger_filename):
     if handler is None:
         os.makedirs(LOGDIR, exist_ok=True)
         filename = os.path.join(LOGDIR, logger_filename)
-        handler = logging.handlers.TimedRotatingFileHandler(filename, when="D", utc=True)
+        handler = logging.handlers.TimedRotatingFileHandler(
+            filename, when="D", utc=True
+        )
         handler.setFormatter(formatter)
 
         for name, item in logging.root.manager.loggerDict.items():
@@ -168,7 +177,10 @@ def violates_moderation(text):
     Check whether the text violates OpenAI moderation API.
     """
     url = "https://api.openai.com/v1/moderations"
-    headers = {"Content-Type": "application/json", "Authorization": "Bearer " + os.environ["OPENAI_API_KEY"]}
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + os.environ["OPENAI_API_KEY"],
+    }
     text = text.replace("\n", "")
     data = "{" + '"input": ' + f'"{text}"' + "}"
     data = data.encode("utf-8")
@@ -176,10 +188,14 @@ def violates_moderation(text):
         ret = requests.post(url, headers=headers, data=data, timeout=5)
         flagged = ret.json()["results"][0]["flagged"]
     except requests.exceptions.RequestException as e:
-        print(f"######################### Moderation Error: {e} #########################")
+        print(
+            f"######################### Moderation Error: {e} #########################"
+        )
         flagged = False
     except KeyError as e:
-        print(f"######################### Moderation Error: {e} #########################")
+        print(
+            f"######################### Moderation Error: {e} #########################"
+        )
         flagged = False
 
     return flagged

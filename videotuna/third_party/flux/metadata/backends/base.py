@@ -1,23 +1,23 @@
-from math import ceil
-import os
-import time
 import logging
+import os
 import threading
-import torch
-from videotuna.third_party.flux.data_backend.base import BaseDataBackend
-from videotuna.third_party.flux.multiaspect.image import MultiaspectImage
-from videotuna.third_party.flux.training.state_tracker import StateTracker
-from videotuna.third_party.flux.training.multi_process import should_log
+import time
+from math import ceil, floor
 from multiprocessing import Process, Queue
-from threading import Thread
 from pathlib import Path
-from tqdm import tqdm
-from PIL import Image
-from math import floor
-import numpy as np
 
 # For semaphore
-from threading import Semaphore
+from threading import Semaphore, Thread
+
+import numpy as np
+import torch
+from PIL import Image
+from tqdm import tqdm
+
+from videotuna.third_party.flux.data_backend.base import BaseDataBackend
+from videotuna.third_party.flux.multiaspect.image import MultiaspectImage
+from videotuna.third_party.flux.training.multi_process import should_log
+from videotuna.third_party.flux.training.state_tracker import StateTracker
 
 logger = logging.getLogger("BaseMetadataBackend")
 if should_log():

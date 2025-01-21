@@ -1,14 +1,14 @@
-import os
 import logging
+import math
+import os
 
 import torch
 from einops import rearrange
 from torch import nn
-import math
 
 from .simple_tokenizer import SimpleTokenizer as _Tokenizer
-from .viclip_vision import clip_joint_l14
 from .viclip_text import clip_text_l14
+from .viclip_vision import clip_joint_l14
 
 logger = logging.getLogger(__name__)
 
@@ -16,16 +16,23 @@ logger = logging.getLogger(__name__)
 class ViCLIP(nn.Module):
     """docstring for ViCLIP"""
 
-    def __init__(self,  tokenizer=None, pretrain=os.path.join(os.path.dirname(os.path.abspath(__file__)), "ViClip-InternVid-10M-FLT.pth"), freeze_text=True):
+    def __init__(
+        self,
+        tokenizer=None,
+        pretrain=os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "ViClip-InternVid-10M-FLT.pth"
+        ),
+        freeze_text=True,
+    ):
         super(ViCLIP, self).__init__()
         if tokenizer:
             self.tokenizer = tokenizer
         else:
             self.tokenizer = _Tokenizer()
         self.max_txt_l = 32
-        
-        self.vision_encoder_name = 'vit_l14'
-    
+
+        self.vision_encoder_name = "vit_l14"
+
         self.vision_encoder_pretrained = False
         self.inputs_image_res = 224
         self.vision_encoder_kernel_size = 1
@@ -35,17 +42,16 @@ class ViCLIP(nn.Module):
         self.vision_encoder_checkpoint_num = 24
         self.is_pretrain = pretrain
         self.vision_width = 1024
-        self.text_width = 768 
-        self.embed_dim = 768 
+        self.text_width = 768
+        self.embed_dim = 768
         self.masking_prob = 0.9
-        
-        self.text_encoder_name = 'vit_l14'
-        self.text_encoder_pretrained = False#'bert-base-uncased'
+
+        self.text_encoder_name = "vit_l14"
+        self.text_encoder_pretrained = False  #'bert-base-uncased'
         self.text_encoder_d_model = 768
 
         self.text_encoder_vocab_size = 49408
-        
-        
+
         # create modules.
         self.vision_encoder = self.build_vision_encoder()
         self.text_encoder = self.build_text_encoder()
@@ -55,14 +61,12 @@ class ViCLIP(nn.Module):
 
         if pretrain:
             logger.info(f"Load pretrained weights from {pretrain}")
-            state_dict = torch.load(pretrain, map_location='cpu')['model']
+            state_dict = torch.load(pretrain, map_location="cpu")["model"]
             self.load_state_dict(state_dict)
-        
+
         # Freeze weights
         if freeze_text:
             self.freeze_text()
-            
-
 
     def freeze_text(self):
         """freeze text encoder"""
@@ -74,13 +78,13 @@ class ViCLIP(nn.Module):
         ret.update(
             {"vision_encoder." + k for k in self.vision_encoder.no_weight_decay()}
         )
-        ret.update(
-            {"text_encoder." + k for k in self.text_encoder.no_weight_decay()}
-        )
+        ret.update({"text_encoder." + k for k in self.text_encoder.no_weight_decay()})
 
         return ret
 
-    def forward(self, image, text, raw_text, idx, log_generation=None, return_sims=False):
+    def forward(
+        self, image, text, raw_text, idx, log_generation=None, return_sims=False
+    ):
         """forward and calculate loss.
 
         Args:
@@ -96,8 +100,9 @@ class ViCLIP(nn.Module):
         vision_embeds = self.encode_vision(image)
         text_embeds = self.encode_text(raw_text)
         if return_sims:
-            sims = torch.nn.functional.normalize(vision_embeds, dim=-1) @ \
-                  torch.nn.functional.normalize(text_embeds, dim=-1).transpose(0, 1)
+            sims = torch.nn.functional.normalize(
+                vision_embeds, dim=-1
+            ) @ torch.nn.functional.normalize(text_embeds, dim=-1).transpose(0, 1)
             return sims
 
         # calculate loss
@@ -129,9 +134,7 @@ class ViCLIP(nn.Module):
             image = image.unsqueeze(2)
 
         if not test and self.masking_prob > 0.0:
-            return self.vision_encoder(
-                image, masking_prob=self.masking_prob
-            )
+            return self.vision_encoder(image, masking_prob=self.masking_prob)
 
         return self.vision_encoder(image)
 
@@ -148,9 +151,9 @@ class ViCLIP(nn.Module):
 
         """
         device = next(self.text_encoder.parameters()).device
-        text = self.text_encoder.tokenize(
-            text, context_length=self.max_txt_l
-        ).to(device)
+        text = self.text_encoder.tokenize(text, context_length=self.max_txt_l).to(
+            device
+        )
         text_embeds = self.text_encoder(text)
         return text_embeds
 
@@ -200,22 +203,22 @@ class ViCLIP(nn.Module):
         """get text encoder, used for text and cross-modal encoding"""
         encoder = self.text_encoder
         return encoder.bert if hasattr(encoder, "bert") else encoder
-    
+
     def get_text_features(self, input_text, tokenizer, text_feature_dict={}):
         if input_text in text_feature_dict:
             return text_feature_dict[input_text]
-        text_template= f"{input_text}"
+        text_template = f"{input_text}"
         with torch.no_grad():
             # text_token = tokenizer.encode(text_template).cuda()
             text_features = self.encode_text(text_template).float()
-            text_features /= text_features.norm(dim=-1, keepdim=True)      
+            text_features /= text_features.norm(dim=-1, keepdim=True)
             text_feature_dict[input_text] = text_features
         return text_features
 
     def get_vid_features(self, input_frames):
         with torch.no_grad():
-            clip_feat = self.encode_vision(input_frames,test=True).float()
-            clip_feat /= clip_feat.norm(dim=-1, keepdim=True)    
+            clip_feat = self.encode_vision(input_frames, test=True).float()
+            clip_feat /= clip_feat.norm(dim=-1, keepdim=True)
         return clip_feat
 
     def get_predict_label(self, clip_feature, text_feats_tensor, top=5):

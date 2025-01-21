@@ -1,9 +1,11 @@
 import json
-import regex as re
 from pathlib import Path
-from videotuna.third_party.flux.training.state_tracker import StateTracker
-from videotuna.third_party.flux.training.multi_process import _get_rank as get_rank
+
+import regex as re
+
 from videotuna.third_party.flux.training import image_file_extensions
+from videotuna.third_party.flux.training.multi_process import _get_rank as get_rank
+from videotuna.third_party.flux.training.state_tracker import StateTracker
 
 prompts = {
     "alien_landscape": "Alien planet, strange rock formations, glowing plants, bizarre creatures, surreal atmosphere",
@@ -84,9 +86,11 @@ def prompt_library_injection(new_prompts: dict) -> dict:
 
 
 import logging
-from videotuna.third_party.flux.data_backend.base import BaseDataBackend
-from tqdm import tqdm
 import os
+
+from tqdm import tqdm
+
+from videotuna.third_party.flux.data_backend.base import BaseDataBackend
 
 logger = logging.getLogger("PromptHandler")
 logger.setLevel(os.environ.get("SIMPLETUNER_LOG_LEVEL", "INFO"))

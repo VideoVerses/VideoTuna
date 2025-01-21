@@ -1,17 +1,20 @@
 import argparse
 import datetime
+import hashlib
 import json
 import os
 import time
 
 import gradio as gr
 import requests
-
-from llava.conversation import default_conversation, conv_templates, SeparatorStyle
 from llava.constants import LOGDIR
-from llava.utils import build_logger, server_error_msg, violates_moderation, moderation_msg
-import hashlib
-
+from llava.conversation import SeparatorStyle, conv_templates, default_conversation
+from llava.utils import (
+    build_logger,
+    moderation_msg,
+    server_error_msg,
+    violates_moderation,
+)
 
 logger = build_logger("gradio_web_server", "gradio_web_server.log")
 
@@ -70,7 +73,9 @@ def load_demo_refresh_model_list(request: gr.Request):
     logger.info(f"load_demo. ip: {request.client.host}")
     models = get_model_list()
     state = default_conversation.copy()
-    dropdown_update = gr.Dropdown.update(choices=models, value=models[0] if len(models) > 0 else "")
+    dropdown_update = gr.Dropdown.update(
+        choices=models, value=models[0] if len(models) > 0 else ""
+    )
     return state, dropdown_update
 
 
@@ -129,7 +134,9 @@ def add_text(state, text, image, image_process_mode, request: gr.Request):
         flagged = violates_moderation(text)
         if flagged:
             state.skip_next = True
-            return (state, state.to_gradio_chatbot(), moderation_msg, None) + (no_change_btn,) * 5
+            return (state, state.to_gradio_chatbot(), moderation_msg, None) + (
+                no_change_btn,
+            ) * 5
 
     text = text[:1536]  # Hard cut-off
     if image is not None:
@@ -146,7 +153,15 @@ def add_text(state, text, image, image_process_mode, request: gr.Request):
     return (state, state.to_gradio_chatbot(), "", None) + (disable_btn,) * 5
 
 
-def http_bot(state, model_selector, temperature, top_p, max_new_tokens, request: gr.Request, template_name=None):
+def http_bot(
+    state,
+    model_selector,
+    temperature,
+    top_p,
+    max_new_tokens,
+    request: gr.Request,
+    template_name=None,
+):
     logger.info(f"http_bot. ip: {request.client.host}")
     start_tstamp = time.time()
     model_name = model_selector
@@ -175,7 +190,10 @@ def http_bot(state, model_selector, temperature, top_p, max_new_tokens, request:
             elif "v1" in model_name.lower():
                 if "mmtag" in model_name.lower():
                     template_name = "llava_v1_mmtag"
-                elif "plain" in model_name.lower() and "finetune" not in model_name.lower():
+                elif (
+                    "plain" in model_name.lower()
+                    and "finetune" not in model_name.lower()
+                ):
                     template_name = "llava_v1_mmtag"
                 else:
                     template_name = "llava_v1"
@@ -184,7 +202,10 @@ def http_bot(state, model_selector, temperature, top_p, max_new_tokens, request:
             else:
                 if "mmtag" in model_name.lower():
                     template_name = "v0_plain"
-                elif "plain" in model_name.lower() and "finetune" not in model_name.lower():
+                elif (
+                    "plain" in model_name.lower()
+                    and "finetune" not in model_name.lower()
+                ):
                     template_name = "v0_plain"
                 else:
                     template_name = "llava_v0"
@@ -212,14 +233,24 @@ def http_bot(state, model_selector, temperature, top_p, max_new_tokens, request:
 
     # Query worker address
     controller_url = args.controller_url
-    ret = requests.post(controller_url + "/get_worker_address", json={"model": model_name})
+    ret = requests.post(
+        controller_url + "/get_worker_address", json={"model": model_name}
+    )
     worker_addr = ret.json()["address"]
     logger.info(f"model_name: {model_name}, worker_addr: {worker_addr}")
 
     # No available worker
     if worker_addr == "":
         state.messages[-1][-1] = server_error_msg
-        yield (state, state.to_gradio_chatbot(), disable_btn, disable_btn, disable_btn, enable_btn, enable_btn)
+        yield (
+            state,
+            state.to_gradio_chatbot(),
+            disable_btn,
+            disable_btn,
+            disable_btn,
+            enable_btn,
+            enable_btn,
+        )
         return
 
     # Construct prompt
@@ -229,7 +260,9 @@ def http_bot(state, model_selector, temperature, top_p, max_new_tokens, request:
     all_image_hash = [hashlib.md5(image.tobytes()).hexdigest() for image in all_images]
     for image, hash in zip(all_images, all_image_hash):
         t = datetime.datetime.now()
-        filename = os.path.join(LOGDIR, "serve_images", f"{t.year}-{t.month:02d}-{t.day:02d}", f"{hash}.jpg")
+        filename = os.path.join(
+            LOGDIR, "serve_images", f"{t.year}-{t.month:02d}-{t.day:02d}", f"{hash}.jpg"
+        )
         if not os.path.isfile(filename):
             os.makedirs(os.path.dirname(filename), exist_ok=True)
             image.save(filename)
@@ -241,7 +274,11 @@ def http_bot(state, model_selector, temperature, top_p, max_new_tokens, request:
         "temperature": float(temperature),
         "top_p": float(top_p),
         "max_new_tokens": min(int(max_new_tokens), 1536),
-        "stop": state.sep if state.sep_style in [SeparatorStyle.SINGLE, SeparatorStyle.MPT] else state.sep2,
+        "stop": (
+            state.sep
+            if state.sep_style in [SeparatorStyle.SINGLE, SeparatorStyle.MPT]
+            else state.sep2
+        ),
         "images": f"List of {len(state.get_images())} images: {all_image_hash}",
     }
     logger.info(f"==== request ====\n{pload}")
@@ -253,7 +290,13 @@ def http_bot(state, model_selector, temperature, top_p, max_new_tokens, request:
 
     try:
         # Stream output
-        response = requests.post(worker_addr + "/worker_generate_stream", headers=headers, json=pload, stream=True, timeout=100)
+        response = requests.post(
+            worker_addr + "/worker_generate_stream",
+            headers=headers,
+            json=pload,
+            stream=True,
+            timeout=100,
+        )
         last_print_time = time.time()
         for chunk in response.iter_lines(decode_unicode=False, delimiter=b"\0"):
             if chunk:
@@ -267,12 +310,24 @@ def http_bot(state, model_selector, temperature, top_p, max_new_tokens, request:
                 else:
                     output = data["text"] + f" (error_code: {data['error_code']})"
                     state.messages[-1][-1] = output
-                    yield (state, state.to_gradio_chatbot()) + (disable_btn, disable_btn, disable_btn, enable_btn, enable_btn)
+                    yield (state, state.to_gradio_chatbot()) + (
+                        disable_btn,
+                        disable_btn,
+                        disable_btn,
+                        enable_btn,
+                        enable_btn,
+                    )
                     return
                 time.sleep(0.03)
     except requests.exceptions.RequestException as e:
         state.messages[-1][-1] = server_error_msg
-        yield (state, state.to_gradio_chatbot()) + (disable_btn, disable_btn, disable_btn, enable_btn, enable_btn)
+        yield (state, state.to_gradio_chatbot()) + (
+            disable_btn,
+            disable_btn,
+            disable_btn,
+            enable_btn,
+            enable_btn,
+        )
         return
 
     state.messages[-1][-1] = state.messages[-1][-1][:-1]
@@ -324,7 +379,9 @@ block_css = """
 
 
 def build_demo(embed_mode):
-    textbox = gr.Textbox(show_label=False, placeholder="Enter text and press ENTER", container=False)
+    textbox = gr.Textbox(
+        show_label=False, placeholder="Enter text and press ENTER", container=False
+    )
     with gr.Blocks(title="LLaVA", theme=gr.themes.Default(), css=block_css) as demo:
         state = gr.State()
 
@@ -334,16 +391,33 @@ def build_demo(embed_mode):
         with gr.Row():
             with gr.Column(scale=3):
                 with gr.Row(elem_id="model_selector_row"):
-                    model_selector = gr.Dropdown(choices=models, value=models[0] if len(models) > 0 else "", interactive=True, show_label=False, container=False)
+                    model_selector = gr.Dropdown(
+                        choices=models,
+                        value=models[0] if len(models) > 0 else "",
+                        interactive=True,
+                        show_label=False,
+                        container=False,
+                    )
 
                 imagebox = gr.Image(type="pil")
-                image_process_mode = gr.Radio(["Crop", "Resize", "Pad", "Default"], value="Default", label="Preprocess for non-square image", visible=False)
+                image_process_mode = gr.Radio(
+                    ["Crop", "Resize", "Pad", "Default"],
+                    value="Default",
+                    label="Preprocess for non-square image",
+                    visible=False,
+                )
 
                 cur_dir = os.path.dirname(os.path.abspath(__file__))
                 gr.Examples(
                     examples=[
-                        [f"{cur_dir}/examples/extreme_ironing.jpg", "What is unusual about this image?"],
-                        [f"{cur_dir}/examples/waterview.jpg", "What are the things I should be cautious about when I visit here?"],
+                        [
+                            f"{cur_dir}/examples/extreme_ironing.jpg",
+                            "What is unusual about this image?",
+                        ],
+                        [
+                            f"{cur_dir}/examples/waterview.jpg",
+                            "What are the things I should be cautious about when I visit here?",
+                        ],
                     ],
                     inputs=[imagebox, textbox],
                 )
@@ -375,7 +449,9 @@ def build_demo(embed_mode):
                     )
 
             with gr.Column(scale=8):
-                chatbot = gr.Chatbot(elem_id="chatbot", label="LLaVA Chatbot", height=550)
+                chatbot = gr.Chatbot(
+                    elem_id="chatbot", label="LLaVA Chatbot", height=550
+                )
                 with gr.Row():
                     with gr.Column(scale=8):
                         textbox.render()
@@ -386,7 +462,9 @@ def build_demo(embed_mode):
                     downvote_btn = gr.Button(value="👎  Downvote", interactive=False)
                     flag_btn = gr.Button(value="⚠️  Flag", interactive=False)
                     # stop_btn = gr.Button(value="⏹️  Stop Generation", interactive=False)
-                    regenerate_btn = gr.Button(value="🔄  Regenerate", interactive=False)
+                    regenerate_btn = gr.Button(
+                        value="🔄  Regenerate", interactive=False
+                    )
                     clear_btn = gr.Button(value="🗑️  Clear", interactive=False)
 
         if not embed_mode:
@@ -396,26 +474,77 @@ def build_demo(embed_mode):
 
         # Register listeners
         btn_list = [upvote_btn, downvote_btn, flag_btn, regenerate_btn, clear_btn]
-        upvote_btn.click(upvote_last_response, [state, model_selector], [textbox, upvote_btn, downvote_btn, flag_btn], queue=False)
-        downvote_btn.click(downvote_last_response, [state, model_selector], [textbox, upvote_btn, downvote_btn, flag_btn], queue=False)
-        flag_btn.click(flag_last_response, [state, model_selector], [textbox, upvote_btn, downvote_btn, flag_btn], queue=False)
-
-        regenerate_btn.click(regenerate, [state, image_process_mode], [state, chatbot, textbox, imagebox] + btn_list, queue=False).then(http_bot, [state, model_selector, temperature, top_p, max_output_tokens], [state, chatbot] + btn_list)
-
-        clear_btn.click(clear_history, None, [state, chatbot, textbox, imagebox] + btn_list, queue=False)
-
-        textbox.submit(add_text, [state, textbox, imagebox, image_process_mode], [state, chatbot, textbox, imagebox] + btn_list, queue=False).then(
-            http_bot, [state, model_selector, temperature, top_p, max_output_tokens], [state, chatbot] + btn_list
+        upvote_btn.click(
+            upvote_last_response,
+            [state, model_selector],
+            [textbox, upvote_btn, downvote_btn, flag_btn],
+            queue=False,
+        )
+        downvote_btn.click(
+            downvote_last_response,
+            [state, model_selector],
+            [textbox, upvote_btn, downvote_btn, flag_btn],
+            queue=False,
+        )
+        flag_btn.click(
+            flag_last_response,
+            [state, model_selector],
+            [textbox, upvote_btn, downvote_btn, flag_btn],
+            queue=False,
         )
 
-        submit_btn.click(add_text, [state, textbox, imagebox, image_process_mode], [state, chatbot, textbox, imagebox] + btn_list, queue=False).then(
-            http_bot, [state, model_selector, temperature, top_p, max_output_tokens], [state, chatbot] + btn_list
+        regenerate_btn.click(
+            regenerate,
+            [state, image_process_mode],
+            [state, chatbot, textbox, imagebox] + btn_list,
+            queue=False,
+        ).then(
+            http_bot,
+            [state, model_selector, temperature, top_p, max_output_tokens],
+            [state, chatbot] + btn_list,
+        )
+
+        clear_btn.click(
+            clear_history,
+            None,
+            [state, chatbot, textbox, imagebox] + btn_list,
+            queue=False,
+        )
+
+        textbox.submit(
+            add_text,
+            [state, textbox, imagebox, image_process_mode],
+            [state, chatbot, textbox, imagebox] + btn_list,
+            queue=False,
+        ).then(
+            http_bot,
+            [state, model_selector, temperature, top_p, max_output_tokens],
+            [state, chatbot] + btn_list,
+        )
+
+        submit_btn.click(
+            add_text,
+            [state, textbox, imagebox, image_process_mode],
+            [state, chatbot, textbox, imagebox] + btn_list,
+            queue=False,
+        ).then(
+            http_bot,
+            [state, model_selector, temperature, top_p, max_output_tokens],
+            [state, chatbot] + btn_list,
         )
 
         if args.model_list_mode == "once":
-            demo.load(load_demo, [url_params], [state, model_selector], _js=get_window_url_params, queue=False)
+            demo.load(
+                load_demo,
+                [url_params],
+                [state, model_selector],
+                _js=get_window_url_params,
+                queue=False,
+            )
         elif args.model_list_mode == "reload":
-            demo.load(load_demo_refresh_model_list, None, [state, model_selector], queue=False)
+            demo.load(
+                load_demo_refresh_model_list, None, [state, model_selector], queue=False
+            )
         else:
             raise ValueError(f"Unknown model list mode: {args.model_list_mode}")
 
@@ -428,7 +557,9 @@ if __name__ == "__main__":
     parser.add_argument("--port", type=int)
     parser.add_argument("--controller-url", type=str, default="http://localhost:21001")
     parser.add_argument("--concurrency-count", type=int, default=10)
-    parser.add_argument("--model-list-mode", type=str, default="once", choices=["once", "reload"])
+    parser.add_argument(
+        "--model-list-mode", type=str, default="once", choices=["once", "reload"]
+    )
     parser.add_argument("--share", action="store_true")
     parser.add_argument("--moderate", action="store_true")
     parser.add_argument("--embed", action="store_true")
@@ -439,4 +570,6 @@ if __name__ == "__main__":
 
     logger.info(args)
     demo = build_demo(args.embed)
-    demo.queue(concurrency_count=args.concurrency_count, api_open=False).launch(server_name=args.host, server_port=args.port, share=args.share)
+    demo.queue(concurrency_count=args.concurrency_count, api_open=False).launch(
+        server_name=args.host, server_port=args.port, share=args.share
+    )

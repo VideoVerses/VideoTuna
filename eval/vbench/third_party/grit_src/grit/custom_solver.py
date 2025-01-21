@@ -2,14 +2,15 @@
 # Modified by Jialian Wu from https://github.com/facebookresearch/Detic/blob/main/detic/custom_solver.py
 import itertools
 from typing import Any, Callable, Dict, Iterable, List, Set, Type, Union
+
 import torch
-
 from detectron2.config import CfgNode
-
 from detectron2.solver.build import maybe_add_gradient_clipping
 
 
-def build_custom_optimizer(cfg: CfgNode, model: torch.nn.Module) -> torch.optim.Optimizer:
+def build_custom_optimizer(
+    cfg: CfgNode, model: torch.nn.Module
+) -> torch.optim.Optimizer:
     params: List[Dict[str, Any]] = []
     memo: Set[torch.nn.parameter.Parameter] = set()
     optimizer_type = cfg.SOLVER.OPTIMIZER
@@ -25,11 +26,13 @@ def build_custom_optimizer(cfg: CfgNode, model: torch.nn.Module) -> torch.optim.
         weight_decay = cfg.SOLVER.WEIGHT_DECAY
 
         if cfg.SOLVER.VIT_LAYER_DECAY:
-            lr = lr * get_vit_lr_decay_rate(key, cfg.SOLVER.VIT_LAYER_DECAY_RATE, cfg.MODEL.VIT_LAYERS)
+            lr = lr * get_vit_lr_decay_rate(
+                key, cfg.SOLVER.VIT_LAYER_DECAY_RATE, cfg.MODEL.VIT_LAYERS
+            )
 
         param = {"params": [value], "lr": lr}
-        if optimizer_type != 'ADAMW':
-            param['weight_decay'] = weight_decay
+        if optimizer_type != "ADAMW":
+            param["weight_decay"] = weight_decay
         params += [param]
 
     def maybe_add_full_model_gradient_clipping(optim):  # optim: the optimizer class
@@ -49,16 +52,16 @@ def build_custom_optimizer(cfg: CfgNode, model: torch.nn.Module) -> torch.optim.
 
         return FullModelGradientClippingOptimizer if enable else optim
 
-    
-    if optimizer_type == 'SGD':
+    if optimizer_type == "SGD":
         optimizer = maybe_add_full_model_gradient_clipping(torch.optim.SGD)(
-            params, cfg.SOLVER.BASE_LR, momentum=cfg.SOLVER.MOMENTUM, 
-            nesterov=cfg.SOLVER.NESTEROV
+            params,
+            cfg.SOLVER.BASE_LR,
+            momentum=cfg.SOLVER.MOMENTUM,
+            nesterov=cfg.SOLVER.NESTEROV,
         )
-    elif optimizer_type == 'ADAMW':
+    elif optimizer_type == "ADAMW":
         optimizer = maybe_add_full_model_gradient_clipping(torch.optim.AdamW)(
-            params, cfg.SOLVER.BASE_LR, 
-            weight_decay=cfg.SOLVER.WEIGHT_DECAY
+            params, cfg.SOLVER.BASE_LR, weight_decay=cfg.SOLVER.WEIGHT_DECAY
         )
     else:
         raise NotImplementedError(f"no optimizer type {optimizer_type}")

@@ -15,7 +15,8 @@ def hinge_d_loss(logits_real, logits_fake):
 
 def vanilla_d_loss(logits_real, logits_fake):
     d_loss = 0.5 * (
-        torch.mean(torch.nn.functional.softplus(-logits_real)) + torch.mean(torch.nn.functional.softplus(logits_fake))
+        torch.mean(torch.nn.functional.softplus(-logits_real))
+        + torch.mean(torch.nn.functional.softplus(logits_fake))
     )
     return d_loss
 
@@ -92,7 +93,11 @@ class VAELoss(nn.Module):
         recon_loss = torch.abs(video - recon_video)
 
         # perceptual loss
-        if self.perceptual_loss_weight is not None and self.perceptual_loss_weight > 0.0 and not no_perceptual:
+        if (
+            self.perceptual_loss_weight is not None
+            and self.perceptual_loss_weight > 0.0
+            and not no_perceptual
+        ):
             # handle channels
             channels = video.shape[1]
             assert channels in {1, 3}
@@ -167,28 +172,43 @@ class AdversarialLoss(nn.Module):
             gen_loss = -torch.mean(fake_logits)
         elif self.generator_loss_type == "non-saturating":
             gen_loss = torch.mean(
-                sigmoid_cross_entropy_with_logits(labels=torch.ones_like(fake_logits), logits=fake_logits)
+                sigmoid_cross_entropy_with_logits(
+                    labels=torch.ones_like(fake_logits), logits=fake_logits
+                )
             )
         else:
-            raise ValueError("Generator loss {} not supported".format(self.generator_loss_type))
+            raise ValueError(
+                "Generator loss {} not supported".format(self.generator_loss_type)
+            )
 
         if self.discriminator_factor is not None and self.discriminator_factor > 0.0:
             try:
-                d_weight = self.calculate_adaptive_weight(nll_loss, gen_loss, last_layer)
+                d_weight = self.calculate_adaptive_weight(
+                    nll_loss, gen_loss, last_layer
+                )
             except RuntimeError:
                 assert not is_training
                 d_weight = torch.tensor(0.0)
         else:
             d_weight = torch.tensor(0.0)
 
-        disc_factor = adopt_weight(self.discriminator_factor, global_step, threshold=self.discriminator_start)
+        disc_factor = adopt_weight(
+            self.discriminator_factor, global_step, threshold=self.discriminator_start
+        )
         weighted_gen_loss = d_weight * disc_factor * gen_loss
 
         return weighted_gen_loss
 
 
 class LeCamEMA:
-    def __init__(self, ema_real=0.0, ema_fake=0.0, decay=0.999, dtype=torch.bfloat16, device="cpu"):
+    def __init__(
+        self,
+        ema_real=0.0,
+        ema_fake=0.0,
+        decay=0.999,
+        dtype=torch.bfloat16,
+        device="cpu",
+    ):
         self.decay = decay
         self.ema_real = torch.tensor(ema_real).to(device, dtype)
         self.ema_fake = torch.tensor(ema_fake).to(device, dtype)
@@ -230,7 +250,11 @@ class DiscriminatorLoss(nn.Module):
         split="train",
     ):
         if self.discriminator_factor is not None and self.discriminator_factor > 0.0:
-            disc_factor = adopt_weight(self.discriminator_factor, global_step, threshold=self.discriminator_start)
+            disc_factor = adopt_weight(
+                self.discriminator_factor,
+                global_step,
+                threshold=self.discriminator_start,
+            )
 
             if self.discriminator_loss_type == "hinge":
                 disc_loss = hinge_d_loss(real_logits, fake_logits)
@@ -266,7 +290,10 @@ class DiscriminatorLoss(nn.Module):
             lecam_loss = lecam_loss * self.lecam_loss_weight
 
         gradient_penalty = torch.tensor(0.0)
-        if self.gradient_penalty_loss_weight is not None and self.gradient_penalty_loss_weight > 0.0:
+        if (
+            self.gradient_penalty_loss_weight is not None
+            and self.gradient_penalty_loss_weight > 0.0
+        ):
             assert real_video is not None
             gradient_penalty = gradient_penalty_fn(real_video, real_logits)
             gradient_penalty *= self.gradient_penalty_loss_weight

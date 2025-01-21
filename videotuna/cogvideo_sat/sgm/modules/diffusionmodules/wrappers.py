@@ -6,11 +6,17 @@ OPENAIUNETWRAPPER = "sgm.modules.diffusionmodules.wrappers.OpenAIWrapper"
 
 
 class IdentityWrapper(nn.Module):
-    def __init__(self, diffusion_model, compile_model: bool = False, dtype: torch.dtype = torch.float32):
+    def __init__(
+        self,
+        diffusion_model,
+        compile_model: bool = False,
+        dtype: torch.dtype = torch.float32,
+    ):
         super().__init__()
         compile = (
             torch.compile
-            if (version.parse(torch.__version__) >= version.parse("2.0.0")) and compile_model
+            if (version.parse(torch.__version__) >= version.parse("2.0.0"))
+            and compile_model
             else lambda x: x
         )
         self.diffusion_model = compile(diffusion_model)
@@ -21,7 +27,9 @@ class IdentityWrapper(nn.Module):
 
 
 class OpenAIWrapper(IdentityWrapper):
-    def forward(self, x: torch.Tensor, t: torch.Tensor, c: dict, **kwargs) -> torch.Tensor:
+    def forward(
+        self, x: torch.Tensor, t: torch.Tensor, c: dict, **kwargs
+    ) -> torch.Tensor:
         for key in c:
             c[key] = c[key].to(self.dtype)
 

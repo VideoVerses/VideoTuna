@@ -10,10 +10,7 @@ import torch.nn as nn
 from einops import rearrange, repeat
 from omegaconf import ListConfig
 from torch.utils.checkpoint import checkpoint
-from transformers import (
-    T5EncoderModel,
-    T5Tokenizer,
-)
+from transformers import T5EncoderModel, T5Tokenizer
 
 from ...util import (
     append_dims,
@@ -99,7 +96,9 @@ class GeneralConditioner(nn.Module):
             elif "input_keys" in embconfig:
                 embedder.input_keys = embconfig["input_keys"]
             else:
-                raise KeyError(f"need either 'input_key' or 'input_keys' for embedder {embedder.__class__.__name__}")
+                raise KeyError(
+                    f"need either 'input_key' or 'input_keys' for embedder {embedder.__class__.__name__}"
+                )
 
             embedder.legacy_ucg_val = embconfig.get("legacy_ucg_value", None)
             if embedder.legacy_ucg_val is not None:
@@ -122,7 +121,9 @@ class GeneralConditioner(nn.Module):
                 batch[embedder.input_key][i] = val
         return batch
 
-    def surely_get_ucg_val(self, embedder: AbstractEmbModel, batch: Dict, cond_or_not) -> Dict:
+    def surely_get_ucg_val(
+        self, embedder: AbstractEmbModel, batch: Dict, cond_or_not
+    ) -> Dict:
         assert embedder.legacy_ucg_val is not None
         val = embedder.legacy_ucg_val
         for i in range(len(batch[embedder.input_key])):
@@ -160,7 +161,10 @@ class GeneralConditioner(nn.Module):
                 if cond_or_not is None:
                     emb = (
                         expand_dims_like(
-                            torch.bernoulli((1.0 - embedder.ucg_rate) * torch.ones(emb.shape[0], device=emb.device)),
+                            torch.bernoulli(
+                                (1.0 - embedder.ucg_rate)
+                                * torch.ones(emb.shape[0], device=emb.device)
+                            ),
                             emb,
                         )
                         * emb
@@ -168,27 +172,38 @@ class GeneralConditioner(nn.Module):
                 else:
                     emb = (
                         expand_dims_like(
-                            torch.tensor(1 - cond_or_not, dtype=emb.dtype, device=emb.device),
+                            torch.tensor(
+                                1 - cond_or_not, dtype=emb.dtype, device=emb.device
+                            ),
                             emb,
                         )
                         * emb
                     )
-            if hasattr(embedder, "input_key") and embedder.input_key in force_zero_embeddings:
+            if (
+                hasattr(embedder, "input_key")
+                and embedder.input_key in force_zero_embeddings
+            ):
                 emb = torch.zeros_like(emb)
             if out_key in output:
-                output[out_key] = torch.cat((output[out_key], emb), self.KEY2CATDIM[out_key])
+                output[out_key] = torch.cat(
+                    (output[out_key], emb), self.KEY2CATDIM[out_key]
+                )
             else:
                 output[out_key] = emb
         return output
 
-    def forward(self, batch: Dict, force_zero_embeddings: Optional[List] = None) -> Dict:
+    def forward(
+        self, batch: Dict, force_zero_embeddings: Optional[List] = None
+    ) -> Dict:
         output = dict()
         if force_zero_embeddings is None:
             force_zero_embeddings = []
 
         if len(self.cor_embs) > 0:
             batch_size = len(batch[list(batch.keys())[0]])
-            rand_idx = np.random.choice(len(self.cor_p), size=(batch_size,), p=self.cor_p)
+            rand_idx = np.random.choice(
+                len(self.cor_p), size=(batch_size,), p=self.cor_p
+            )
             for emb_idx in self.cor_embs:
                 cond_or_not = rand_idx % 2
                 rand_idx //= 2
@@ -204,11 +219,16 @@ class GeneralConditioner(nn.Module):
             if i in self.cor_embs:
                 continue
             output = self.get_single_embedding(
-                embedder, batch, output=output, force_zero_embeddings=force_zero_embeddings
+                embedder,
+                batch,
+                output=output,
+                force_zero_embeddings=force_zero_embeddings,
             )
         return output
 
-    def get_unconditional_conditioning(self, batch_c, batch_uc=None, force_uc_zero_embeddings=None):
+    def get_unconditional_conditioning(
+        self, batch_c, batch_uc=None, force_uc_zero_embeddings=None
+    ):
         if force_uc_zero_embeddings is None:
             force_uc_zero_embeddings = []
         ucg_rates = list()
@@ -248,7 +268,9 @@ class FrozenT5Embedder(AbstractEmbModel):
             self.transformer = T5EncoderModel.from_pretrained(model_dir)
         else:
             self.tokenizer = T5Tokenizer.from_pretrained(model_dir, cache_dir=cache_dir)
-            self.transformer = T5EncoderModel.from_pretrained(model_dir, cache_dir=cache_dir)
+            self.transformer = T5EncoderModel.from_pretrained(
+                model_dir, cache_dir=cache_dir
+            )
         self.device = device
         self.max_length = max_length
         if freeze:

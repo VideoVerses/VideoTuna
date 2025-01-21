@@ -1,15 +1,13 @@
-import os
 import json
+import os
 
 import pytorch_lightning as pl
 from accelerate.logging import get_logger
-from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, DistributedSampler
 
 from videotuna.third_party.flux.data_backend.factory import configure_multi_databackend
 from videotuna.third_party.flux.training.state_tracker import StateTracker
-
 
 logger = get_logger(
     "SimpleTuner", log_level=os.environ.get("SIMPLETUNER_LOG_LEVEL", "INFO")
@@ -17,13 +15,17 @@ logger = get_logger(
 
 
 class ModelData(pl.LightningDataModule):
-    def __init__(self, data_dir="/disk1/xuelei/SimpleTuner_flux/SimpleTuner/VideoTuna-internal/SimpleTuner/datasets/pseudo-camera-10k/train", batch_size=1):
+    def __init__(
+        self,
+        data_dir="/disk1/xuelei/SimpleTuner_flux/SimpleTuner/VideoTuna-internal/SimpleTuner/datasets/pseudo-camera-10k/train",
+        batch_size=1,
+    ):
         super().__init__()
-        
+
         self.data_dir = data_dir
         self.batch_size = batch_size
         self.images = []
-        
+
     def init_data_backend(self):
 
         try:
@@ -87,17 +89,18 @@ class ModelData(pl.LightningDataModule):
             message_type="init_data_backend",
         )
         self.accelerator.wait_for_everyone()
-        
-    def create_dataset(self):
-        print('creating dataset...')
-        self.images = [os.path.join(self.data_dir, image) for image in os.listdir(self.data_dir)]
 
-        print('dataset created!')
-    
+    def create_dataset(self):
+        print("creating dataset...")
+        self.images = [
+            os.path.join(self.data_dir, image) for image in os.listdir(self.data_dir)
+        ]
+
+        print("dataset created!")
+
     def prepare_data(self):
         pass
 
-    
     def setup(self, stage=None):
         if stage is None or stage == "fit":
             self.train_set, _ = train_test_split(self.images, test_size=0.1)
@@ -106,16 +109,21 @@ class ModelData(pl.LightningDataModule):
 
     def train_dataloader(self):
         # train_sampler = DistributedSampler(self.train_set, shuffle=True)
-        return DataLoader(self.train_set, batch_size=self.batch_size, drop_last=True, num_workers=8, pin_memory=True)
+        return DataLoader(
+            self.train_set,
+            batch_size=self.batch_size,
+            drop_last=True,
+            num_workers=8,
+            pin_memory=True,
+        )
 
     def test_dataloader(self):
         # test_sampler = DistributedSampler(self.test_set, shuffle=True)
-        
-        return DataLoader(self.test_set, batch_size=self.batch_size, drop_last=True, num_workers=8, pin_memory=True)
-        
-        
-        
-        
-        
-        
-        
+
+        return DataLoader(
+            self.test_set,
+            batch_size=self.batch_size,
+            drop_last=True,
+            num_workers=8,
+            pin_memory=True,
+        )

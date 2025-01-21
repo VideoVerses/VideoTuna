@@ -3,9 +3,9 @@ import atexit
 import bisect
 import multiprocessing as mp
 from collections import deque
+
 import cv2
 import torch
-
 from detectron2.data import MetadataCatalog
 from detectron2.engine.defaults import DefaultPredictor
 from detectron2.utils.video_visualizer import VideoVisualizer
@@ -51,7 +51,9 @@ class VisualizationDemo(object):
         use_video_vis = True
         if visualizer is None:
             use_video_vis = False
-            visualizer = Visualizer(image, self.metadata, instance_mode=self.instance_mode)
+            visualizer = Visualizer(
+                image, self.metadata, instance_mode=self.instance_mode
+            )
         if "panoptic_seg" in predictions:
             panoptic_seg, segments_info = predictions["panoptic_seg"]
             vis_output = visualizer.draw_panoptic_seg_predictions(
@@ -66,9 +68,12 @@ class VisualizationDemo(object):
                 instances = predictions["instances"].to(self.cpu_device)
                 if use_video_vis:
                     vis_output = visualizer.draw_instance_predictions(
-                        image, predictions=instances)
+                        image, predictions=instances
+                    )
                 else:
-                    vis_output = visualizer.draw_instance_predictions(predictions=instances)
+                    vis_output = visualizer.draw_instance_predictions(
+                        predictions=instances
+                    )
             elif "proposals" in predictions:
                 instances = predictions["proposals"].to(self.cpu_device)
                 instances.pred_boxes = instances.proposal_boxes
@@ -76,9 +81,12 @@ class VisualizationDemo(object):
                 instances.pred_classes[:] = -1
                 if use_video_vis:
                     vis_output = visualizer.draw_instance_predictions(
-                        image, predictions=instances)
+                        image, predictions=instances
+                    )
                 else:
-                    vis_output = visualizer.draw_instance_predictions(predictions=instances)
+                    vis_output = visualizer.draw_instance_predictions(
+                        predictions=instances
+                    )
 
         return predictions, vis_output
 
@@ -112,7 +120,9 @@ class VisualizationDemo(object):
                 )
             elif "instances" in predictions:
                 predictions = predictions["instances"].to(self.cpu_device)
-                vis_frame = video_visualizer.draw_instance_predictions(frame, predictions)
+                vis_frame = video_visualizer.draw_instance_predictions(
+                    frame, predictions
+                )
             elif "sem_seg" in predictions:
                 vis_frame = video_visualizer.draw_sem_seg(
                     frame, predictions["sem_seg"].argmax(dim=0).to(self.cpu_device)
@@ -122,7 +132,9 @@ class VisualizationDemo(object):
                 predictions.pred_boxes = predictions.proposal_boxes
                 predictions.scores = predictions.objectness_logits
                 predictions.pred_classes[:] = -1
-                vis_frame = video_visualizer.draw_instance_predictions(frame, predictions)
+                vis_frame = video_visualizer.draw_instance_predictions(
+                    frame, predictions
+                )
 
             # Converts Matplotlib RGB format to OpenCV BGR format
             vis_frame = cv2.cvtColor(vis_frame.get_image(), cv2.COLOR_RGB2BGR)

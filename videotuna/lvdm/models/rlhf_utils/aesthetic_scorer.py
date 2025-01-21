@@ -2,15 +2,17 @@
 # import ipdb
 # st = ipdb.set_trace
 # from importlib_resources import files
+import os
+
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
+from PIL import Image
 from transformers import CLIPModel, CLIPProcessor
-from PIL import Image  
-import os  
 
 # ASSETS_PATH = files("lvdm.models.rlhf_utils.pretrained_reward_models")
 ASSETS_PATH = "videotuna/lvdm/models/rlhf_utils/pretrained_reward_models"
+
 
 class MLPDiff(nn.Module):
     def __init__(self):
@@ -26,7 +28,6 @@ class MLPDiff(nn.Module):
             nn.Linear(16, 1),
         )
 
-
     def forward(self, embed):
         return self.layers(embed)
 
@@ -36,7 +37,9 @@ class AestheticScorerDiff(torch.nn.Module):
         super().__init__()
         self.clip = CLIPModel.from_pretrained("openai/clip-vit-large-patch14")
         self.mlp = MLPDiff()
-        state_dict = torch.load(os.path.join(ASSETS_PATH,"sac+logos+ava1-l14-linearMSE.pth"))
+        state_dict = torch.load(
+            os.path.join(ASSETS_PATH, "sac+logos+ava1-l14-linearMSE.pth")
+        )
         self.mlp.load_state_dict(state_dict)
         self.dtype = dtype
         self.eval()
@@ -47,6 +50,7 @@ class AestheticScorerDiff(torch.nn.Module):
         embed = self.clip.get_image_features(pixel_values=images)
         embed = embed / torch.linalg.vector_norm(embed, dim=-1, keepdim=True)
         return self.mlp(embed).squeeze(1)
+
     def eval_video(self, video_path):
         # read a video and return the aesthetic score
         cap = cv2.VideoCapture(video_path)
@@ -66,25 +70,30 @@ class AestheticScorerDiff(torch.nn.Module):
         frames = torch.tensor(frames, dtype=torch.float32).permute(0, 3, 1, 2)
         scores = self(frames)
         return scores.mean().item()
-    
-    def eval_video_folder(self,video_folder):
+
+    def eval_video_folder(self, video_folder):
         # read a folder of videos and return the aesthetic scores
 
         files = os.listdir(video_folder)
         scores = []
         for file in files:
-            if file.endswith('.mp4'):
-                score = self.eval_video(video_folder + '/' + file)
+            if file.endswith(".mp4"):
+                score = self.eval_video(video_folder + "/" + file)
                 scores.append(score)
 
+
 ## the main function is a aesthetic scorer that takes in a video folder and returns the aesthetic scores
-if __name__=="__main__":
+if __name__ == "__main__":
     target_size = (224, 224)
-    normalize = torchvision.transforms.Normalize(mean=[0.48145466, 0.4578275, 0.40821073],
-                                                std=[0.26862954, 0.26130258, 0.27577711])
+    normalize = torchvision.transforms.Normalize(
+        mean=[0.48145466, 0.4578275, 0.40821073],
+        std=[0.26862954, 0.26130258, 0.27577711],
+    )
     scorer = AestheticScorerDiff(dtype=torch_dtype).to(device, dtype=torch_dtype)
     scorer.requires_grad_(False)
-    video_folder = "path to video /rlhf-visual-results/lora_aes_chatgpt_instructions-3184"
+    video_folder = (
+        "path to video /rlhf-visual-results/lora_aes_chatgpt_instructions-3184"
+    )
     scores = scorer.eval_video_folder(video_folder)
-    print(type(scores),type(scores[0]))
+    print(type(scores), type(scores[0]))
     print(scores, np.mean(scores))

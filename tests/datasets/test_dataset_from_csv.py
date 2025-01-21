@@ -2,10 +2,11 @@ import sys
 
 sys.path.append(".")
 
-import unittest
 import os
-from videotuna.data.datasets import DatasetFromCSV
+import unittest
+
 import videotuna.data.transforms as transforms
+from videotuna.data.datasets import DatasetFromCSV
 
 
 class TestDatasets(unittest.TestCase):
@@ -13,7 +14,9 @@ class TestDatasets(unittest.TestCase):
     def test_video_dataset_from_csv(self):
         transform_video = transforms.get_transforms_video()
         if not os.path.exists("videotuna/data/toy_videos"):
-            transform_video.transforms[0] = transforms.LoadDummyVideo((100, 100), probs_fail=0.5)
+            transform_video.transforms[0] = transforms.LoadDummyVideo(
+                (100, 100), probs_fail=0.5
+            )
         dataset = DatasetFromCSV(
             "videotuna/data/anno_files/toy_video_dataset.csv",
             "videotuna/data/toy_videos",

@@ -1,11 +1,13 @@
-import torch
-import random
 import math
-from videotuna.third_party.flux.models.flux.pipeline import FluxPipeline
-from videotuna.third_party.flux.training import steps_remaining_in_epoch
+import random
+
+import torch
 from diffusers.pipelines.flux.pipeline_flux import (
     calculate_shift as calculate_shift_flux,
 )
+
+from videotuna.third_party.flux.models.flux.pipeline import FluxPipeline
+from videotuna.third_party.flux.training import steps_remaining_in_epoch
 
 
 def apply_flux_schedule_shift(args, noise_scheduler, sigmas, noise):

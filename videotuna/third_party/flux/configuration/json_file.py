@@ -1,6 +1,6 @@
-import os
 import json
 import logging
+import os
 
 # Set up logging
 from videotuna.third_party.flux.training.multi_process import _get_rank

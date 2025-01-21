@@ -79,7 +79,9 @@ class ZeroSeqParallelPlugin(LowLevelZeroPlugin):
     ):
         _kwargs = kwargs.copy()
         distributed_sampler_cls = distributed_sampler_cls or DistributedSampler
-        sampler = distributed_sampler_cls(dataset, num_replicas=self.dp_size, rank=self.dp_rank, shuffle=shuffle)
+        sampler = distributed_sampler_cls(
+            dataset, num_replicas=self.dp_size, rank=self.dp_rank, shuffle=shuffle
+        )
 
         # Deterministic dataloader
         def seed_worker(worker_id):

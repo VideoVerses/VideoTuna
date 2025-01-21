@@ -1,12 +1,9 @@
 import logging
-
 from io import BytesIO
-from typing import Union, IO, Any
+from typing import IO, Any, Union
 
 import numpy as np
-
 from PIL import Image, PngImagePlugin
-
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)

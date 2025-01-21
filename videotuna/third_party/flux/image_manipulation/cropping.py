@@ -1,6 +1,7 @@
-from PIL import Image
 import logging
 import os
+
+from PIL import Image
 
 logger = logging.getLogger(__name__)
 logger.setLevel(os.environ.get("SIMPLETUNER_LOG_LEVEL", "INFO"))

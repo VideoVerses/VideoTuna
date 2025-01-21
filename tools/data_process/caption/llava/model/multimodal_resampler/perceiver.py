@@ -85,8 +85,16 @@ class PerceiverResamplerModule(nn.Module):
     ):
         super().__init__()
         self.latents = nn.Parameter(torch.randn(num_latents, dim))
-        self.frame_embs = nn.Parameter(torch.randn(max_num_frames, dim)) if exists(max_num_frames) else None
-        self.media_time_embs = nn.Parameter(torch.randn(max_num_media, 1, dim)) if exists(max_num_media) else None
+        self.frame_embs = (
+            nn.Parameter(torch.randn(max_num_frames, dim))
+            if exists(max_num_frames)
+            else None
+        )
+        self.media_time_embs = (
+            nn.Parameter(torch.randn(max_num_media, 1, dim))
+            if exists(max_num_media)
+            else None
+        )
 
         self.layers = nn.ModuleList([])
         for _ in range(depth):
@@ -94,7 +102,11 @@ class PerceiverResamplerModule(nn.Module):
                 nn.ModuleList(
                     [
                         PerceiverAttention(dim=dim, dim_head=dim_head, heads=heads),
-                        FeedForward(dim=dim, mult=ff_mult) if ff_mult > 0 else nn.Identity(),
+                        (
+                            FeedForward(dim=dim, mult=ff_mult)
+                            if ff_mult > 0
+                            else nn.Identity()
+                        ),
                     ]
                 )
             )
@@ -115,7 +127,9 @@ class PerceiverResamplerModule(nn.Module):
         if exists(self.frame_embs):
             frame_embs = repeat(self.frame_embs[:F], "F d -> b T F v d", b=b, T=T, v=v)
             x = x + frame_embs
-        x = rearrange(x, "b T F v d -> b T (F v) d")  # flatten the frame and spatial dimensions
+        x = rearrange(
+            x, "b T F v d -> b T (F v) d"
+        )  # flatten the frame and spatial dimensions
         if exists(self.media_time_embs):
             x = x + self.media_time_embs[:T]
 
@@ -136,7 +150,12 @@ class PerceiverResampler(nn.Module):
         self.ff_mult = model_args.mm_perceiver_ff_mult
         self.pretrained = model_args.mm_perceiver_pretrained
 
-        self.perceiver = PerceiverResamplerModule(dim=vision_tower.hidden_size, depth=self.depth, num_latents=self.num_latents, ff_mult=self.ff_mult)
+        self.perceiver = PerceiverResamplerModule(
+            dim=vision_tower.hidden_size,
+            depth=self.depth,
+            num_latents=self.num_latents,
+            ff_mult=self.ff_mult,
+        )
 
         if self.pretrained is not None:
             self.load_state_dict(torch.load(self.pretrained))

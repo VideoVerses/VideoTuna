@@ -1,10 +1,12 @@
 # pytorch_diffusion + derived encoder decoder
 import math
+
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
 from einops import rearrange
-from .movq_enc_3d import CausalConv3d, Upsample3D, DownSample3D
+
+from .movq_enc_3d import CausalConv3d, DownSample3D, Upsample3D
 
 
 def cast_tuple(t, length=1):
@@ -63,17 +65,27 @@ class SpatialNorm3D(nn.Module):
                 p.requires_grad = False
         self.add_conv = add_conv
         if self.add_conv:
-            self.conv = CausalConv3d(zq_channels, zq_channels, kernel_size=3, pad_mode=pad_mode)
-        self.conv_y = CausalConv3d(zq_channels, f_channels, kernel_size=1, pad_mode=pad_mode)
-        self.conv_b = CausalConv3d(zq_channels, f_channels, kernel_size=1, pad_mode=pad_mode)
+            self.conv = CausalConv3d(
+                zq_channels, zq_channels, kernel_size=3, pad_mode=pad_mode
+            )
+        self.conv_y = CausalConv3d(
+            zq_channels, f_channels, kernel_size=1, pad_mode=pad_mode
+        )
+        self.conv_b = CausalConv3d(
+            zq_channels, f_channels, kernel_size=1, pad_mode=pad_mode
+        )
 
     def forward(self, f, zq):
         if zq.shape[2] > 1:
             f_first, f_rest = f[:, :, :1], f[:, :, 1:]
             f_first_size, f_rest_size = f_first.shape[-3:], f_rest.shape[-3:]
             zq_first, zq_rest = zq[:, :, :1], zq[:, :, 1:]
-            zq_first = torch.nn.functional.interpolate(zq_first, size=f_first_size, mode="nearest")
-            zq_rest = torch.nn.functional.interpolate(zq_rest, size=f_rest_size, mode="nearest")
+            zq_first = torch.nn.functional.interpolate(
+                zq_first, size=f_first_size, mode="nearest"
+            )
+            zq_rest = torch.nn.functional.interpolate(
+                zq_rest, size=f_rest_size, mode="nearest"
+            )
             zq = torch.cat([zq_first, zq_rest], dim=2)
         else:
             zq = torch.nn.functional.interpolate(zq, size=f.shape[-3:], mode="nearest")
@@ -117,17 +129,25 @@ class ResnetBlock3D(nn.Module):
         self.use_conv_shortcut = conv_shortcut
 
         self.norm1 = Normalize3D(in_channels, zq_ch, add_conv=add_conv)
-        self.conv1 = CausalConv3d(in_channels, out_channels, kernel_size=3, pad_mode=pad_mode)
+        self.conv1 = CausalConv3d(
+            in_channels, out_channels, kernel_size=3, pad_mode=pad_mode
+        )
         if temb_channels > 0:
             self.temb_proj = torch.nn.Linear(temb_channels, out_channels)
         self.norm2 = Normalize3D(out_channels, zq_ch, add_conv=add_conv)
         self.dropout = torch.nn.Dropout(dropout)
-        self.conv2 = CausalConv3d(out_channels, out_channels, kernel_size=3, pad_mode=pad_mode)
+        self.conv2 = CausalConv3d(
+            out_channels, out_channels, kernel_size=3, pad_mode=pad_mode
+        )
         if self.in_channels != self.out_channels:
             if self.use_conv_shortcut:
-                self.conv_shortcut = CausalConv3d(in_channels, out_channels, kernel_size=3, pad_mode=pad_mode)
+                self.conv_shortcut = CausalConv3d(
+                    in_channels, out_channels, kernel_size=3, pad_mode=pad_mode
+                )
             else:
-                self.nin_shortcut = torch.nn.Conv3d(in_channels, out_channels, kernel_size=1, stride=1, padding=0)
+                self.nin_shortcut = torch.nn.Conv3d(
+                    in_channels, out_channels, kernel_size=1, stride=1, padding=0
+                )
 
     def forward(self, x, temb, zq):
         h = x
@@ -158,10 +178,18 @@ class AttnBlock2D(nn.Module):
         self.in_channels = in_channels
 
         self.norm = Normalize3D(in_channels, zq_ch, add_conv=add_conv)
-        self.q = torch.nn.Conv2d(in_channels, in_channels, kernel_size=1, stride=1, padding=0)
-        self.k = torch.nn.Conv2d(in_channels, in_channels, kernel_size=1, stride=1, padding=0)
-        self.v = torch.nn.Conv2d(in_channels, in_channels, kernel_size=1, stride=1, padding=0)
-        self.proj_out = torch.nn.Conv2d(in_channels, in_channels, kernel_size=1, stride=1, padding=0)
+        self.q = torch.nn.Conv2d(
+            in_channels, in_channels, kernel_size=1, stride=1, padding=0
+        )
+        self.k = torch.nn.Conv2d(
+            in_channels, in_channels, kernel_size=1, stride=1, padding=0
+        )
+        self.v = torch.nn.Conv2d(
+            in_channels, in_channels, kernel_size=1, stride=1, padding=0
+        )
+        self.proj_out = torch.nn.Conv2d(
+            in_channels, in_channels, kernel_size=1, stride=1, padding=0
+        )
 
     def forward(self, x, zq):
         h_ = x
@@ -236,7 +264,9 @@ class MOVQDecoder3D(nn.Module):
         curr_res = resolution // 2 ** (self.num_resolutions - 1)
         self.z_shape = (1, z_channels, curr_res, curr_res)
 
-        self.conv_in = CausalConv3d(z_channels, block_in, kernel_size=3, pad_mode=pad_mode)
+        self.conv_in = CausalConv3d(
+            z_channels, block_in, kernel_size=3, pad_mode=pad_mode
+        )
 
         # middle
         self.mid = nn.Module()
@@ -286,9 +316,13 @@ class MOVQDecoder3D(nn.Module):
             up.attn = attn
             if i_level != 0:
                 if i_level < self.num_resolutions - self.temporal_compress_level:
-                    up.upsample = Upsample3D(block_in, resamp_with_conv, compress_time=False)
+                    up.upsample = Upsample3D(
+                        block_in, resamp_with_conv, compress_time=False
+                    )
                 else:
-                    up.upsample = Upsample3D(block_in, resamp_with_conv, compress_time=True)
+                    up.upsample = Upsample3D(
+                        block_in, resamp_with_conv, compress_time=True
+                    )
                 curr_res = curr_res * 2
             self.up.insert(0, up)  # prepend to get consistent order
 
@@ -371,7 +405,9 @@ class NewDecoder3D(nn.Module):
         if zq_ch is None:
             zq_ch = z_channels
         if post_quant_conv:
-            self.post_quant_conv = CausalConv3d(zq_ch, z_channels, kernel_size=3, pad_mode=pad_mode)
+            self.post_quant_conv = CausalConv3d(
+                zq_ch, z_channels, kernel_size=3, pad_mode=pad_mode
+            )
         else:
             self.post_quant_conv = None
 
@@ -380,7 +416,11 @@ class NewDecoder3D(nn.Module):
         block_in = ch * ch_mult[self.num_resolutions - 1]
         curr_res = resolution // 2 ** (self.num_resolutions - 1)
         self.z_shape = (1, z_channels, curr_res, curr_res)
-        print("Working with z of shape {} = {} dimensions.".format(self.z_shape, np.prod(self.z_shape)))
+        print(
+            "Working with z of shape {} = {} dimensions.".format(
+                self.z_shape, np.prod(self.z_shape)
+            )
+        )
 
         # z to block_in
         # self.conv_in = torch.nn.Conv3d(z_channels,
@@ -388,7 +428,9 @@ class NewDecoder3D(nn.Module):
         #                                kernel_size=3,
         #                                stride=1,
         #                                padding=1)
-        self.conv_in = CausalConv3d(z_channels, block_in, kernel_size=3, pad_mode=pad_mode)
+        self.conv_in = CausalConv3d(
+            z_channels, block_in, kernel_size=3, pad_mode=pad_mode
+        )
 
         # middle
         self.mid = nn.Module()
@@ -439,9 +481,13 @@ class NewDecoder3D(nn.Module):
             up.attn = attn
             if i_level != 0:
                 if i_level < self.num_resolutions - self.temporal_compress_level:
-                    up.upsample = Upsample3D(block_in, resamp_with_conv, compress_time=False)
+                    up.upsample = Upsample3D(
+                        block_in, resamp_with_conv, compress_time=False
+                    )
                 else:
-                    up.upsample = Upsample3D(block_in, resamp_with_conv, compress_time=True)
+                    up.upsample = Upsample3D(
+                        block_in, resamp_with_conv, compress_time=True
+                    )
                 curr_res = curr_res * 2
             self.up.insert(0, up)  # prepend to get consistent order
 

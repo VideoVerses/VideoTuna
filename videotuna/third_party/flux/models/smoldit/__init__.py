@@ -1,5 +1,5 @@
-from videotuna.third_party.flux.models.smoldit.transformer import SmolDiT2DModel
 from videotuna.third_party.flux.models.smoldit.pipeline import SmolDiTPipeline
+from videotuna.third_party.flux.models.smoldit.transformer import SmolDiT2DModel
 
 SmolDiTConfigurations = {
     "smoldit-small": {

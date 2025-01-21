@@ -1,17 +1,17 @@
-import sys
 import io
+import json
 import os
 import re
-import json
+import sys
 import tarfile
 from functools import partial
 
 import webdataset as wds
-from webdataset import ResampledShards, DataPipeline, tarfile_to_samples
+from webdataset import DataPipeline, ResampledShards, tarfile_to_samples
 from webdataset.filters import pipelinefilter
-from webdataset.tariterators import url_opener, group_by_keys
+from webdataset.gopen import gopen, gopen_schemes
 from webdataset.handlers import reraise_exception
-from webdataset.gopen import gopen_schemes, gopen
+from webdataset.tariterators import group_by_keys, url_opener
 
 
 def pytorch_worker_info(group=None):  # sourcery skip: use-contextlib-suppress
@@ -85,7 +85,9 @@ class SimpleDistributedWebDataset(DataPipeline):
         except Exception:
             pass
         super().__init__(
-            ConfiguredResampledShards(path, seed),  # Lots of shards are recommended, or not evenly
+            ConfiguredResampledShards(
+                path, seed
+            ),  # Lots of shards are recommended, or not evenly
             tarfile_to_samples(),
             wds.shuffle(shuffle_buffer),
             process_fn,
@@ -93,7 +95,12 @@ class SimpleDistributedWebDataset(DataPipeline):
 
 
 def tar_file_iterator_with_meta(
-    fileobj, meta_names, skip_meta=r"__[^/]*__($|/)", suffix=None, handler=reraise_exception, meta_stream=None
+    fileobj,
+    meta_names,
+    skip_meta=r"__[^/]*__($|/)",
+    suffix=None,
+    handler=reraise_exception,
+    meta_stream=None,
 ):
     """Iterate over tar file, yielding filename, content pairs for the given tar stream.
 
@@ -122,7 +129,10 @@ def tar_file_iterator_with_meta(
             except Exception as exn:
                 from sat.helpers import print_rank0
 
-                print_rank0(f"Error in loading jsonl {meta_file_name}, lineno {lineno}: {line}", level="DEBUG")
+                print_rank0(
+                    f"Error in loading jsonl {meta_file_name}, lineno {lineno}: {line}",
+                    level="DEBUG",
+                )
                 continue
             for item in meta_list:
                 if not item["key"] in meta_data:
@@ -146,7 +156,9 @@ def tar_file_iterator_with_meta(
                 if skip_meta is not None and re.match(skip_meta, fname):
                     continue
                 if fname.endswith(".txt") and suffix is not None:
-                    data = (stream.extractfile(tarinfo).read().decode() + suffix).encode()
+                    data = (
+                        stream.extractfile(tarinfo).read().decode() + suffix
+                    ).encode()
                 else:
                     data = stream.extractfile(tarinfo).read()
                 result = dict(fname=fname, data=data)
@@ -186,8 +198,12 @@ def tar_file_expander_with_meta(data, meta_names, handler=reraise_exception):
         try:
             assert isinstance(source, dict)
             assert "stream" in source
-            for sample in tar_file_iterator_with_meta(source["stream"], meta_names, meta_stream=source["meta_stream"]):
-                assert isinstance(sample, dict) and "data" in sample and "fname" in sample
+            for sample in tar_file_iterator_with_meta(
+                source["stream"], meta_names, meta_stream=source["meta_stream"]
+            ):
+                assert (
+                    isinstance(sample, dict) and "data" in sample and "fname" in sample
+                )
                 sample["__url__"] = url
                 yield sample
         except Exception as exn:
@@ -250,7 +266,15 @@ class MetaDistributedWebDataset(DataPipeline):
     """
 
     def __init__(
-        self, path, process_fn, seed, *, meta_names=[], nshards=sys.maxsize, shuffle_buffer=1000, include_dirs=None
+        self,
+        path,
+        process_fn,
+        seed,
+        *,
+        meta_names=[],
+        nshards=sys.maxsize,
+        shuffle_buffer=1000,
+        include_dirs=None,
     ):
         # os.environ['WDS_SHOW_SEED'] = '1'
         import torch
@@ -267,7 +291,10 @@ class MetaDistributedWebDataset(DataPipeline):
                         n = 1
                     for cur_dir, dirs, files in os.walk(include_dir):
                         for f in files:
-                            if f.endswith("tar") and os.path.getsize(os.path.join(cur_dir, f)) > 0:
+                            if (
+                                f.endswith("tar")
+                                and os.path.getsize(os.path.join(cur_dir, f)) > 0
+                            ):
                                 # other_paths.append(os.path.join(cur_dir,f))
                                 other_paths.extend([os.path.join(cur_dir, f)] * n)
                 # print(f'Adding dataset paths {",".join(other_paths)}')
@@ -361,7 +388,10 @@ def gopen_boto3(url, mode="rb", bufsize=8192 * 2):
 
     if mode[0] == "r":
         s3_client = boto3.client(
-            "s3", endpoint_url=endpoint_url, aws_access_key_id=access_key, aws_secret_access_key=secret_key
+            "s3",
+            endpoint_url=endpoint_url,
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
         )
         bucket, key = url.split("/", 1)
 

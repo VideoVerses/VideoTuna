@@ -1,23 +1,22 @@
 import os
 import sys
+
 sys.path.insert(0, os.getcwd())
 
 import argparse
 import json
+import logging
 import time
+from os import environ
 from pathlib import Path
 
-from videotuna.third_party.flux.training.state_tracker import StateTracker
-from videotuna.third_party.flux import log_format
-import logging
-from os import environ
-
+import torch.distributed as dist
 from pytorch_lightning import Trainer
 
+from videotuna.third_party.flux import log_format
 from videotuna.third_party.flux.training.model import Model
 from videotuna.third_party.flux.training.model_data import ModelData
-import torch.distributed as dist
-
+from videotuna.third_party.flux.training.state_tracker import StateTracker
 
 logger = logging.getLogger("SimpleTuner")
 logger.setLevel(environ.get("SIMPLETUNER_LOG_LEVEL", "INFO"))
@@ -71,22 +70,31 @@ def main(args):
         model = Model()
         model.run()
         print("loaded model")
-        trainer = Trainer(accelerator='gpu', max_epochs=config["--num_train_epochs"], strategy="ddp", limit_train_batches=1490, logger=False)
+        trainer = Trainer(
+            accelerator="gpu",
+            max_epochs=config["--num_train_epochs"],
+            strategy="ddp",
+            limit_train_batches=1490,
+            logger=False,
+        )
         print("loaded Trainer, training...")
         # print("model params:", list(model.parameters()))
         if dist.is_available() and dist.is_initialized():
-            dist.barrier() 
+            dist.barrier()
         trainer.fit(model, datamodule=dm)
-        
+
         print("train finished")
 
     except Exception as e:
         raise e
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--config_path", type=str, help="Path to the config file")
-    parser.add_argument("--data_config_path", type=str, help="Path to the config of data file")
+    parser.add_argument(
+        "--data_config_path", type=str, help="Path to the config of data file"
+    )
     args = parser.parse_args()
 
     main(args)

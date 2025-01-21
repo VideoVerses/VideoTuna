@@ -1,67 +1,82 @@
-import huggingface_hub
-from videotuna.third_party.flux.training.default_settings.safety_check import safety_check
-from videotuna.third_party.flux.publishing.huggingface import HubManager
-from videotuna.third_party.flux.configuration.configure import model_labels
-import shutil
+import copy
+import glob
 import hashlib
 import json
-import copy
-import random
 import logging
 import math
 import os
+import random
+import shutil
 import sys
-import glob
-import wandb
-from safetensors.torch import save_file
-import torch.distributed as dist
+
+import huggingface_hub
 import pytorch_lightning as pl
+import torch.distributed as dist
+import wandb
 from pytorch_lightning.callbacks import Callback
 from pytorch_lightning.utilities import rank_zero_only
+from safetensors.torch import save_file
+
+from videotuna.third_party.flux.configuration.configure import model_labels
+from videotuna.third_party.flux.publishing.huggingface import HubManager
+from videotuna.third_party.flux.training.default_settings.safety_check import (
+    safety_check,
+)
 from videotuna.utils.callbacks import LoraModelCheckpoint
 
 # Quiet down, you.
 os.environ["ACCELERATE_LOG_LEVEL"] = "WARNING"
+from accelerate.logging import get_logger
+from diffusers.models.embeddings import get_2d_rotary_pos_embed
+
 from videotuna.third_party.flux import log_format  # noqa
-from videotuna.third_party.flux.configuration.loader import load_config
 from videotuna.third_party.flux.caching.memory import reclaim_memory
-from videotuna.third_party.flux.training.multi_process import _get_rank as get_rank
-from videotuna.third_party.flux.training.validation import Validation, prepare_validation_prompt_list
-from videotuna.third_party.flux.training.state_tracker import StateTracker
-from videotuna.third_party.flux.training.schedulers import load_scheduler_from_args
-from videotuna.third_party.flux.training.custom_schedule import get_lr_scheduler
-from videotuna.third_party.flux.training.adapter import determine_adapter_target_modules, load_lora_weights
-from videotuna.third_party.flux.training.diffusion_model import load_diffusion_model
-from videotuna.third_party.flux.training.text_encoding import (
-    load_tes,
-    determine_te_path_subfolder,
-    import_model_class_from_model_name_or_path,
-    get_tokenizers,
+from videotuna.third_party.flux.configuration.loader import load_config
+from videotuna.third_party.flux.data_backend.factory import (
+    BatchFetcher,
+    configure_multi_databackend,
+    random_dataloader_iterator,
 )
-from videotuna.third_party.flux.training.optimizer_param import (
-    determine_optimizer_class_with_config,
-    determine_params_to_optimize,
-    is_lr_scheduler_disabled,
-    cpu_offload_optimizer,
+from videotuna.third_party.flux.models.smoldit import get_resize_crop_region_for_grid
+from videotuna.third_party.flux.training import steps_remaining_in_epoch
+from videotuna.third_party.flux.training.adapter import (
+    determine_adapter_target_modules,
+    load_lora_weights,
 )
-from videotuna.third_party.flux.data_backend.factory import BatchFetcher
+from videotuna.third_party.flux.training.custom_schedule import (
+    generate_timestep_weights,
+    get_lr_scheduler,
+    segmented_timestep_selection,
+)
 from videotuna.third_party.flux.training.deepspeed import (
     deepspeed_zero_init_disabled_context_manager,
     prepare_model_for_deepspeed,
 )
-from videotuna.third_party.flux.training.wrappers import unwrap_model
-from videotuna.third_party.flux.data_backend.factory import configure_multi_databackend
-from videotuna.third_party.flux.data_backend.factory import random_dataloader_iterator
-from videotuna.third_party.flux.training import steps_remaining_in_epoch
-from videotuna.third_party.flux.training.custom_schedule import (
-    generate_timestep_weights,
-    segmented_timestep_selection,
-)
+from videotuna.third_party.flux.training.diffusion_model import load_diffusion_model
 from videotuna.third_party.flux.training.min_snr_gamma import compute_snr
-from videotuna.third_party.flux.training.peft_init import init_lokr_network_with_perturbed_normal
-from accelerate.logging import get_logger
-from diffusers.models.embeddings import get_2d_rotary_pos_embed
-from videotuna.third_party.flux.models.smoldit import get_resize_crop_region_for_grid
+from videotuna.third_party.flux.training.multi_process import _get_rank as get_rank
+from videotuna.third_party.flux.training.optimizer_param import (
+    cpu_offload_optimizer,
+    determine_optimizer_class_with_config,
+    determine_params_to_optimize,
+    is_lr_scheduler_disabled,
+)
+from videotuna.third_party.flux.training.peft_init import (
+    init_lokr_network_with_perturbed_normal,
+)
+from videotuna.third_party.flux.training.schedulers import load_scheduler_from_args
+from videotuna.third_party.flux.training.state_tracker import StateTracker
+from videotuna.third_party.flux.training.text_encoding import (
+    determine_te_path_subfolder,
+    get_tokenizers,
+    import_model_class_from_model_name_or_path,
+    load_tes,
+)
+from videotuna.third_party.flux.training.validation import (
+    Validation,
+    prepare_validation_prompt_list,
+)
+from videotuna.third_party.flux.training.wrappers import unwrap_model
 
 logger = get_logger(
     "SimpleTuner", log_level=os.environ.get("SIMPLETUNER_LOG_LEVEL", "INFO")
@@ -80,57 +95,56 @@ training_logger.setLevel(training_logger_level)
 # Less important logs.
 filelock_logger.setLevel("WARNING")
 connection_logger.setLevel("WARNING")
-import torch
-import diffusers
 import accelerate
-import transformers
+import diffusers
+import torch
 import torch.nn.functional as F
 import torch.utils.checkpoint
+import transformers
 from accelerate import Accelerator
 from accelerate.utils import set_seed
-from videotuna.third_party.flux.configuration.configure import model_classes
 from torch.distributions import Beta
+
+from videotuna.third_party.flux.configuration.configure import model_classes
 
 try:
     from lycoris import LycorisNetwork
 except:
     print("[ERROR] Lycoris not available. Please install ")
-from tqdm.auto import tqdm
-from transformers import PretrainedConfig, CLIPTokenizer
-from videotuna.third_party.flux.models.sdxl.pipeline import StableDiffusionXLPipeline
-from diffusers import StableDiffusion3Pipeline
-
 from diffusers import (
     AutoencoderKL,
     ControlNetModel,
     DDIMScheduler,
     DDPMScheduler,
-    UNet2DConditionModel,
+    EulerAncestralDiscreteScheduler,
+    EulerDiscreteScheduler,
     FluxTransformer2DModel,
     PixArtTransformer2DModel,
-    EulerDiscreteScheduler,
-    EulerAncestralDiscreteScheduler,
+    StableDiffusion3Pipeline,
+    UNet2DConditionModel,
     UniPCMultistepScheduler,
 )
-
-from peft import LoraConfig
-from peft.utils import get_peft_model_state_dict
-from videotuna.third_party.flux.training.ema import EMAModel
 from diffusers.utils import (
     check_min_version,
     convert_state_dict_to_diffusers,
     is_wandb_available,
 )
 from diffusers.utils.import_utils import is_xformers_available
+from peft import LoraConfig
+from peft.utils import get_peft_model_state_dict
+from tqdm.auto import tqdm
+from transformers import CLIPTokenizer, PretrainedConfig
 from transformers.utils import ContextManagers
 
 from videotuna.third_party.flux.models.flux import (
-    prepare_latent_image_ids,
-    pack_latents,
-    unpack_latents,
-    get_mobius_guidance,
     apply_flux_schedule_shift,
+    get_mobius_guidance,
+    pack_latents,
+    prepare_latent_image_ids,
+    unpack_latents,
 )
+from videotuna.third_party.flux.models.sdxl.pipeline import StableDiffusionXLPipeline
+from videotuna.third_party.flux.training.ema import EMAModel
 
 is_optimi_available = False
 try:
@@ -164,7 +178,8 @@ lora_checkpoint_callback = LoraModelCheckpoint()
 
 class Model(pl.LightningModule):
     def __init__(
-        self, config: dict = None, disable_accelerator: bool = False, job_id: str = None):
+        self, config: dict = None, disable_accelerator: bool = False, job_id: str = None
+    ):
         super().__init__()
         self.accelerator = None
         self.job_id = job_id
@@ -960,7 +975,9 @@ class Model(pl.LightningModule):
 
     def init_post_load_freeze(self):
         if self.config.layer_freeze_strategy == "bitfit":
-            from videotuna.third_party.flux.training.model_freeze import apply_bitfit_freezing
+            from videotuna.third_party.flux.training.model_freeze import (
+                apply_bitfit_freezing,
+            )
 
             if self.unet is not None:
                 logger.info("Applying BitFit freezing strategy to the U-net.")
@@ -2036,7 +2053,7 @@ class Model(pl.LightningModule):
 
     def forward(self, x):
         pass
-    
+
     def on_train_start(self):
         self.init_trackers()
         self._train_initial_msg()
@@ -2069,7 +2086,7 @@ class Model(pl.LightningModule):
         self.current_epoch_step = None
         self.bf, self.fetch_thread = None, None
         self.iterator_fn = random_dataloader_iterator
-        
+
     def on_train_epoch_start(self):
         if self.state["current_epoch"] > self.config.num_train_epochs + 1:
             # This might immediately end training, but that's useful for simply exporting the model.
@@ -2133,7 +2150,7 @@ class Model(pl.LightningModule):
                 self.fetch_thread.join()
             self.fetch_thread = self.bf.start_fetching()
             self.iterator_fn = self.bf.next_response
-            
+
     def training_step(self, batch, batch_idx):
         self._exit_on_signal()
         self.step += 1
@@ -2177,8 +2194,7 @@ class Model(pl.LightningModule):
                 if self.config.offset_noise:
                     if (
                         self.config.noise_offset_probability == 1.0
-                        or random.random()
-                        < self.config.noise_offset_probability
+                        or random.random() < self.config.noise_offset_probability
                     ):
                         noise = noise + self.config.noise_offset * torch.randn(
                             latents.shape[0],
@@ -2217,9 +2233,7 @@ class Model(pl.LightningModule):
                     beta_dist = Beta(alpha, beta)
 
                     # Sample from the Beta distribution
-                    sigmas = beta_dist.sample((bsz,)).to(
-                        device=self.accelerator.device
-                    )
+                    sigmas = beta_dist.sample((bsz,)).to(device=self.accelerator.device)
 
                     sigmas = apply_flux_schedule_shift(
                         self.config, self.noise_scheduler, sigmas, noise
@@ -2252,10 +2266,7 @@ class Model(pl.LightningModule):
                 ).to(self.accelerator.device)
                 # Instead of uniformly sampling the timestep range, we'll split our weights and schedule into bsz number of segments.
                 # This enables more broad sampling and potentially more effective training.
-                if (
-                    bsz > 1
-                    and not self.config.disable_segmented_timestep_sampling
-                ):
+                if bsz > 1 and not self.config.disable_segmented_timestep_sampling:
                     timesteps = segmented_timestep_selection(
                         actual_num_timesteps=self.noise_scheduler.config.num_train_timesteps,
                         bsz=bsz,
@@ -2264,30 +2275,22 @@ class Model(pl.LightningModule):
                         and not StateTracker.get_args().sdxl_refiner_uses_full_range,
                     ).to(self.accelerator.device)
                 else:
-                    timesteps = torch.multinomial(
-                        weights, bsz, replacement=True
-                    ).long()
+                    timesteps = torch.multinomial(weights, bsz, replacement=True).long()
 
             # Prepare the data for the scatter plot
             for timestep in timesteps.tolist():
-                self.timesteps_buffer.append(
-                    (self.state["global_step"], timestep)
-                )
+                self.timesteps_buffer.append((self.state["global_step"], timestep))
 
             if self.config.input_perturbation != 0 and (
                 not self.config.input_perturbation_steps
-                or self.state["global_step"]
-                < self.config.input_perturbation_steps
+                or self.state["global_step"] < self.config.input_perturbation_steps
             ):
                 input_perturbation = self.config.input_perturbation
                 if self.config.input_perturbation_steps:
                     input_perturbation *= 1.0 - (
-                        self.state["global_step"]
-                        / self.config.input_perturbation_steps
+                        self.state["global_step"] / self.config.input_perturbation_steps
                     )
-                input_noise = noise + input_perturbation * torch.randn_like(
-                    latents
-                )
+                input_noise = noise + input_perturbation * torch.randn_like(latents)
             else:
                 input_noise = noise
 
@@ -2323,22 +2326,19 @@ class Model(pl.LightningModule):
                 elif self.config.flow_matching_loss == "compatible":
                     target = noise - latents
                 elif self.config.flow_matching_loss == "sd35":
-                    sigma_reshaped = sigmas.view(-1, 1, 1, 1)  # Ensure sigma has the correct shape
+                    sigma_reshaped = sigmas.view(
+                        -1, 1, 1, 1
+                    )  # Ensure sigma has the correct shape
                     target = (noisy_latents - latents) / sigma_reshaped
 
             elif self.noise_scheduler.config.prediction_type == "epsilon":
                 target = noise
-            elif (
-                self.noise_scheduler.config.prediction_type == "v_prediction"
-                or (
-                    self.config.flow_matching
-                    and self.config.flow_matching_loss == "diffusion"
-                )
+            elif self.noise_scheduler.config.prediction_type == "v_prediction" or (
+                self.config.flow_matching
+                and self.config.flow_matching_loss == "diffusion"
             ):
                 # When not using flow-matching, train on velocity prediction objective.
-                target = self.noise_scheduler.get_velocity(
-                    latents, noise, timesteps
-                )
+                target = self.noise_scheduler.get_velocity(latents, noise, timesteps)
             elif self.noise_scheduler.config.prediction_type == "sample":
                 # We set the target to latents here, but the model_pred will return the noise sample prediction.
                 # We will have to subtract the noise residual from the prediction to get the target sample.
@@ -2372,9 +2372,7 @@ class Model(pl.LightningModule):
                 # pixart requires an input of {"resolution": .., "aspect_ratio": ..}
                 if "batch_time_ids" in batch:
                     added_cond_kwargs = batch["batch_time_ids"]
-                batch["encoder_attention_mask"] = batch[
-                    "encoder_attention_mask"
-                ].to(
+                batch["encoder_attention_mask"] = batch["encoder_attention_mask"].to(
                     device=self.accelerator.device,
                     dtype=self.config.weight_dtype,
                 )
@@ -2449,13 +2447,9 @@ class Model(pl.LightningModule):
                 training_logger.debug("Using min-SNR loss")
                 snr = compute_snr(timesteps, self.noise_scheduler)
                 snr_divisor = snr
-                if (
-                    self.noise_scheduler.config.prediction_type
-                    == "v_prediction"
-                    or (
-                        self.config.flow_matching
-                        and self.config.flow_matching_loss == "diffusion"
-                    )
+                if self.noise_scheduler.config.prediction_type == "v_prediction" or (
+                    self.config.flow_matching
+                    and self.config.flow_matching_loss == "diffusion"
                 ):
                     snr_divisor = snr + 1
 
@@ -2515,9 +2509,7 @@ class Model(pl.LightningModule):
             avg_loss = self.accelerator.gather(
                 loss.repeat(self.config.train_batch_size)
             ).mean()
-            self.train_loss += (
-                avg_loss.item() / self.config.gradient_accumulation_steps
-            )
+            self.train_loss += avg_loss.item() / self.config.gradient_accumulation_steps
             # Backpropagate
             grad_norm = None
             if not self.config.disable_accelerator:
@@ -2529,7 +2521,6 @@ class Model(pl.LightningModule):
                 if not os.path.exists(loss_output_dir):
                     os.makedirs(loss_output_dir)
                 torch.save(loss, os.path.join(loss_output_dir, "loss_tensor.pt"))
-                
 
                 if (
                     self.config.optimizer != "adam_bfloat16"
@@ -2558,14 +2549,10 @@ class Model(pl.LightningModule):
                     training_logger.debug(
                         f"step: {self.step}, should_not_release_gradients: {should_not_release_gradients}, self.config.optimizer_release_gradients: {self.config.optimizer_release_gradients}"
                     )
-                    self.optimizer.optimizer_accumulation = (
-                        should_not_release_gradients
-                    )
+                    self.optimizer.optimizer_accumulation = should_not_release_gradients
                 else:
                     self.optimizer.step()
-                self.optimizer.zero_grad(
-                    set_to_none=self.config.set_grads_to_none
-                )
+                self.optimizer.zero_grad(set_to_none=self.config.set_grads_to_none)
 
         # Checks if the accelerator has performed an optimization step behind the scenes
         wandb_logs = {}
@@ -2617,18 +2604,13 @@ class Model(pl.LightningModule):
                 self.accelerator.wait_for_everyone()
 
             # Log scatter plot to wandb
-            if (
-                self.config.report_to == "wandb"
-                and self.accelerator.is_main_process
-            ):
+            if self.config.report_to == "wandb" and self.accelerator.is_main_process:
                 # Prepare the data for the scatter plot
                 data = [
                     [iteration, timestep]
                     for iteration, timestep in self.timesteps_buffer
                 ]
-                table = wandb.Table(
-                    data=data, columns=["global_step", "timestep"]
-                )
+                table = wandb.Table(data=data, columns=["global_step", "timestep"])
                 wandb_logs["timesteps_scatter"] = wandb.plot.scatter(
                     table,
                     "global_step",
@@ -2660,8 +2642,7 @@ class Model(pl.LightningModule):
 
             if (
                 self.config.webhook_reporting_interval is not None
-                and self.state["global_step"]
-                % self.config.webhook_reporting_interval
+                and self.state["global_step"] % self.config.webhook_reporting_interval
                 == 0
             ):
                 structured_data = {
@@ -2692,10 +2673,7 @@ class Model(pl.LightningModule):
                         )
 
                         # before we save the new checkpoint, we need to have at _most_ `checkpoints_total_limit - 1` checkpoints
-                        if (
-                            len(checkpoints)
-                            >= self.config.checkpoints_total_limit
-                        ):
+                        if len(checkpoints) >= self.config.checkpoints_total_limit:
                             num_to_remove = (
                                 len(checkpoints)
                                 - self.config.checkpoints_total_limit
@@ -2784,13 +2762,11 @@ class Model(pl.LightningModule):
                         webhook_handler=self.webhook_handler,
                     )
                 except Exception as e:
-                    logger.error(
-                        f"Error uploading to hub: {e}, continuing training."
-                    )
+                    logger.error(f"Error uploading to hub: {e}, continuing training.")
         self.accelerator.wait_for_everyone()
 
         return loss
-    
+
     def on_train_end(self):
         self.accelerator.wait_for_everyone()
         validation_images = None
@@ -2848,6 +2824,7 @@ class Model(pl.LightningModule):
 
                 if self.config.model_family == "flux":
                     from diffusers.pipelines import FluxPipeline
+
                     print("saving lora...")
                     self.save_lora()
 
@@ -2857,22 +2834,23 @@ class Model(pl.LightningModule):
                 del text_encoder_2_lora_layers
                 reclaim_memory()
         self.accelerator.end_training()
-       
 
     def configure_optimizers(self):
-    
+
         print("configuring optimizers...")
         # print("model params:")
         # print("model:", self)
         # print(list(self.parameters()))
         opt = torch.optim.Adam(self.parameters(), lr=1e-5)
         return opt
-    
+
     @rank_zero_only
     def save_lora(self):
         with open("configs/006_flux/config.json", "r") as f:
             output_dir = json.load(f).get("--output_dir")
-        lora_weights = lora_checkpoint_callback.on_save_checkpoint(self.trainer, pl.LightningModule, self.state_dict())
+        lora_weights = lora_checkpoint_callback.on_save_checkpoint(
+            self.trainer, pl.LightningModule, self.state_dict()
+        )
 
         new_lora_weights = {}
         # rename the state_dict keys
@@ -2886,8 +2864,6 @@ class Model(pl.LightningModule):
             new_k = ".".join(k_list)
             new_lora_weights[new_k] = lora_weights[k]
 
-        save_path = os.path.join(output_dir, 'pytorch_lora_own.ckpt')
+        save_path = os.path.join(output_dir, "pytorch_lora_own.ckpt")
         torch.save(new_lora_weights, save_path)
         print("lora saved successfully at:", save_path)
-
-   

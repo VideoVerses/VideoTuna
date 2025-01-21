@@ -7,7 +7,10 @@ from timm.models.layers import DropPath
 from timm.models.vision_transformer import Mlp
 
 from videotuna.opensora.acceleration.checkpoint import auto_grad_checkpoint
-from videotuna.opensora.acceleration.communications import gather_forward_split_backward, split_forward_gather_backward
+from videotuna.opensora.acceleration.communications import (
+    gather_forward_split_backward,
+    split_forward_gather_backward,
+)
 from videotuna.opensora.acceleration.parallel_states import get_sequence_parallel_group
 from videotuna.opensora.models.layers.blocks import (
     Attention,
@@ -53,7 +56,9 @@ class STDiTBlock2(nn.Module):
             self.attn_cls = Attention
             self.mha_cls = MultiHeadCrossAttention
 
-        self.norm1 = get_layernorm(hidden_size, eps=1e-6, affine=False, use_kernel=enable_layernorm_kernel)
+        self.norm1 = get_layernorm(
+            hidden_size, eps=1e-6, affine=False, use_kernel=enable_layernorm_kernel
+        )
         self.attn = self.attn_cls(
             hidden_size,
             num_heads=num_heads,
@@ -61,12 +66,19 @@ class STDiTBlock2(nn.Module):
             enable_flashattn=enable_flashattn,
         )
         self.cross_attn = self.mha_cls(hidden_size, num_heads)
-        self.norm2 = get_layernorm(hidden_size, eps=1e-6, affine=False, use_kernel=enable_layernorm_kernel)
+        self.norm2 = get_layernorm(
+            hidden_size, eps=1e-6, affine=False, use_kernel=enable_layernorm_kernel
+        )
         self.mlp = Mlp(
-            in_features=hidden_size, hidden_features=int(hidden_size * mlp_ratio), act_layer=approx_gelu, drop=0
+            in_features=hidden_size,
+            hidden_features=int(hidden_size * mlp_ratio),
+            act_layer=approx_gelu,
+            drop=0,
         )
         self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
-        self.scale_shift_table = nn.Parameter(torch.randn(6, hidden_size) / hidden_size**0.5)
+        self.scale_shift_table = nn.Parameter(
+            torch.randn(6, hidden_size) / hidden_size**0.5
+        )
 
         # temporal attention
         self.d_s = d_s
@@ -84,7 +96,7 @@ class STDiTBlock2(nn.Module):
             qkv_bias=True,
             enable_flashattn=self.enable_flashattn,
         )
-    
+
     def t_mask_select(self, x_mask, x, masked_x, T, S):
         # x: [B, (T, S), C]
         # mased_x: [B, (T, S), C]
@@ -95,16 +107,23 @@ class STDiTBlock2(nn.Module):
         x = rearrange(x, "B T S C -> B (T S) C")
         return x
 
-    def forward(self, x, y, t, mask=None, tpe=None, x_mask=None, t0=None, T=None, S=None):
+    def forward(
+        self, x, y, t, mask=None, tpe=None, x_mask=None, t0=None, T=None, S=None
+    ):
         B, N, C = x.shape
 
         shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = (
             self.scale_shift_table[None] + t.reshape(B, 6, -1)
         ).chunk(6, dim=1)
         if x_mask is not None:
-            shift_msa_zero, scale_msa_zero, gate_msa_zero, shift_mlp_zero, scale_mlp_zero, gate_mlp_zero = (
-                self.scale_shift_table[None] + t0.reshape(B, 6, -1)
-            ).chunk(6, dim=1)
+            (
+                shift_msa_zero,
+                scale_msa_zero,
+                gate_msa_zero,
+                shift_mlp_zero,
+                scale_mlp_zero,
+                gate_mlp_zero,
+            ) = (self.scale_shift_table[None] + t0.reshape(B, 6, -1)).chunk(6, dim=1)
 
         # modulate
         x_m = t2i_modulate(self.norm1(x), shift_msa, scale_msa)
@@ -211,7 +230,9 @@ class STDiT2(nn.Module):
 
         self.x_embedder = PatchEmbed3D(patch_size, in_channels, hidden_size)
         self.t_embedder = TimestepEmbedder(hidden_size)
-        self.t_block = nn.Sequential(nn.SiLU(), nn.Linear(hidden_size, 6 * hidden_size, bias=True))
+        self.t_block = nn.Sequential(
+            nn.SiLU(), nn.Linear(hidden_size, 6 * hidden_size, bias=True)
+        )
         self.y_embedder = CaptionEmbedder(
             in_channels=caption_channels,
             hidden_size=hidden_size,
@@ -237,7 +258,9 @@ class STDiT2(nn.Module):
                 for i in range(self.depth)
             ]
         )
-        self.final_layer = T2IFinalLayer(hidden_size, np.prod(self.patch_size), self.out_channels)
+        self.final_layer = T2IFinalLayer(
+            hidden_size, np.prod(self.patch_size), self.out_channels
+        )
 
         # init model
         self.initialize_weights()
@@ -278,13 +301,17 @@ class STDiT2(nn.Module):
 
         # embedding
         x = self.x_embedder(x)  # [B, N, C]
-        x = rearrange(x, "B (T S) C -> B T S C", T=self.num_temporal, S=self.num_spatial)
+        x = rearrange(
+            x, "B (T S) C -> B T S C", T=self.num_temporal, S=self.num_spatial
+        )
         x = x + self.pos_embed
         x = rearrange(x, "B T S C -> B (T S) C")
 
         # shard over the sequence dim if sp is enabled
         if self.enable_sequence_parallelism:
-            x = split_forward_gather_backward(x, get_sequence_parallel_group(), dim=1, grad_scale="down")
+            x = split_forward_gather_backward(
+                x, get_sequence_parallel_group(), dim=1, grad_scale="down"
+            )
 
         t = self.t_embedder(timestep, dtype=x.dtype)  # [B, C]
         t_emb = self.t_block(t)  # [B, C]
@@ -301,7 +328,11 @@ class STDiT2(nn.Module):
             if mask.shape[0] != y.shape[0]:
                 mask = mask.repeat(y.shape[0] // mask.shape[0], 1)
             mask = mask.squeeze(1).squeeze(1)
-            y = y.squeeze(1).masked_select(mask.unsqueeze(-1) != 0).view(1, -1, x.shape[-1])
+            y = (
+                y.squeeze(1)
+                .masked_select(mask.unsqueeze(-1) != 0)
+                .view(1, -1, x.shape[-1])
+            )
             y_lens = mask.sum(dim=1).tolist()
         else:
             y_lens = [y.shape[2]] * y.shape[0]
@@ -312,20 +343,28 @@ class STDiT2(nn.Module):
             if i == 0:
                 if self.enable_sequence_parallelism:
                     tpe = torch.chunk(
-                        self.pos_embed_temporal, dist.get_world_size(get_sequence_parallel_group()), dim=1
+                        self.pos_embed_temporal,
+                        dist.get_world_size(get_sequence_parallel_group()),
+                        dim=1,
                     )[self.sp_rank].contiguous()
                 else:
                     tpe = self.pos_embed_temporal
             else:
                 tpe = None
-            x = auto_grad_checkpoint(block, x, y, t_emb, y_lens, tpe, x_mask, t0_emb, T, S)
+            x = auto_grad_checkpoint(
+                block, x, y, t_emb, y_lens, tpe, x_mask, t0_emb, T, S
+            )
 
         if self.enable_sequence_parallelism:
-            x = gather_forward_split_backward(x, get_sequence_parallel_group(), dim=1, grad_scale="up")
+            x = gather_forward_split_backward(
+                x, get_sequence_parallel_group(), dim=1, grad_scale="up"
+            )
         # x.shape: [B, N, C]
 
         # final process
-        x = self.final_layer(x, t, x_mask, t0, T, S)  # [B, N, C=T_p * H_p * W_p * C_out]
+        x = self.final_layer(
+            x, t, x_mask, t0, T, S
+        )  # [B, N, C=T_p * H_p * W_p * C_out]
         x = self.unpatchify(x)  # [B, C_out, T, H, W]
 
         # cast to float32 for better accuracy
@@ -374,7 +413,9 @@ class STDiT2(nn.Module):
             (grid_size[0] // self.patch_size[1], grid_size[1] // self.patch_size[2]),
             scale=self.space_scale,
         )
-        pos_embed = torch.from_numpy(pos_embed).float().unsqueeze(0).requires_grad_(False)
+        pos_embed = (
+            torch.from_numpy(pos_embed).float().unsqueeze(0).requires_grad_(False)
+        )
         return pos_embed
 
     def get_temporal_pos_embed(self):
@@ -383,7 +424,9 @@ class STDiT2(nn.Module):
             self.input_size[0] // self.patch_size[0],
             scale=self.time_scale,
         )
-        pos_embed = torch.from_numpy(pos_embed).float().unsqueeze(0).requires_grad_(False)
+        pos_embed = (
+            torch.from_numpy(pos_embed).float().unsqueeze(0).requires_grad_(False)
+        )
         return pos_embed
 
     def freeze_not_temporal(self):
@@ -436,7 +479,9 @@ class STDiT2(nn.Module):
 
 @MODELS.register_module("STDiT2-XL/2")
 def STDiT2_XL_2(from_pretrained=None, **kwargs):
-    model = STDiT2(depth=28, hidden_size=1152, patch_size=(1, 2, 2), num_heads=16, **kwargs)
+    model = STDiT2(
+        depth=28, hidden_size=1152, patch_size=(1, 2, 2), num_heads=16, **kwargs
+    )
     if from_pretrained is not None:
         load_checkpoint(model, from_pretrained)
     return model

@@ -1,18 +1,22 @@
-import time
 import random
-
+import time
 from pathlib import Path
-from loguru import logger
 
 import torch
-from videotuna.hyvideo.constants import PROMPT_TEMPLATE, NEGATIVE_PROMPT, PRECISION_TO_TYPE
-from videotuna.hyvideo.vae import load_vae
+from loguru import logger
+
+from videotuna.hyvideo.constants import (
+    NEGATIVE_PROMPT,
+    PRECISION_TO_TYPE,
+    PROMPT_TEMPLATE,
+)
+from videotuna.hyvideo.diffusion.pipelines import HunyuanVideoPipeline
+from videotuna.hyvideo.diffusion.schedulers import FlowMatchDiscreteScheduler
 from videotuna.hyvideo.modules import load_model
+from videotuna.hyvideo.modules.posemb_layers import get_nd_rotary_pos_embed
 from videotuna.hyvideo.text_encoder import TextEncoder
 from videotuna.hyvideo.utils.data_utils import align_to
-from videotuna.hyvideo.modules.posemb_layers import get_nd_rotary_pos_embed
-from videotuna.hyvideo.diffusion.schedulers import FlowMatchDiscreteScheduler
-from videotuna.hyvideo.diffusion.pipelines import HunyuanVideoPipeline
+from videotuna.hyvideo.vae import load_vae
 
 
 class Inference(object):
@@ -43,9 +47,7 @@ class Inference(object):
         self.device = (
             device
             if device is not None
-            else "cuda"
-            if torch.cuda.is_available()
-            else "cpu"
+            else "cuda" if torch.cuda.is_available() else "cpu"
         )
         self.logger = logger
 
@@ -486,7 +488,7 @@ class HunyuanVideoSampler(Inference):
         scheduler = FlowMatchDiscreteScheduler(
             shift=flow_shift,
             reverse=self.args.flow_reverse,
-            solver=self.args.flow_solver
+            solver=self.args.flow_solver,
         )
         self.pipeline.scheduler = scheduler
 

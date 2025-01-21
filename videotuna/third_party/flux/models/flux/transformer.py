@@ -8,13 +8,16 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 from diffusers.configuration_utils import ConfigMixin, register_to_config
 from diffusers.loaders import FromOriginalModelMixin, PeftAdapterMixin
 from diffusers.models.attention import FeedForward
-from diffusers.models.attention_processor import (
-    Attention,
+from diffusers.models.attention_processor import Attention
+from diffusers.models.embeddings import (
+    CombinedTimestepGuidanceTextProjEmbeddings,
+    CombinedTimestepTextProjEmbeddings,
+    FluxPosEmbed,
 )
+from diffusers.models.modeling_outputs import Transformer2DModelOutput
 from diffusers.models.modeling_utils import ModelMixin
 from diffusers.models.normalization import (
     AdaLayerNormContinuous,
@@ -29,13 +32,6 @@ from diffusers.utils import (
     unscale_lora_layers,
 )
 from diffusers.utils.torch_utils import maybe_allow_in_graph
-from diffusers.models.embeddings import (
-    CombinedTimestepGuidanceTextProjEmbeddings,
-    CombinedTimestepTextProjEmbeddings,
-    FluxPosEmbed,
-)
-from diffusers.models.modeling_outputs import Transformer2DModelOutput
-
 
 logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -48,8 +44,8 @@ except:
     pass
 
 from videotuna.third_party.flux.models.flux.attention import (
-    FluxSingleAttnProcessor3_0,
     FluxAttnProcessor3_0,
+    FluxSingleAttnProcessor3_0,
 )
 
 

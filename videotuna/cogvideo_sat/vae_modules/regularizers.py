@@ -16,7 +16,9 @@ class DiagonalGaussianDistribution(object):
         self.std = torch.exp(0.5 * self.logvar)
         self.var = torch.exp(self.logvar)
         if self.deterministic:
-            self.var = self.std = torch.zeros_like(self.mean).to(device=self.parameters.device)
+            self.var = self.std = torch.zeros_like(self.mean).to(
+                device=self.parameters.device
+            )
 
     def sample(self):
         # x = self.mean + self.std * torch.randn(self.mean.shape).to(
@@ -77,10 +79,14 @@ class IdentityRegularizer(AbstractRegularizer):
         yield from ()
 
 
-def measure_perplexity(predicted_indices: torch.Tensor, num_centroids: int) -> Tuple[torch.Tensor, torch.Tensor]:
+def measure_perplexity(
+    predicted_indices: torch.Tensor, num_centroids: int
+) -> Tuple[torch.Tensor, torch.Tensor]:
     # videotuna: https://github.com/karpathy/deep-vector-quantization/blob/main/model.py
     # eval cluster perplexity. when perplexity == num_embeddings then all clusters are used exactly equally
-    encodings = F.one_hot(predicted_indices, num_centroids).float().reshape(-1, num_centroids)
+    encodings = (
+        F.one_hot(predicted_indices, num_centroids).float().reshape(-1, num_centroids)
+    )
     avg_probs = encodings.mean(0)
     perplexity = (-(avg_probs * torch.log(avg_probs + 1e-10)).sum()).exp()
     cluster_use = torch.sum(avg_probs > 0)
