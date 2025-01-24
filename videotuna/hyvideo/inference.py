@@ -5,14 +5,14 @@ from pathlib import Path
 from loguru import logger
 
 import torch
-from hyvideo.constants import PROMPT_TEMPLATE, NEGATIVE_PROMPT, PRECISION_TO_TYPE
-from hyvideo.vae import load_vae
-from hyvideo.modules import load_model
-from hyvideo.text_encoder import TextEncoder
-from hyvideo.utils.data_utils import align_to
-from hyvideo.modules.posemb_layers import get_nd_rotary_pos_embed
-from hyvideo.diffusion.schedulers import FlowMatchDiscreteScheduler
-from hyvideo.diffusion.pipelines import HunyuanVideoPipeline
+from videotuna.hyvideo.constants import PROMPT_TEMPLATE, NEGATIVE_PROMPT, PRECISION_TO_TYPE
+from videotuna.hyvideo.vae import load_vae
+from videotuna.hyvideo.modules import load_model
+from videotuna.hyvideo.text_encoder import TextEncoder
+from videotuna.hyvideo.utils.data_utils import align_to
+from videotuna.hyvideo.modules.posemb_layers import get_nd_rotary_pos_embed
+from videotuna.hyvideo.diffusion.schedulers import FlowMatchDiscreteScheduler
+from videotuna.hyvideo.diffusion.pipelines import HunyuanVideoPipeline
 
 
 class Inference(object):

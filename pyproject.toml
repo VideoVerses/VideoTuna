@@ -50,12 +50,16 @@ beartype = "0.18.5"
 moviepy = "1.0.2"
 open-clip-torch = "2.12.0"
 numpy = "==1.*"
+diffusers = "^0.32.2"
+hpsv2 = {git = "https://github.com/tgxs002/HPSv2.git"}
+backports-tarfile = "^1.2.0"
+swissarmytransformer = {path = "SwissArmyTransformer", develop = true}
 
 [tool.poetry.dev-dependencies]
 black = "^24.0.0"
 isort = "^5.12.0"
 mypy = "^1.11.2"
-pytest = "^8.3.3"
+pytest = "7.2.0"
 pre-commit = "^4.0.0"
 coverage = "^7.6.1"
 ruff = "^0.6.8"
@@ -67,10 +71,10 @@ format-check = 'scripts:code_format_check'
 lint = 'scripts:lint'
 test = 'scripts:test'
 type-check = 'scripts:type_check'
-inference-cogvideo-i2v-diffusers = 'scripts:inference_cogVideo_i2v_diffusers'
+inference-cogvideo-i2v-diffusers = 'scripts:inference_cogvideo_i2v_diffusers'
 inference-cogvideo-i2v-lora = 'scripts:inference_cogvideo_i2v_lora'
 inference-cogvideo-lora = 'scripts:inference_cogvideo_lora'
-inference-cogvideo-t2v-diffusers = 'scripts:inference_cogVideo_t2v_diffusers'
+inference-cogvideo-t2v-diffusers = 'scripts:inference_cogvideo_t2v_diffusers'
 inference-cogvideox-15-5b-i2v = 'scripts:inference_cogvideox1_5_5b_i2v'
 inference-cogvideox-15-5b-t2v = 'scripts:inference_cogvideox1_5_5b_t2v'
 inference-dc-i2v-576x1024 = 'scripts:inference_dc_i2v_576x1024'
