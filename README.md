@@ -363,7 +363,7 @@ After downloading, the model checkpoints should be placed as [Checkpoint Structu
 
 Task|Model|Command|Length (#frames)|Resolution|Inference Time (s)|GPU Memory (GiB)|
 |:---------|:---------|:---------|:---------|:---------|:---------|:---------|
-|T2V|HunyuanVideo|`bash shscripts/inference_hunyuan_diffusers.sh`|129|720x1280|1920|59.15|
+|T2V|HunyuanVideo|`bash shscripts/inference_hunyuan_src.sh`|129|720x1280|1920|59.15|
 |T2V|Mochi|`bash shscripts/inference_mochi.sh`|84|480x848|109.0|26|
 |I2V|CogVideoX-5b-I2V|`bash shscripts/inference_cogVideo_i2v_diffusers.sh`|49|480x720|310.4|4.78|
 |T2V|CogVideoX-2b|`bash shscripts/inference_cogVideo_t2v_diffusers.sh`|49|480x720|107.6|2.32|
@@ -453,6 +453,64 @@ owndata/
 ```
 bash configs/train/000_videocrafter2ft/run.sh
 ``` -->
+
+#### 4. HunyuanVideo Fine-tuning
+
+Please follow the steps below:
+  1) Install the environment
+     ``` shell
+      conda create --name videotuna-hunyuan python=3.10 -y
+      conda activate videotuna-hunyuan
+      pip install -r requirements-hunyuan-finetune.txt
+     ```
+     
+  2) Prepare the dataset
+     ``` shell
+      # install `huggingface_hub`
+      huggingface-cli download \
+        --repo-type dataset Wild-Heart/Disney-VideoGeneration-Dataset \
+        --local-dir Dataset/video-dataset-disney
+     ```
+     
+     <details close>
+      <summary>
+        
+      **Customized Dataset Preparation**
+      </summary>
+         If you would like to use a custom dataset, make sure to create a `prompt.txt` file, which should contain prompts separated by lines. Please note that the prompts must be in English, and it is recommended to use the [prompt refinement script](https://github.com/THUDM/CogVideo/blob/main/inference/convert_demo.py) for better prompts. Alternatively, you can use [CogVideo-caption](https://huggingface.co/THUDM/cogvlm2-llama3-caption) for data annotation:
+         
+        ```
+        A black and white animated sequence featuring a rabbit, named Rabbity Ribfried, and an anthropomorphic goat in a musical, playful environment, showcasing their evolving interaction.
+        A black and white animated sequence on a ship’s deck features a bulldog character, named Bully Bulldoger, showcasing exaggerated facial expressions and body language...
+        ...
+        ```
+        
+        You will also need a `videos.txt` file. The `videos.txt` file should contain the video file paths, separated by lines. Please note that the paths must be relative to the `--data_root` directory. The format is as follows:
+     
+        ```
+        videos/00000.mp4
+        videos/00001.mp4
+        ...
+        ```
+        
+        The training video resolution should be divisible by 32. For example, `720 * 480`, `1920 * 1020`, etc. And the frame counts (length) must be `4 * k` or `4 * k + 1` (example: 16, 32, 49, 81)
+       </details>  
+  4) Download the checkpoints
+     
+      ```
+        huggingface-cli download hunyuanvideo-community/HunyuanVideo --local-dir ./checkpoints/hunyuan/HunyuanVideo
+      ```
+
+     Please note you need about 60G CUDA memory for HunyuanVideo training and 40G+ for inference. You may decrease the video size and frame length to try to save memory. 
+  4) Train the LoRA
+     ```
+     bash shscripts/train_hunyuan_lora.sh
+     ```
+  5) Run the inference
+     ```
+     bash shscripts/inference_hunyuan_diffusers.sh
+     ```
+
 
 #### Finetuning for enhanced langugage understanding
 

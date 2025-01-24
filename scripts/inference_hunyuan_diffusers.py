@@ -1,60 +1,55 @@
-import os
-import sys
-import time
-from pathlib import Path
-from loguru import logger
-from datetime import datetime
-
-sys.path.insert(0, os.getcwd())
-sys.path.insert(1, f'{os.getcwd()}/src')
-from src.hyvideo.utils.file_utils import save_videos_grid
-from src.hyvideo.config import parse_args
-from src.hyvideo.inference import HunyuanVideoSampler
+import torch
+import argparse
+from diffusers import HunyuanVideoPipeline, HunyuanVideoTransformer3DModel
+from diffusers.utils import export_to_video
 
 
+# Function to parse arguments
+def parse_args():
+    parser = argparse.ArgumentParser(description="Hyperparameters for Hunyuan Video Inference")
+    parser.add_argument('--ckpt-path', type=str, required=True, help="Path to the checkpoint directory")
+    parser.add_argument('--lora-path', type=str, required=True, help="Path to the LoRA weights")
+    parser.add_argument('--lora-weight', type=float, required=True, help="Weight for the LoRA model")
+    parser.add_argument('--prompt', type=str, required=True, help="Prompt for the video generation")
+    parser.add_argument('--video-size', type=int, nargs=2, required=True,
+                        help="Height and width of the generated video")
+    parser.add_argument('--video-frame-length', type=int, required=True, help="Number of frames in the video")
+    parser.add_argument('--video-fps', type=int, required=True, help="Frames per second for the output video")
+    parser.add_argument('--infer-steps', type=int, required=True, help="Number of inference steps")
+    parser.add_argument('--output-path', type=str, required=True, help="Path to save the output video")
+
+    return parser.parse_args()
+
+
+# Main function
 def main():
+    # Parse arguments
     args = parse_args()
-    print(args)
-    models_root_path = Path(args.model_base)
-    if not models_root_path.exists():
-        raise ValueError(f"`models_root` not exists: {models_root_path}")
 
-    # Create save folder to save the samples
-    save_path = args.save_path if args.save_path_suffix == "" else f'{args.save_path}_{args.save_path_suffix}'
-    if not os.path.exists(args.save_path):
-        os.makedirs(save_path, exist_ok=True)
+    # Load model and pipeline
+    transformer = HunyuanVideoTransformer3DModel.from_pretrained(args.ckpt_path, subfolder="transformer",
+                                                                 torch_dtype=torch.bfloat16)
+    pipe = HunyuanVideoPipeline.from_pretrained(args.ckpt_path, transformer=transformer, torch_dtype=torch.float16)
 
-    # Load models
-    hunyuan_video_sampler = HunyuanVideoSampler.from_pretrained(models_root_path, args=args)
+    # Load LoRA weights
+    pipe.load_lora_weights(args.lora_path, adapter_name="hunyuanvideo-lora")
+    pipe.set_adapters(["hunyuanvideo-lora"], [args.lora_weight])
 
-    # Get the updated args
-    args = hunyuan_video_sampler.args
+    # Enable tiling and move to GPU
+    pipe.vae.enable_tiling()
+    pipe.to("cuda")
 
-    # Start sampling
-    # TODO: batch inference check
-    outputs = hunyuan_video_sampler.predict(
+    # Generate video frames
+    output = pipe(
         prompt=args.prompt,
         height=args.video_size[0],
         width=args.video_size[1],
-        video_length=args.video_length,
-        seed=args.seed,
-        negative_prompt=args.neg_prompt,
-        infer_steps=args.infer_steps,
-        guidance_scale=args.cfg_scale,
-        num_videos_per_prompt=args.num_videos,
-        flow_shift=args.flow_shift,
-        batch_size=args.batch_size,
-        embedded_guidance_scale=args.embedded_cfg_scale
-    )
-    samples = outputs['samples']
+        num_frames=args.video_frame_length,
+        num_inference_steps=args.infer_steps,
+    ).frames[0]
 
-    # Save samples
-    for i, sample in enumerate(samples):
-        sample = samples[i].unsqueeze(0)
-        time_flag = datetime.fromtimestamp(time.time()).strftime("%Y-%m-%d-%H:%M:%S")
-        save_path = f"{save_path}/{time_flag}_seed{outputs['seeds'][i]}_{outputs['prompts'][i][:100].replace('/', '')}.mp4"
-        save_videos_grid(sample, save_path, fps=24)
-        logger.info(f'Sample save to: {save_path}')
+    # Export to video
+    export_to_video(output, args.output_path, fps=args.video_fps)
 
 
 if __name__ == "__main__":
