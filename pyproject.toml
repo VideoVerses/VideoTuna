@@ -9,6 +9,13 @@ readme = "README.md"
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
+[[tool.poetry.source]]
+name = "pypi"
+
+[[tool.poetry.source]]
+name = "modelscope"
+url = "https://modelscope.oss-cn-beijing.aliyuncs.com/releases/repo.html"
+
 [tool.poetry.dependencies]
 python = "^3.10"
 deepspeed = "0.15.4"
@@ -36,7 +43,7 @@ pyyaml = "6.0.2"
 rotary-embedding-torch = "0.6.5"
 requests = "2.32.3"
 safetensors = "0.4.4"
-timm = "1.0.8"
+timm = "0.5.4"
 torchvision = "0.17.2"
 tqdm = "4.66.5"
 transformers = "4.39.3"
@@ -47,13 +54,15 @@ pyramid = "1.5"
 wandb = "0.17.8"
 scipy = "1.14.1"
 beartype = "0.18.5"
-moviepy = "1.0.2"
+moviepy = "1.0.3"
 open-clip-torch = "2.12.0"
 numpy = "==1.*"
 diffusers = "^0.32.2"
+modelscope = { version = "1.22.3", extras = ["cv"] }
+torchsde = "0.2.6"
 hpsv2 = {git = "https://github.com/tgxs002/HPSv2.git"}
 backports-tarfile = "^1.2.0"
-swissarmytransformer = {path = "SwissArmyTransformer", develop = true}
+swissarmytransformer = {git = "https://github.com/JingyeChen/SwissArmyTransformer"}
 
 [tool.poetry.dev-dependencies]
 black = "^24.0.0"
@@ -65,6 +74,7 @@ coverage = "^7.6.1"
 ruff = "^0.6.8"
 
 [tool.poetry.scripts]
+install-flash-attn = 'scripts:install_flash_attn'
 coverage-report = 'scripts:coverage_report'
 format = 'scripts:code_format'
 format-check = 'scripts:code_format_check'
@@ -80,7 +90,7 @@ inference-cogvideox-15-5b-t2v = 'scripts:inference_cogvideox1_5_5b_t2v'
 inference-dc-i2v-576x1024 = 'scripts:inference_dc_i2v_576x1024'
 inference-flux = 'scripts:inference_flux'
 inference-flux-lora = 'scripts:inference_flux_lora'
-inference-hunyuan-diffusers = 'scripts:inference_hunyuan_diffusers'
+inference-hunyuan = 'scripts:inference_hunyuan'
 inference-mochi = 'scripts:inference_mochi'
 inference-opensora-v10-16x256x256 = 'scripts:inference_opensora_v10_16x256x256'
 inference-v2v-ms = 'scripts:inference_v2v_ms'

@@ -8,7 +8,7 @@ import pytorch_lightning as pl
 
 from videotuna.lvdm.modules.ae_modules import Encoder, Decoder
 from videotuna.base.distributions import DiagonalGaussianDistribution
-from utils.common_utils import instantiate_from_config
+from videotuna.utils.common_utils import instantiate_from_config
 
 
 class AutoencoderKL(pl.LightningModule):
