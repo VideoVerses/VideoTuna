@@ -8,6 +8,21 @@ from datetime import datetime
 
 current_time = datetime.now().strftime("%Y%m%d%H%M%S")
 
+def install_flash_attn():
+    command_install_cuda_nvcc = [
+        "conda", "install", 
+        "-c", "nvidia", "cuda-nvcc",
+        "-y"
+    ] + sys.argv[1:]
+    command_install_flash_attn =[
+        "pip", "install", "flash-attn==2.7.3", "--no-build-isolation"
+    ]
+    result_nvcc = subprocess.run(command_install_cuda_nvcc, check=False)
+    if result_nvcc.returncode != 0:
+        exit(result_nvcc.returncode)
+
+    result_flash = subprocess.run(command_install_flash_attn, check=False)
+    exit(result_flash.returncode)
 
 def code_format(check=False):
     """
@@ -264,9 +279,9 @@ def inference_flux_lora():
     exit(result.returncode)
 
 
-def inference_hunyuan_diffusers():
+def inference_hunyuan():
     result = subprocess.run([
-        "python", "scripts/inference_hunyuan_diffusers.py",
+        "python", "scripts/inference_hunyuan.py",
         "--video-size", "544", "960",
         "--video-length", "129",
         "--infer-steps", "50",
