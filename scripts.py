@@ -223,25 +223,12 @@ def inference_dc_i2v_576x1024():
     exit(result.returncode)
 
 
-def inference_flux():
+def inference_flux_schnell():
     # Common parameters
     prompt = "inputs/t2v/prompts.txt"
     width = 1360
     height = 768
 
-    # First inference with "dev" model
-    command_dev = [
-        "python", "scripts/inference_flux.py",
-        "--model_type", "dev",
-        "--prompt", prompt,
-        "--out_path", "results/flux-dev/",
-        "--width", str(width),
-        "--height", str(height),
-        "--num_inference_steps", "50",
-        "--guidance_scale", "0."
-    ] + sys.argv[1:]
-
-    # Second inference with "schnell" model
     command_schnell = [
         "python", "scripts/inference_flux.py",
         "--model_type", "schnell",
@@ -253,15 +240,28 @@ def inference_flux():
         "--guidance_scale", "0."
     ] + sys.argv[1:]
 
-    # Run the first command
-    result_dev = subprocess.run(command_dev, check=False)
-    if result_dev.returncode != 0:
-        exit(result_dev.returncode)
-
-    # Run the second command
     result_schnell = subprocess.run(command_schnell, check=False)
     exit(result_schnell.returncode)
 
+def inference_flux_dev():
+    # Common parameters
+    prompt = "inputs/t2v/prompts.txt"
+    width = 1360
+    height = 768
+    
+    command_dev = [
+        "python", "scripts/inference_flux.py",
+        "--model_type", "dev",
+        "--prompt", prompt,
+        "--out_path", "results/flux-dev/",
+        "--width", str(width),
+        "--height", str(height),
+        "--num_inference_steps", "50",
+        "--guidance_scale", "0."
+    ] + sys.argv[1:]
+
+    result_dev = subprocess.run(command_dev, check=False)
+    exit(result_dev.returncode)
 
 def inference_flux_lora():
     os.environ["lora_ckpt"] = "{YOUR_CORA_CKPT_PATH}"
