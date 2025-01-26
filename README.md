@@ -323,19 +323,14 @@ Please check [docs/CHECKPOINTS.md](docs/CHECKPOINTS.md) to download all the mode
 
 ### 1.Prepare environment
 ``` shell
-conda create --name videotuna python=3.10 -y
+conda create -n videotuna python=3.10 -y
 conda activate videotuna
-pip install -r requirements.txt
-git clone https://github.com/JingyeChen/SwissArmyTransformer
-pip install -e SwissArmyTransformer/
-git clone https://github.com/tgxs002/HPSv2.git
-cd ./HPSv2
-pip install -e .
-cd ..
-conda config --add channels conda-forge
-conda install ffmpeg
+poetry install
 ```
-
+**Flash-attn installation (Optional)**
+``` shell
+poetry run install-flash-attn 
+```
 ### 2.Prepare checkpoints
 
 Please follow [docs/CHECKPOINTS.md](https://github.com/VideoVerses/VideoTuna/blob/main/docs/CHECKPOINTS.md) to download model checkpoints.  
@@ -363,17 +358,17 @@ After downloading, the model checkpoints should be placed as [Checkpoint Structu
 
 Task|Model|Command|Length (#frames)|Resolution|Inference Time (s)|GPU Memory (GiB)|
 |:---------|:---------|:---------|:---------|:---------|:---------|:---------|
-|T2V|HunyuanVideo|`bash shscripts/inference_hunyuan_diffusers.sh`|129|720x1280|1920|59.15|
-|T2V|Mochi|`bash shscripts/inference_mochi.sh`|84|480x848|109.0|26|
-|I2V|CogVideoX-5b-I2V|`bash shscripts/inference_cogVideo_i2v_diffusers.sh`|49|480x720|310.4|4.78|
-|T2V|CogVideoX-2b|`bash shscripts/inference_cogVideo_t2v_diffusers.sh`|49|480x720|107.6|2.32|
-|T2V|Open Sora V1.0|`bash shscripts/inference_opensora_v10_16x256x256.sh`|16|256x256|11.2|23.99|
-|T2V|VideoCrafter-V2-320x512|`bash shscripts/inference_vc2_t2v_320x512.sh`|16|320x512|26.4|10.03|
-|T2V|VideoCrafter-V1-576x1024|`bash shscripts/inference_vc1_t2v_576x1024.sh`|16|576x1024|91.4|14.57|
-|I2V|DynamiCrafter|`bash shscripts/inference_dc_i2v_576x1024.sh`|16|576x1024|101.7|52.23|
-|I2V|VideoCrafter-V1|`bash shscripts/inference_vc1_i2v_320x512.sh`|16|320x512|26.4|10.03|
-|T2I|Flux-dev|`bash shscripts/inference_flux.sh`|1|768x1360|238.1|1.18|
-|T2I|Flux-schnell|`bash shscripts/inference_flux.sh`|1|768x1360|5.4|1.20|
+|T2V|HunyuanVideo|`poetry run inference-hunyuan`|129|720x1280|1920|59.15|
+|T2V|Mochi|`poetry run inference-mochi`|84|480x848|109.0|26|
+|I2V|CogVideoX-5b-I2V|`poetry run inference-cogvideox-15-5b-i2v`|49|480x720|310.4|4.78|
+|T2V|CogVideoX-2b|`poetry run inference-cogvideo-t2v-diffusers`|49|480x720|107.6|2.32|
+|T2V|Open Sora V1.0|`poetry run inference-opensora-v10-16x256x256`|16|256x256|11.2|23.99|
+|T2V|VideoCrafter-V2-320x512|`poetry run inference-vc2-t2v-320x512`|16|320x512|26.4|10.03|
+|T2V|VideoCrafter-V1-576x1024|`poetry run inference-vc1-t2v-576x1024`|16|576x1024|91.4|14.57|
+|I2V|DynamiCrafter|`poetry run inference-dc-i2v-576x1024`|16|576x1024|101.7|52.23|
+|I2V|VideoCrafter-V1|`poetry run inference-vc1-i2v-320x512`|16|320x512|26.4|10.03|
+|T2I|Flux-dev|`poetry run inference-flux-dev`|1|768x1360|238.1|1.18|
+|T2I|Flux-schnell|`poetry run inference-flux-schnell`|1|768x1360|5.4|1.20|
 
 ### 4. Finetune T2V models
 #### 4.1 Prepare dataset
