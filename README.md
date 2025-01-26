@@ -325,6 +325,7 @@ Please check [docs/CHECKPOINTS.md](docs/CHECKPOINTS.md) to download all the mode
 ``` shell
 conda create -n videotuna python=3.10 -y
 conda activate videotuna
+pip install poetry
 poetry install
 ```
 **Flash-attn installation (Optional)**
