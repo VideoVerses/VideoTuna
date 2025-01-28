@@ -515,7 +515,7 @@ def train_dynamicrafter():
     exit(result.returncode)
 
 
-def train_flux():
+def train_flux_lora():
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     os.environ["CONFIG_PATH"] = "configs/006_flux/config"
     os.environ["DATACONFIG_PATH"] = "configs/006_flux/multidatabackend"
@@ -525,7 +525,7 @@ def train_flux():
         "--mixed_precision=bf16",
         "--num_processes=1",
         "--num_machines=1",
-        "scripts/train_flux.py",
+        "scripts/train_flux_lora.py",
         "--config_path", f"{os.environ['CONFIG_PATH']}.{os.environ['CONFIG_BACKEND']}",
         "--data_config_path",
         f"{os.environ['DATACONFIG_PATH']}.{os.environ['CONFIG_BACKEND']}",

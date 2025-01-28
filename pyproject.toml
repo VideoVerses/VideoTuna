@@ -21,7 +21,7 @@ python = "^3.10"
 deepspeed = "0.15.4"
 av = "12.3.0"
 beautifulsoup4 = "4.12.3"
-colossalai = "0.4.0"
+colossalai = "0.3.6"
 decord = "0.6.0"
 einops = "0.8.0"
 fire = "0.6.0"
@@ -46,7 +46,7 @@ safetensors = "0.4.4"
 timm = "0.5.4"
 torchvision = "0.17.2"
 tqdm = "4.66.5"
-transformers = "4.39.3"
+transformers = "^4.44.0"
 xformers = "0.0.25.post1"
 imageio = "2.35.1"
 imageio-ffmpeg = "0.5.1"
@@ -60,6 +60,11 @@ numpy = "==1.*"
 diffusers = "^0.32.2"
 modelscope = { version = "1.22.3", extras = ["cv"] }
 torchsde = "0.2.6"
+colorama = "0.4.6"
+torch-optimi = "^0.2.1"
+accelerate = "^0.33.0"
+torchao = "0.8.0"
+toml = "0.10.2"
 hpsv2 = {git = "https://github.com/tgxs002/HPSv2.git"}
 backports-tarfile = "^1.2.0"
 swissarmytransformer = {git = "https://github.com/JingyeChen/SwissArmyTransformer"}
@@ -102,7 +107,7 @@ inference-vc2-t2v-320x512-lora = 'scripts:inference_vc2_t2v_320x512_lora'
 train-cogvideox-i2v-lora = 'scripts:train_cogvideox_i2v_lora'
 train-cogvideox-t2v-lora = 'scripts:train_cogvideox_t2v_lora'
 train-dynamicrafter = 'scripts:train_dynamicrafter'
-train-flux = 'scripts:train_flux'
+train-flux-lora = 'scripts:train_flux_lora'
 train-opensorav10 = 'scripts:train_opensorav10'
 train-videocrafter-lora = 'scripts:train_videocrafter_lora'
 train-videocrafter-v2 = 'scripts:train_videocrafter_v2'
