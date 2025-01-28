@@ -329,6 +329,8 @@ pip install poetry
 poetry install
 ```
 **Flash-attn installation (Optional)**
+
+Hunyuan model uses it to reduce memory usage and speed up inference. If it is not installed, the model will run in normal mode.
 ``` shell
 poetry run install-flash-attn 
 ```
@@ -371,6 +373,9 @@ Task|Model|Command|Length (#frames)|Resolution|Inference Time (s)|GPU Memory (Gi
 |T2I|Flux-dev|`poetry run inference-flux-dev`|1|768x1360|238.1|1.18|
 |T2I|Flux-schnell|`poetry run inference-flux-schnell`|1|768x1360|5.4|1.20|
 
+**Flux-dev:** Trained using guidance distillation, it requires 40 to 50 steps to generate high-quality images.
+
+**Flux-schnell:** Trained using latent adversarial diffusion distillation, it can generate high-quality images in only 1 to 4 steps.
 ### 4. Finetune T2V models
 #### 4.1 Prepare dataset
 Please follow the [docs/datasets.md](docs/datasets.md) to try provided toydataset or build your own datasets.
