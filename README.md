@@ -401,7 +401,7 @@ python tools/convert_checkpoint.py --input_path checkpoints/videocrafter/t2v_v2_
 
 Second, run this command to start training on the single GPU. The training results will be automatically saved at `results/train/${CURRENT_TIME}_${EXPNAME}`    
 ```
-bash shscripts/train_videocrafter_v2.sh
+poetry run train-videocrafter-v2
 ```
 
 
@@ -419,17 +419,17 @@ We support lora finetuning to make the model to learn new concepts/characters/st
 We support open-sora finetuning, you can simply run the following commands:
 ``` shell
 # finetune the Open-Sora v1.0
-bash shscripts/train_opensorav10.sh
+poetry run train-opensorav10
 ```
 
 #### 4. FLUX Lora Fine-tuning
 We support flux lora finetuning, you can simply run the following commands:
 ``` shell
 # finetune the Flux-Lora
-bash shscripts/train_flux.sh
+poetry run train-flux-lora
 
 # inference the lora model
-bash shscripts/inference_flux_lora.sh
+poetry run inference-flux-lora
 ```
 If you want to build your own dataset, please organize your data as `inputs/t2i/flux/plushie_teddybear`, which contains the training images and the corresponding text prompt files, as shown in the following directory structure. Then modify the `instance_data_dir` in`configs/006_flux/multidatabackend.json`.
 ```
