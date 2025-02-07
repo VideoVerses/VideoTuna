@@ -8,10 +8,9 @@
 
 
 🤗🤗🤗 Videotuna is a useful codebase for text-to-video applications.   
-🌟 VideoTuna is the first repo that integrates multiple AI video generation models for text-to-video, image-to-video, text-to-image generation (to the best of our knowledge).   
-🌟 VideoTuna is the first repo that provides comprehensive pipelines in video generation, including pre-training, continuous training, post-training (alignment), and fine-tuning (to the best of our knowledge).   
-🌟 The models of VideoTuna include both U-Net and DiT architectures for visual generation tasks.  
-🌟 A new 3D video VAE, and a controllable facial video generation model will be released soon.  
+🌟 VideoTuna is the first repo that integrates multiple AI video generation models including `text-to-video (T2V)`, `image-to-video (I2V)`, `text-to-image (T2I)`, and `video-to-video (V2V)` generation for model inference and finetuning (to the best of our knowledge).   
+🌟 VideoTuna is the first repo that provides comprehensive pipelines in video generation, from fine-tuning to pre-training, continuous training, and post-training (alignment) (to the best of our knowledge).   
+🌟 An Emotion Control I2V model will be released soon.  
 
 
 ## Features
@@ -26,25 +25,33 @@
 
 
 ## 🔆 Updates
-- [2024-11-01] We make the VideoTuna V0.1.0 public!
+- [2025-02-03] 🐟 We update automatic code formatting from [PR#27](https://github.com/VideoVerses/VideoTuna/pull/27). Thanks [samidarko](https://github.com/samidarko)!
+- [2025-02-01] 🐟 We update [Poetry](https://python-poetry.org) migration for better dependency management and script automation from [PR#25](https://github.com/VideoVerses/VideoTuna/pull/25). Thanks [samidarko](https://github.com/samidarko)!
+- [2025-01-20] 🐟 We update the **fine-tuning** of `Flux-T2I`. Thanks VideoTuna team!
+- [2025-01-01] 🐟 We update the **training** of `VideoVAE+` in [this repo](https://github.com/VideoVerses/VideoVAEPlus). Thanks VideoTuna team!
+- [2025-01-01] 🐟 We update the **inference** of `Hunyuan Video` and `Mochi`. Thanks VideoTuna team!
+- [2024-12-24] 🐟 We release a SOTA Video VAE model `VideoVAE+` in [this repo](https://github.com/VideoVerses/VideoVAEPlus)! Better video reconstruction than Nvidia's [`Cosmos-Tokenizer`](https://github.com/NVIDIA/Cosmos-Tokenizer). Thanks VideoTuna team!
+- [2024-12-01] 🐟 We update the **inference** of `CogVideoX-1.5-T2V&I2V`, `Video-to-Video Enhancement` from ModelScope, and **fine-tuning** of `CogVideoX-1`. Thanks VideoTuna team!
+- [2024-11-01] 🐟 We make the VideoTuna V0.1.0 public! It supports inference of `VideoCrafter1-T2V&I2V`, `VideoCrafter2-T2V`, `DynamiCrafter-I2V`, `OpenSora-T2V`, `CogVideoX-1-2B-T2V`, `CogVideoX-1-T2V`, `Flux-T2I`, as well as training and finetuning of part of these models. Thanks VideoTuna team!
 
 
-## Demo
+
+## Application Demonstration
 ### Model Inference and Comparison
 
 ![combined_video_29_A_mountain_biker_racing_down_a_trail__dust_flying_behind](https://github.com/user-attachments/assets/f8249049-e0d8-47b9-a5b3-511994779cb1)
 ![combined_video_22_Fireworks_exploding_over_a_historic_river__reflections_twinkling_in_the_water](https://github.com/user-attachments/assets/868c02fc-1e44-4636-b4e7-d9f2287bc89f)
-![combined_video_20_Waves_crashing_against_a_rocky_shore_under_a_stormy_sky__spray_misting_the_air](https://github.com/user-attachments/assets/ab04d3c6-2d5d-40e5-be64-5d8373f12402)
+<!-- ![combined_video_20_Waves_crashing_against_a_rocky_shore_under_a_stormy_sky__spray_misting_the_air](https://github.com/user-attachments/assets/ab04d3c6-2d5d-40e5-be64-5d8373f12402)
 ![combined_video_17_A_butterfly_landing_delicately_on_a_wildflower_in_a_vibrant_meadow](https://github.com/user-attachments/assets/247212e5-0d5a-4f93-b47f-ee9c8ba945fb)
 ![combined_video_12_Sunlight_piercing_through_a_dense_canopy_in_a_tropical_rainforest__illuminating_a_](https://github.com/user-attachments/assets/f66551ca-7d18-4c73-9656-3d2757ea4fb5)
-![combined_video_3_Divers_observing_a_group_of_tuna_as_they_navigate_through_a_vibrant_coral_reef_teem](https://github.com/user-attachments/assets/6c084832-5a0d-42ac-b7b8-1d914b8a35dc)
+![combined_video_3_Divers_observing_a_group_of_tuna_as_they_navigate_through_a_vibrant_coral_reef_teem](https://github.com/user-attachments/assets/6c084832-5a0d-42ac-b7b8-1d914b8a35dc) -->
 
 
 
 
 
-### 3D Video VAE
-The 3D video VAE from VideoTuna can accurately compress and reconstruct the input videos with fine details.
+### Video VAE+
+Video VAE+ can accurately compress and reconstruct the input videos with fine details.
 
 <table class="center">
   
@@ -55,77 +62,20 @@ The 3D video VAE from VideoTuna can accurately compress and reconstruct the inpu
   <tr>
     <td><a href="https://github.com/user-attachments/assets/0efcbf80-0074-4421-810f-79a1f1733ed3"><img src="https://github.com/user-attachments/assets/0efcbf80-0074-4421-810f-79a1f1733ed3" width="320"></a></td>
     <td><a href="https://github.com/user-attachments/assets/4adf29f2-d413-49b1-bccc-48adfd64a4da"><img src="https://github.com/user-attachments/assets/4adf29f2-d413-49b1-bccc-48adfd64a4da" width="320"></a></td>
-  </tr>
-
-  <tr>
-    <td style="text-align:center;" width="320">Ground Truth</td>
-    <td style="text-align:center;" width="320">Reconstruction</td>
-  </tr>
-  <tr>
-    <td><a href="https://github.com/user-attachments/assets/508e2b10-487a-4850-a9d8-89fdbc13120a"><img src="https://github.com/user-attachments/assets/508e2b10-487a-4850-a9d8-89fdbc13120a" width="320"></a></td>
-    <td><a href="https://github.com/user-attachments/assets/28029b2c-4922-46ee-88d3-ff8d577d2525"><img src="https://github.com/user-attachments/assets/28029b2c-4922-46ee-88d3-ff8d577d2525)" width="320"></a></td>
-  </tr>
-
-  <tr>
-    <td style="text-align:center;" width="320">Ground Truth</td>
-    <td style="text-align:center;" width="320">Reconstruction</td>
-  </tr>
-  <tr>
-    <td><a href="https://github.com/user-attachments/assets/51471c42-8a38-4f02-b29b-e34a5279753a"><img src="https://github.com/user-attachments/assets/51471c42-8a38-4f02-b29b-e34a5279753a" width="320"></a></td>
-    <td><a href="https://github.com/user-attachments/assets/383f2120-5fed-4d9f-82d8-3de130d6bd65"><img src="https://github.com/user-attachments/assets/383f2120-5fed-4d9f-82d8-3de130d6bd65" width="320"></a></td>
-  </tr>
-
-  <tr>
-    <td style="text-align:center;" width="320">Ground Truth</td>
-    <td style="text-align:center;" width="320">Reconstruction</td>
-  </tr>
-  <tr>
-    <td><a href="https://github.com/user-attachments/assets/28892f4c-54cc-4cea-91e1-8fe6bbc7a1a4"><img src="https://github.com/user-attachments/assets/28892f4c-54cc-4cea-91e1-8fe6bbc7a1a4" width="320"></a></td>
-    <td><a href="https://github.com/user-attachments/assets/d56d34e4-c4d5-4ed2-b2c5-fa1596714492"><img src="https://github.com/user-attachments/assets/d56d34e4-c4d5-4ed2-b2c5-fa1596714492" width="320"></a></td>
-  </tr>
-  
-  <tr>
-    <td style="text-align:center;" width="320">Ground Truth</td>
-    <td style="text-align:center;" width="320">Reconstruction</td>
-  </tr>
-  <tr>
-    <td><a href="https://github.com/user-attachments/assets/a0ffc2ca-c3e2-485f-b0ea-ead0d733cc8b"><img src="https://github.com/user-attachments/assets/a0ffc2ca-c3e2-485f-b0ea-ead0d733cc8b" width="320"></a></td>
-    <td><a href="https://github.com/user-attachments/assets/1465ac70-caa9-42c7-874b-b01e13a78efb"><img src="https://github.com/user-attachments/assets/1465ac70-caa9-42c7-874b-b01e13a78efb" width="320"></a></td>
-  </tr>
-  
-  <tr>
-    <td style="text-align:center;" width="320">Ground Truth</td>
-    <td style="text-align:center;" width="320">Reconstruction</td>
-  </tr>
-  <tr>
-    <td><a href="https://github.com/user-attachments/assets/48e2eb49-265b-4eaf-b730-48fa4d7e5bfd"><img src="https://github.com/user-attachments/assets/48e2eb49-265b-4eaf-b730-48fa4d7e5bfd" width="320"></a></td>
-    <td><a href="https://github.com/user-attachments/assets/24c893c5-865e-4af4-b003-17bda2ba4f59"><img src="https://github.com/user-attachments/assets/24c893c5-865e-4af4-b003-17bda2ba4f59" width="320"></a></td>
-  </tr>
-  
-  <tr>
-    <td style="text-align:center;" width="320">Ground Truth</td>
-    <td style="text-align:center;" width="320">Reconstruction</td>
-  </tr>
-  <tr>
-    <td><a href="https://github.com/user-attachments/assets/c18ed80f-3650-43a7-8438-7914de7e39ab"><img src="https://github.com/user-attachments/assets/c18ed80f-3650-43a7-8438-7914de7e39ab" width="320"></a></td>
-    <td><a href="https://github.com/user-attachments/assets/89d38004-021b-4a4d-ab83-5627474f8928"><img src="https://github.com/user-attachments/assets/89d38004-021b-4a4d-ab83-5627474f8928" width="320"></a></td>
-  </tr>
-  
+  </tr>  
   
 </table>
 
-### Face domain
+### Emotion Control I2V
 
 <table class="center">
   <tr>
     <td><img src="https://github.com/user-attachments/assets/a1562c70-d97c-4324-bb11-47db2b83f443" width="240" alt="Image 1"></td>
-    <td><img src="https://github.com/user-attachments/assets/3196810b-48d7-4024-b687-df2009774631" width="240" alt="Image 2"></td>
     <td><img src="https://github.com/user-attachments/assets/4e873f4c-ca56-4549-aaa1-ef24032ae96b" width="240" alt="Image 3"></td>
   </tr>
   <tr>
     <td style="text-align: center;">Input 1</td>
     <td style="text-align: center;">Input 2</td>
-    <td style="text-align: center;">Input 3</td>
   </tr>
 </table>
 
@@ -152,28 +102,6 @@ The 3D video VAE from VideoTuna can accurately compress and reconstruct the inpu
   </tr>
 </table>
 
-<table class="center">
-  <tr>
-    <td><a href="https://github.com/user-attachments/assets/8ba84071-1978-4245-84b3-3a6fc3c9fa5a"><img src="https://github.com/user-attachments/assets/8ba84071-1978-4245-84b3-3a6fc3c9fa5a" width="240"></a></td>
-    <td><a href="https://github.com/user-attachments/assets/d180c358-bdff-40b4-aa5a-fa4ec73d80b6"><img src="https://github.com/user-attachments/assets/d180c358-bdff-40b4-aa5a-fa4ec73d80b6" width="240"></a></td>
-    <td><a href="https://github.com/user-attachments/assets/37004c20-3d0d-4cff-8b4a-f8a4d184de51"><img src="https://github.com/user-attachments/assets/37004c20-3d0d-4cff-8b4a-f8a4d184de51" width="240"></a></td>
-  </tr>
-  <tr>
-    <td style="text-align:center;">Emotion: Anger</td>
-    <td style="text-align:center;">Emotion: Disgust</td>
-    <td style="text-align:center;">Emotion: Fear</td>
-  </tr>
-  <tr>
-    <td><a href="https://github.com/user-attachments/assets/025fe090-7d53-4a12-9498-1c814a0ee768"><img src="https://github.com/user-attachments/assets/025fe090-7d53-4a12-9498-1c814a0ee768" width="240"></a></td>
-    <td><a href="https://github.com/user-attachments/assets/e8ddf3d1-57ea-4545-a004-66554c19f27b"><img src="https://github.com/user-attachments/assets/e8ddf3d1-57ea-4545-a004-66554c19f27b" width="240"></a></td>
-    <td><a href="https://github.com/user-attachments/assets/519b3c87-baa6-408b-b3a5-a95eece9e19e"><img src="https://github.com/user-attachments/assets/519b3c87-baa6-408b-b3a5-a95eece9e19e" width="240"></a></td>
-  </tr>
-  <tr>
-    <td style="text-align:center;">Emotion: Happy</td>
-    <td style="text-align:center;">Emotion: Sad</td>
-    <td style="text-align:center;">Emotion: Surprise</td>
-  </tr>
-</table>
 
 <table class="center">
   <tr>
@@ -199,7 +127,7 @@ The 3D video VAE from VideoTuna can accurately compress and reconstruct the inpu
 </table>
 
 
-### Storytelling
+### Character-Consistent Storytelling Video Generation
 
 <table class="center">
   <tr>
@@ -266,9 +194,9 @@ The 3D video VAE from VideoTuna can accurately compress and reconstruct the inpu
 
 
 
-## ⏰ TODOs
+<!-- ## ⏰ TODOs
 - [ ] More demo and applications
-- [ ] More functionalities such as control modules. (Suggestions are welcome!)
+- [ ] More functionalities such as control modules. (Suggestions are welcome!) -->
 
 
 ## 🔆 Information
@@ -456,7 +384,7 @@ owndata/
 bash configs/train/000_videocrafter2ft/run.sh
 ``` -->
 
-#### Finetuning for enhanced langugage understanding
+<!-- #### Finetuning for enhanced langugage understanding -->
 
 
 ### 5. Evaluation
