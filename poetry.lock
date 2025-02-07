@@ -407,6 +407,29 @@ html5lib = ["html5lib"]
 lxml = ["lxml"]
 
 [[package]]
+name = "bitsandbytes"
+version = "0.45.2"
+description = "k-bit optimizers and matrix multiplication routines."
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+markers = "python_version <= \"3.11\" or python_version >= \"3.12\""
+files = [
+    {file = "bitsandbytes-0.45.2-py3-none-manylinux_2_24_x86_64.whl", hash = "sha256:ba3a720187f518b172ebce4081049c682ae3fd8284947e22499b256ff99a2bc3"},
+    {file = "bitsandbytes-0.45.2-py3-none-win_amd64.whl", hash = "sha256:e1893170455422924156760bae9e210ae26e8bd2ce7b21065d24b47decbe6963"},
+]
+
+[package.dependencies]
+numpy = ">=1.17"
+torch = ">=2.0,<3"
+
+[package.extras]
+benchmark = ["matplotlib", "pandas"]
+dev = ["bitsandbytes[test]", "build (>=1.0.0,<2)", "pre-commit (>=3.5.0,<4)", "ruff (==0.6.9)", "wheel (>=0.42,<1)"]
+docs = ["hf-doc-builder (==0.5.0)"]
+test = ["einops (>=0.8.0,<0.9.0)", "lion-pytorch (==0.2.3)", "pytest (>=8.3,<9.0)", "scipy (>=1.10.1,<2)", "scipy (>=1.11.4,<2)", "transformers (>=4.30.1,<5)"]
+
+[[package]]
 name = "black"
 version = "24.10.0"
 description = "The uncompromising code formatter."
@@ -1548,6 +1571,24 @@ files = [
 
 [package.dependencies]
 wcwidth = ">=0.2.12,<0.3.0"
+
+[[package]]
+name = "galore-torch"
+version = "1.0"
+description = "GaLore: Memory-Efficient LLM Training by Gradient Low-Rank Projection"
+optional = false
+python-versions = "*"
+groups = ["main"]
+markers = "python_version <= \"3.11\" or python_version >= \"3.12\""
+files = [
+    {file = "galore-torch-1.0.tar.gz", hash = "sha256:469f793a0ae1c29cc42d9ba4550fed66983936cb50eccb46b06fbd16cfde40b9"},
+    {file = "galore_torch-1.0-py3-none-any.whl", hash = "sha256:7339bd6f6ea4557c5c9ae58026d67414bba2a0c7a7e7f1d69a05514ff565dd20"},
+]
+
+[package.dependencies]
+bitsandbytes = "*"
+torch = "*"
+transformers = "*"
 
 [[package]]
 name = "gitdb"
@@ -6066,4 +6107,4 @@ testing = ["coverage[toml]", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "3c9374b7ba2fcb19b44a11b5a6cbe62c29ecefe1b00be2a7a25771842f2c00c1"
+content-hash = "9eb4090c2558c42aaaaf73a20b3abc5a91be291ff30432a78a721e9bea579985"
