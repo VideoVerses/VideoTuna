@@ -201,7 +201,7 @@ Video VAE+ can accurately compress and reconstruct the input videos with fine de
 
 ## 🔆 Information
 
-### Code Structure
+<!-- ### Code Structure
 ```
 VideoTuna/
     ├── assets       # put images for readme
@@ -216,7 +216,7 @@ VideoTuna/
     ├── src          # model-related source code
     ├── tests        # testing scripts
     ├── tools        # some tool scripts
-```
+``` -->
 
 
 ### Supported Models

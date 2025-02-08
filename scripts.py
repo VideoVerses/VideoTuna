@@ -11,6 +11,9 @@ current_time = datetime.now().strftime("%Y%m%d%H%M%S")
 
 
 def install_flash_attn():
+    """
+    Install the flash attention package
+    """
     command_install_cuda_nvcc = [
         "conda",
         "install",
@@ -132,7 +135,6 @@ def inference_cogvideo_i2v_lora():
     ckpt = "results/train/cogvideox_i2v_5b/{YOUR_CKPT_PATH}.ckpt"
     prompt_dir = "{YOUR_PROMPT_DIR}"
 
-    # Dynamic timestamp
     savedir = f"results/inference/i2v/cogvideox-i2v-lora-{current_time}"
 
     result = subprocess.run(
@@ -325,7 +327,6 @@ def inference_dc_i2v_576x1024():
 
 
 def inference_flux_schnell():
-    # Common parameters
     prompt = "inputs/t2v/prompts.txt"
     width = 1360
     height = 768
@@ -354,7 +355,6 @@ def inference_flux_schnell():
 
 
 def inference_flux_dev():
-    # Common parameters
     prompt = "inputs/t2v/prompts.txt"
     width = 1360
     height = 768
