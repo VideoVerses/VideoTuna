@@ -19,9 +19,7 @@ from transformers.trainer import (
     is_sagemaker_mp_enabled,
     logger,
 )
-from transformers.trainer_pt_utils import (
-    AcceleratorConfig,
-)
+from transformers.trainer_pt_utils import AcceleratorConfig
 from transformers.trainer_pt_utils import (
     get_length_grouped_indices as get_length_grouped_indices_hf,
 )
