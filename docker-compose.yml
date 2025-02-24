@@ -1,0 +1,10 @@
+services:
+  videotuna:
+    image: "videotuna:${TAG-latest}"
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: docker/poetry/Dockerfile
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"  # Run as the host's user
+    volumes:
+      - .:/opt/VideoTuna

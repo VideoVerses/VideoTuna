@@ -62,6 +62,7 @@ toml = "0.10.2"
 hpsv2 = {git = "https://github.com/tgxs002/HPSv2.git"}
 backports-tarfile = "^1.2.0"
 swissarmytransformer = {git = "https://github.com/JingyeChen/SwissArmyTransformer"}
+pydantic-settings = "^2.8.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.0.0"

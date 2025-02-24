@@ -522,21 +522,13 @@ def inference_opensora_v10_16x256x256():
 
 
 def inference_v2v_ms():
-    input_dir = "inputs/v2v/001"
-    output_dir = f"results/v2v/{current_time}-v2v-modelscope-001"
-    result = subprocess.run(
-        [
-            "python3",
-            "scripts/inference_v2v_ms.py",
-            "--input_dir",
-            input_dir,
-            "--output_dir",
-            output_dir,
-        ]
-        + sys.argv[1:],
-        check=False,
+    from .inference_v2v_ms import Settings, inference_v2v_ms
+
+    settings = Settings(
+        input_dir="inputs/v2v/001",
+        output_dir=f"results/v2v/{current_time}-v2v-modelscope-001",
     )
-    exit(result.returncode)
+    inference_v2v_ms(settings=settings)
 
 
 def inference_vc1_i2v_320x512():

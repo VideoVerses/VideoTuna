@@ -250,13 +250,68 @@ Please check [docs/CHECKPOINTS.md](docs/CHECKPOINTS.md) to download all the mode
 ## 🔆 Get started
 
 ### 1.Prepare environment
+
+Install Poetry: https://python-poetry.org/docs/#installation
+
+On Linux only
+
 ``` shell
-conda create -n videotuna python=3.10 -y
-conda activate videotuna
-pip install poetry
+poetry config virtualenvs.in-project true # optional but recommended, will ensure the virtual env is created in the project root
+poetry env use python3.10 # will create the virtual env, check with `ls -l .venv`.
+poetry env activate # optional because Poetry commands (e.g. `poetry install` or `poetry run <command>`) will always automatically load the virtual env.
 poetry install
-poetry run pip install "modelscope[cv]" -f https://modelscope.oss-cn-beijing.aliyuncs.com/releases/repo.html
 ```
+
+On MacOS with Apple Silicon chip use [docker compose](https://docs.docker.com/compose/) because some dependencies are not supporting arm64 (e.g. `bitsandbytes`, `decord`, `xformers`).
+
+First build:
+
+```shell
+docker compose build videotuna
+```
+
+To preserve the project's files permissions set those env variables:
+
+```shell
+export HOST_UID=$(id -u)
+export HOST_GID=$(id -g)
+```
+
+Install dependencies:
+
+```shell
+docker compose run --remove-orphans videotuna poetry env use /usr/local/bin/python
+docker compose run --remove-orphans videotuna poetry run python -m pip install --upgrade pip setuptools wheel
+docker compose run --remove-orphans videotuna poetry install
+docker compose run --remove-orphans videotuna poetry run pip install "modelscope[cv]" -f https://modelscope.oss-cn-beijing.aliyuncs.com/releases/repo.html
+```
+
+Note: installing swissarmytransformer might hang. Just try again and it should work.
+
+Add a dependency:
+
+```shell
+docker compose run --remove-orphans videotuna poetry add wheel
+```
+
+Check dependencies:
+
+```shell
+docker compose run --remove-orphans videotuna poetry run pip freeze
+```
+
+Run Poetry commands:
+
+```shell
+docker compose run --remove-orphans videotuna poetry run format
+```
+
+Start a terminal:
+
+```shell
+docker compose run -it --remove-orphans videotuna bash
+```
+
 **Flash-attn installation (Optional)**
 
 Hunyuan model uses it to reduce memory usage and speed up inference. If it is not installed, the model will run in normal mode.
@@ -321,21 +376,15 @@ Before started, we assume you have finished the following two preliminary steps:
   ll checkpoints/stablediffusion/v2-1_512-ema/model.ckpt
 ```
 
-
 First, run this command to convert the VC2 checkpoint as we make minor modifications on the keys of the state dict of the checkpoint. The converted checkpoint will be automatically save at `checkpoints/videocrafter/t2v_v2_512/model_converted.ckpt`.    
 ```
 python tools/convert_checkpoint.py --input_path checkpoints/videocrafter/t2v_v2_512/model.ckpt
 ```
 
-
 Second, run this command to start training on the single GPU. The training results will be automatically saved at `results/train/${CURRENT_TIME}_${EXPNAME}`    
 ```
 poetry run train-videocrafter-v2
 ```
-
-
-
-
 
 #### 2. VideoCrafter2 Lora Fine-tuning
 
