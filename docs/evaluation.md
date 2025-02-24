@@ -7,7 +7,7 @@ python -m pip install 'git+https://github.com/facebookresearch/detectron2.git'
 If you encounter errors during installing the [detectron2](https://github.com/facebookresearch/detectron2), you can check [here](https://detectron2.readthedocs.io/en/latest/tutorials/install.html) for detailed suggestions.
 
 ## Usage
-1. Prepare samples and a json file.  
+1. Prepare samples and a json file.
     Firstly, if you already have video samples, please export a json file for mapping the video file name to prompt. The format is as follows:
     ```json
     {
@@ -19,10 +19,10 @@ If you encounter errors during installing the [detectron2](https://github.com/fa
 
     For the standard vbench evaluation, you have to do inference on `all_dimensions.txt`.
 
-2. Evaluation  
-(1) Standard evaluation  
+2. Evaluation
+(1) Standard evaluation
 
-    Run the following command:  
+    Run the following command:
     ```shell
     python eval/scripts/evaluation.py  \
         --output_path $output_path \
@@ -38,9 +38,9 @@ If you encounter errors during installing the [detectron2](https://github.com/fa
     ```
     The result will be saved in the file `scaled_results.json`.
 
-    (2) Customized evaluation  
+    (2) Customized evaluation
 
-    If you want to evaluate the generation performance on your own prompts, you can choose the custom mode. 
+    If you want to evaluate the generation performance on your own prompts, you can choose the custom mode.
     Note that Vbench only support the following dimensions for the custom mode:
     ```python
     dimensions = [

@@ -1,5 +1,5 @@
 """
-    This code is partially borrowed from IFRNet (https://github.com/ltkong218/IFRNet). 
+    This code is partially borrowed from IFRNet (https://github.com/ltkong218/IFRNet).
 """
 
 import os

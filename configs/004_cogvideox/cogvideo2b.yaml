@@ -1,39 +1,39 @@
 model:
   base_learning_rate: 6e-6
   target: videotuna.cogvideo_hf.cogvideo_pl.CogVideoXWorkFlow
-  params: 
+  params:
     # VAE of CogVideoX
     first_stage_config:
       target: diffusers.AutoencoderKLCogVideoX
       params:
-        pretrained_model_name_or_path: checkpoints/cogvideo/CogVideoX-2b 
+        pretrained_model_name_or_path: checkpoints/cogvideo/CogVideoX-2b
         subfolder: "vae"
-    
+
     # Text encoder (T5) of CogVideoX
     cond_stage_config:
       target: videotuna.lvdm.modules.encoders.condition.FrozenT5Embedder
       params:
         version: "DeepFloyd/t5-v1_1-xxl"
         device: "cuda"
-        max_length: 226 
+        max_length: 226
         freeze: True
-    
+
     # Denosier model
     denoiser_config:
       target: diffusers.CogVideoXTransformer3DModel
       params:
-        pretrained_model_name_or_path: checkpoints/cogvideo/CogVideoX-2b 
+        pretrained_model_name_or_path: checkpoints/cogvideo/CogVideoX-2b
         subfolder: "transformer"
-        load_dtype: fp16 # bf16 5b / fp16 2B 
-        # revision: null 
+        load_dtype: fp16 # bf16 5b / fp16 2B
+        # revision: null
         # variant: null
-    
-    # Lora module 
+
+    # Lora module
     adapter_config:
       target: peft.LoraConfig
       params:
         r: 4
-        lora_alpha: 1.0 
+        lora_alpha: 1.0
         init_lora_weights: True
         target_modules: ["to_k", "to_q", "to_v", "to_out.0"]
 
@@ -41,7 +41,7 @@ model:
     scheduler_config:
       target: diffusers.CogVideoXDPMScheduler
       params:
-        pretrained_model_name_or_path: checkpoints/cogvideo/CogVideoX-2b 
+        pretrained_model_name_or_path: checkpoints/cogvideo/CogVideoX-2b
         subfolder: scheduler
 
 # data configs
@@ -55,7 +55,7 @@ data:
       target: videotuna.data.cogvideo_dataset.VideoDataset
       params:
         instance_data_root: "inputs/t2v/cogvideo/elon_musk_video"
-        dataset_name: null 
+        dataset_name: null
         dataset_config_name: null
         caption_column: "labels.txt"
         video_column: "videos.txt"
@@ -92,5 +92,3 @@ lightning:
         save_weights_only: False
         # every_n_epochs: 300
         every_n_train_steps: 10
-    
-

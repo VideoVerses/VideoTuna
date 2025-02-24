@@ -59,7 +59,7 @@ The CSV file should have the following columns:
 
 Ensure that the paths in the CSV file are either absolute or relative to the `data_root` provided during initialization.
 
-In addition, to support a new dataset, you need to convert your annotations to the required CSV format. 
+In addition, to support a new dataset, you need to convert your annotations to the required CSV format.
 
 
 ### Important Considerations

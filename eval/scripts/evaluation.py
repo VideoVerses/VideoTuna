@@ -143,7 +143,7 @@ def parse_args():
         help="""This is for setting preprocessing in imaging_quality
         1. 'shorter': if the shorter side is more than 512, the image is resized so that the shorter side is 512.
         2. 'longer': if the longer side is more than 512, the image is resized so that the longer side is 512.
-        3. 'shorter_centercrop': if the shorter side is more than 512, the image is resized so that the shorter side is 512. 
+        3. 'shorter_centercrop': if the shorter side is more than 512, the image is resized so that the shorter side is 512.
         Then the center 512 x 512 after resized is used for evaluation.
         4. 'None': no preprocessing
         """,

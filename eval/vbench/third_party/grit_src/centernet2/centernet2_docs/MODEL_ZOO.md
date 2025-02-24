@@ -2,7 +2,7 @@
 
 ### Common settings and notes
 
-- Multiscale training is used by default in all models. The results are all reported using single-scale testing. 
+- Multiscale training is used by default in all models. The results are all reported using single-scale testing.
 - We report runtime on our local workstation with a TitanXp GPU and a Titan RTX GPU.
 - All models are trained on 8-GPU servers by default. The 1280 models are trained on 24G GPUs. Reducing the batchsize with the linear learning rate rule should be fine.
 - All models can be downloaded directly from [Google drive](https://drive.google.com/drive/folders/1eae1cTX8tvIaCeof36sBgxrXEXALYlf-?usp=sharing).

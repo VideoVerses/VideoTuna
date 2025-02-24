@@ -7,4 +7,3 @@ python scripts/inference_cogVideo_diffusers.py \
     --guidance_scale 3.5 \
     --num_videos_per_prompt 1 \
     --dtype float16
-

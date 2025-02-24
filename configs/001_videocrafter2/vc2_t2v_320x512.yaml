@@ -24,7 +24,7 @@ model:
 
     diffusion_scheduler_config:
       target: videotuna.base.diffusion_schedulers.LDMScheduler
-      params: 
+      params:
         timesteps: 1000
         linear_start: 0.00085
         linear_end: 0.012
@@ -137,4 +137,3 @@ lightning:
         save_weights_only: False
         every_n_epochs: 300
         every_n_train_steps: null
-    

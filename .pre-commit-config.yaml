@@ -1,0 +1,47 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+fail_fast: false
+repos:
+  - repo: local
+    hooks:
+      - id: format-checking
+        name: format checking
+        entry: poetry run format-check
+        pass_filenames: false
+        language: system
+        stages: [pre-commit]
+#      - id: linting
+#        name: linting
+#        entry: poetry run lint
+#        pass_filenames: false
+#        language: system
+#        stages: [commit]
+#      - id: type-checking
+#        name: type checking
+#        entry: poetry run type-check
+#        pass_filenames: false
+#        language: system
+#        stages: [commit]
+#      - id: unit-tests
+#        name: unit tests
+#        entry: poetry run test
+#        pass_filenames: false
+#        language: system
+#        stages: [commit]
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v2.28.0
+    hooks:
+      - id: commitizen
+        stages:
+          - commit-msg
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.3.0
+    hooks:
+      - id: check-merge-conflict
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-added-large-files
+      - id: detect-private-key
+      - id: check-case-conflict
+      - id: mixed-line-ending
+      - id: detect-private-key

@@ -5,7 +5,7 @@ CONFIG='configs/004_cogvideox/cogvideo2b.yaml'   # experiment config: ‘configs
 
 # exp saving directory: ${RESROOT}/${CURRENT_TIME}_${EXPNAME}
 RESROOT="results/train"             # experiment saving directory
-EXPNAME="cogvideox_t2v_5b"          # experiment name 
+EXPNAME="cogvideox_t2v_5b"          # experiment name
 CURRENT_TIME=$(date +%Y%m%d%H%M%S)  # current time
 
 # run

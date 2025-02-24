@@ -229,7 +229,7 @@ def load_checkpoints(model, model_cfg):
                     mainlogger.info(f"Skipped parameter [{n}] from pretrained! ")
                     state_dict.pop(n)
             model_state_dict.update(state_dict)
-            model.load_state_dict(model_state_dict)    
+            model.load_state_dict(model_state_dict)
         empty_paras = None
         """
     elif check_config_attribute(model_cfg, "sd_checkpoint"):

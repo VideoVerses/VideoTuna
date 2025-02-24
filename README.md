@@ -7,21 +7,21 @@
 ![Version](https://img.shields.io/badge/version-0.1.0-blue) ![visitors](https://visitor-badge.laobi.icu/badge?page_id=VideoVerses.VideoTuna&left_color=green&right_color=red)  [![](https://dcbadge.limes.pink/api/server/AammaaR2?style=flat)](https://discord.gg/AammaaR2) <a href='https://github.com/user-attachments/assets/a48d57a3-4d89-482c-8181-e0bce4f750fd'><img src='https://badges.aleen42.com/src/wechat.svg'></a> [![Homepage](https://img.shields.io/badge/Homepage-VideoTuna-orange)](https://videoverses.github.io/videotuna/) [![GitHub](https://img.shields.io/github/stars/VideoVerses/VideoTuna?style=social)](https://github.com/VideoVerses/VideoTuna)
 
 
-🤗🤗🤗 Videotuna is a useful codebase for text-to-video applications.   
-🌟 VideoTuna is the first repo that integrates multiple AI video generation models including `text-to-video (T2V)`, `image-to-video (I2V)`, `text-to-image (T2I)`, and `video-to-video (V2V)` generation for model inference and finetuning (to the best of our knowledge).   
-🌟 VideoTuna is the first repo that provides comprehensive pipelines in video generation, from fine-tuning to pre-training, continuous training, and post-training (alignment) (to the best of our knowledge).   
-🌟 An Emotion Control I2V model will be released soon.  
+🤗🤗🤗 Videotuna is a useful codebase for text-to-video applications.
+🌟 VideoTuna is the first repo that integrates multiple AI video generation models including `text-to-video (T2V)`, `image-to-video (I2V)`, `text-to-image (T2I)`, and `video-to-video (V2V)` generation for model inference and finetuning (to the best of our knowledge).
+🌟 VideoTuna is the first repo that provides comprehensive pipelines in video generation, from fine-tuning to pre-training, continuous training, and post-training (alignment) (to the best of our knowledge).
+🌟 An Emotion Control I2V model will be released soon.
 
 
 ## Features
-🌟 **All-in-one framework:** Inference and fine-tune up-to-date video generation models.  
-🌟 **Pre-training:** Build your own foundational text-to-video model.  
-🌟 **Continuous training:** Keep improving your model with new data.  
-🌟 **Domain-specific fine-tuning:** Adapt models to your specific scenario.  
-🌟 **Concept-specific fine-tuning:** Teach your models with unique concepts.  
-🌟 **Enhanced language understanding:** Improve model comprehension through continuous training.  
-🌟 **Post-processing:** Enhance the videos with video-to-video enhancement model.  
-🌟 **Post-training/Human preference alignment:** Post-training with RLHF for more attractive results.  
+🌟 **All-in-one framework:** Inference and fine-tune up-to-date video generation models.
+🌟 **Pre-training:** Build your own foundational text-to-video model.
+🌟 **Continuous training:** Keep improving your model with new data.
+🌟 **Domain-specific fine-tuning:** Adapt models to your specific scenario.
+🌟 **Concept-specific fine-tuning:** Teach your models with unique concepts.
+🌟 **Enhanced language understanding:** Improve model comprehension through continuous training.
+🌟 **Post-processing:** Enhance the videos with video-to-video enhancement model.
+🌟 **Post-training/Human preference alignment:** Post-training with RLHF for more attractive results.
 
 
 ## 🔆 Updates
@@ -54,7 +54,7 @@
 Video VAE+ can accurately compress and reconstruct the input videos with fine details.
 
 <table class="center">
-  
+
   <tr>
     <td style="text-align:center;" width="320">Ground Truth</td>
     <td style="text-align:center;" width="320">Reconstruction</td>
@@ -62,8 +62,8 @@ Video VAE+ can accurately compress and reconstruct the input videos with fine de
   <tr>
     <td><a href="https://github.com/user-attachments/assets/0efcbf80-0074-4421-810f-79a1f1733ed3"><img src="https://github.com/user-attachments/assets/0efcbf80-0074-4421-810f-79a1f1733ed3" width="320"></a></td>
     <td><a href="https://github.com/user-attachments/assets/4adf29f2-d413-49b1-bccc-48adfd64a4da"><img src="https://github.com/user-attachments/assets/4adf29f2-d413-49b1-bccc-48adfd64a4da" width="320"></a></td>
-  </tr>  
-  
+  </tr>
+
 </table>
 
 ### Emotion Control I2V
@@ -210,7 +210,7 @@ VideoTuna/
     ├── data         # data processing scripts and dataset files
     ├── docs         # documentations
     ├── eval         # evaluation scripts
-    ├── inputs       # input examples for testing 
+    ├── inputs       # input examples for testing
     ├── scripts      # train and inference python scripts
     ├── shsripts     # train and inference shell scripts
     ├── src          # model-related source code
@@ -250,22 +250,77 @@ Please check [docs/CHECKPOINTS.md](docs/CHECKPOINTS.md) to download all the mode
 ## 🔆 Get started
 
 ### 1.Prepare environment
+
+Install Poetry: https://python-poetry.org/docs/#installation
+
+On Linux only
+
 ``` shell
-conda create -n videotuna python=3.10 -y
-conda activate videotuna
-pip install poetry
+poetry config virtualenvs.in-project true # optional but recommended, will ensure the virtual env is created in the project root
+poetry env use python3.10 # will create the virtual env, check with `ls -l .venv`.
+poetry env activate # optional because Poetry commands (e.g. `poetry install` or `poetry run <command>`) will always automatically load the virtual env.
 poetry install
-poetry run pip install "modelscope[cv]" -f https://modelscope.oss-cn-beijing.aliyuncs.com/releases/repo.html
 ```
+
+On MacOS with Apple Silicon chip use [docker compose](https://docs.docker.com/compose/) because some dependencies are not supporting arm64 (e.g. `bitsandbytes`, `decord`, `xformers`).
+
+First build:
+
+```shell
+docker compose build videotuna
+```
+
+To preserve the project's files permissions set those env variables:
+
+```shell
+export HOST_UID=$(id -u)
+export HOST_GID=$(id -g)
+```
+
+Install dependencies:
+
+```shell
+docker compose run --remove-orphans videotuna poetry env use /usr/local/bin/python
+docker compose run --remove-orphans videotuna poetry run python -m pip install --upgrade pip setuptools wheel
+docker compose run --remove-orphans videotuna poetry install
+docker compose run --remove-orphans videotuna poetry run pip install "modelscope[cv]" -f https://modelscope.oss-cn-beijing.aliyuncs.com/releases/repo.html
+```
+
+Note: installing swissarmytransformer might hang. Just try again and it should work.
+
+Add a dependency:
+
+```shell
+docker compose run --remove-orphans videotuna poetry add wheel
+```
+
+Check dependencies:
+
+```shell
+docker compose run --remove-orphans videotuna poetry run pip freeze
+```
+
+Run Poetry commands:
+
+```shell
+docker compose run --remove-orphans videotuna poetry run format
+```
+
+Start a terminal:
+
+```shell
+docker compose run -it --remove-orphans videotuna bash
+```
+
 **Flash-attn installation (Optional)**
 
 Hunyuan model uses it to reduce memory usage and speed up inference. If it is not installed, the model will run in normal mode.
 ``` shell
-poetry run install-flash-attn 
+poetry run install-flash-attn
 ```
 ### 2.Prepare checkpoints
 
-Please follow [docs/CHECKPOINTS.md](https://github.com/VideoVerses/VideoTuna/blob/main/docs/CHECKPOINTS.md) to download model checkpoints.  
+Please follow [docs/CHECKPOINTS.md](https://github.com/VideoVerses/VideoTuna/blob/main/docs/CHECKPOINTS.md) to download model checkpoints.
 After downloading, the model checkpoints should be placed as [Checkpoint Structure](https://github.com/VideoVerses/VideoTuna/blob/main/docs/CHECKPOINTS.md#checkpoint-orgnization-structure).
 
 ### 3.Inference state-of-the-art T2V/I2V/T2I models
@@ -321,28 +376,22 @@ Before started, we assume you have finished the following two preliminary steps:
   ll checkpoints/stablediffusion/v2-1_512-ema/model.ckpt
 ```
 
-
-First, run this command to convert the VC2 checkpoint as we make minor modifications on the keys of the state dict of the checkpoint. The converted checkpoint will be automatically save at `checkpoints/videocrafter/t2v_v2_512/model_converted.ckpt`.    
+First, run this command to convert the VC2 checkpoint as we make minor modifications on the keys of the state dict of the checkpoint. The converted checkpoint will be automatically save at `checkpoints/videocrafter/t2v_v2_512/model_converted.ckpt`.
 ```
 python tools/convert_checkpoint.py --input_path checkpoints/videocrafter/t2v_v2_512/model.ckpt
 ```
 
-
-Second, run this command to start training on the single GPU. The training results will be automatically saved at `results/train/${CURRENT_TIME}_${EXPNAME}`    
+Second, run this command to start training on the single GPU. The training results will be automatically saved at `results/train/${CURRENT_TIME}_${EXPNAME}`
 ```
 poetry run train-videocrafter-v2
 ```
 
-
-
-
-
 #### 2. VideoCrafter2 Lora Fine-tuning
 
-We support lora finetuning to make the model to learn new concepts/characters/styles.   
-- Example config file: `configs/001_videocrafter2/vc2_t2v_lora.yaml`  
-- Training lora based on VideoCrafter2: `bash shscripts/train_videocrafter_lora.sh`  
-- Inference the trained models: `bash shscripts/inference_vc2_t2v_320x512_lora.sh`   
+We support lora finetuning to make the model to learn new concepts/characters/styles.
+- Example config file: `configs/001_videocrafter2/vc2_t2v_lora.yaml`
+- Training lora based on VideoCrafter2: `bash shscripts/train_videocrafter_lora.sh`
+- Inference the trained models: `bash shscripts/inference_vc2_t2v_320x512_lora.sh`
 
 #### 3. Open-Sora Fine-tuning
 We support open-sora finetuning, you can simply run the following commands:
@@ -364,22 +413,22 @@ If you want to build your own dataset, please organize your data as `inputs/t2i/
 ```
 owndata/
     ├── img1.jpg
-    ├── img2.jpg  
-    ├── img3.jpg           
+    ├── img2.jpg
+    ├── img3.jpg
     ├── ...
     ├── prompt1.txt      # prompt of img1.jpg
     ├── prompt2.txt      # prompt of img2.jpg
     ├── prompt3.txt      # prompt of img3.jpg
     ├── ...
-``` 
+```
 
 <!-- Please check [configs/train/003_vc2_lora_ft/README.md](configs/train/003_vc2_lora_ft/README.md) for details.    -->
-<!-- 
+<!--
 
 (1) Prepare data
 
 
-(2) Finetune  
+(2) Finetune
 ```
 bash configs/train/000_videocrafter2ft/run.sh
 ``` -->
@@ -388,12 +437,32 @@ bash configs/train/000_videocrafter2ft/run.sh
 
 
 ### 5. Evaluation
-We support VBench evaluation to evaluate the T2V generation performance. 
+We support VBench evaluation to evaluate the T2V generation performance.
 Please check [eval/README.md](docs/evaluation.md) for details.
 
 <!-- ### 6. Alignment
 We support video alignment post-training to align human perference for video diffusion models. Please check [configs/train/004_rlhf_vc2/README.md](configs/train/004_rlhf_vc2/README.md) for details. -->
 
+# Contribute
+
+## Git hooks
+
+Git hooks are handled with [pre-commit](https://pre-commit.com) library.
+
+### Hooks installation
+
+Run the following command to install hooks on `commit`. They will check formatting, linting and types.
+
+```shell
+poetry run pre-commit install
+poetry run pre-commit install --hook-type commit-msg
+```
+
+### Running the hooks without commiting
+
+```shell
+poetry run pre-commit run --all-files
+```
 
 ## Acknowledgement
 We thank the following repos for sharing their awesome models and codes!

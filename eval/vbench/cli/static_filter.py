@@ -150,7 +150,7 @@ def static_filter(args):
             os.path.isfile(args.filter_scope)
             and Path(args.filter_scope).suffix.lower() == ".json"
         ), f"""
-        --filter_scope flag is not correctly set, set to 'all' to filter all videos in the --videos_path directory, 
+        --filter_scope flag is not correctly set, set to 'all' to filter all videos in the --videos_path directory,
         or provide the correct path to the JSON file
         """
         full_prompt_list = load_json(args.filter_scope)

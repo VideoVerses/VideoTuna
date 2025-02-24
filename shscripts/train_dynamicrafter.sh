@@ -6,8 +6,8 @@ SDCKPT="checkpoints/stablediffusion/v2-1_512-ema/model.ckpt"
 # DCCKPT="checkpoints/dynamicrafter/i2v_576x1024/model.ckpt"
 DCCKPT="checkpoints/dynamicrafter/i2v_576x1024/model_converted.ckpt"
 
-EXPNAME="002_dynamicrafterft_1024"                            # experiment name 
-CONFIG='configs/002_dynamicrafter/dc_i2v_1024.yaml' # experiment config 
+EXPNAME="002_dynamicrafterft_1024"                            # experiment name
+CONFIG='configs/002_dynamicrafter/dc_i2v_1024.yaml' # experiment config
 RESROOT="results/train"                               # experiment saving directory
 
 # run
@@ -22,4 +22,3 @@ python scripts/train.py \
 --devices '0,' \
 lightning.trainer.num_nodes=1 \
 --auto_resume
-

@@ -1,0 +1,10 @@
+.gitlab-ci.yml
+.mypy_cache
+.pytest_cache
+.pre-commit-config.yaml
+.venv
+hooks
+junit.xml
+coverage.xml
+docker
+docs

@@ -84,7 +84,7 @@ __global__ void corr_forward_kernel(
           }
 
           __syncthreads();
-      
+
           scalar_t s = 0.0;
           for (int k=0; k<CHANNEL_STRIDE; k++)
             s += f1[k][tid] * f2[k][tid];
@@ -113,7 +113,7 @@ __global__ void corr_forward_kernel(
           if (iy < rd && ix < rd && within_bounds(h1, w1, H1, W1))
             *(corr_ptr + ix_se) += se;
         }
-      } 
+      }
     }
   }
 }
@@ -174,7 +174,7 @@ __global__ void corr_backward_kernel(
     int h1 = h0 + threadIdx.x;
     int w1 = w0 + threadIdx.y;
 
-    for (int n=0; n<N; n++) {  
+    for (int n=0; n<N; n++) {
       x2s[tid] = coords[b][n][h1][w1][0];
       y2s[tid] = coords[b][n][h1][w1][1];
 
@@ -200,7 +200,7 @@ __global__ void corr_backward_kernel(
           }
 
           __syncthreads();
-      
+
           const scalar_t* grad_ptr = &corr_grad[b][n][0][h1][w1];
           scalar_t g = 0.0;
 
@@ -220,7 +220,7 @@ __global__ void corr_backward_kernel(
 
           if (iy < rd && ix < rd && within_bounds(h1, w1, H1, W1))
             g += *(grad_ptr + ix_se) * (1-dy) * (1-dx);
-            
+
           for (int k=0; k<CHANNEL_STRIDE; k++) {
             f1_grad[k][tid] += g * f2[k][tid];
             f2_grad[k][tid] += g * f1[k][tid];
@@ -237,7 +237,7 @@ __global__ void corr_backward_kernel(
               atomicAdd(fptr+c+c2, f2_grad[c2][k1]);
           }
         }
-      } 
+      }
     }
     __syncthreads();
 
@@ -271,7 +271,7 @@ std::vector<torch::Tensor> corr_cuda_forward(
   const auto rd = 2 * radius + 1;
   auto opts = fmap1.options();
   auto corr = torch::zeros({B, N, rd*rd, H, W}, opts);
-  
+
   const dim3 blocks(B, (H+BLOCK_H-1)/BLOCK_H, (W+BLOCK_W-1)/BLOCK_W);
   const dim3 threads(BLOCK_H, BLOCK_W);
 
@@ -305,7 +305,7 @@ std::vector<torch::Tensor> corr_cuda_backward(
   auto fmap1_grad = torch::zeros({B, H1, W1, C}, opts);
   auto fmap2_grad = torch::zeros({B, H2, W2, C}, opts);
   auto coords_grad = torch::zeros({B, N, H1, W1, 2}, opts);
-    
+
   const dim3 blocks(B, (H1+BLOCK_H-1)/BLOCK_H, (W1+BLOCK_W-1)/BLOCK_W);
   const dim3 threads(BLOCK_H, BLOCK_W);
 

@@ -7,7 +7,7 @@ CONFIG='configs/001_videocrafter2/vc2_t2v_320x512.yaml'             # experiment
 
 # exp saving directory: ${RESROOT}/${CURRENT_TIME}_${EXPNAME}
 RESROOT="results/train"                                             # root directory for saving multiple experiments
-EXPNAME="videocrafter2_320x512"                                     # experiment name 
+EXPNAME="videocrafter2_320x512"                                     # experiment name
 CURRENT_TIME=$(date +%Y%m%d%H%M%S)                                  # current time
 
 # run

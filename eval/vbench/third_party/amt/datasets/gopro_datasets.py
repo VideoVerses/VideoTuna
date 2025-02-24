@@ -1,6 +1,6 @@
 """
-    This code is partially borrowed from IFRNet (https://github.com/ltkong218/IFRNet). 
-    In the consideration of the difficulty in flow supervision generation, we abort 
+    This code is partially borrowed from IFRNet (https://github.com/ltkong218/IFRNet).
+    In the consideration of the difficulty in flow supervision generation, we abort
     flow loss in the 8x case.
 """
 

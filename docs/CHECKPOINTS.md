@@ -84,14 +84,14 @@ git clone https://www.modelscope.cn/iic/Video-to-Video.git
 
 
 ### Checkpoint Orgnization Structure
-After downloading, the model checkpoints should be placed as follows:  
+After downloading, the model checkpoints should be placed as follows:
 
 ```
 VideoTuna/
     └── checkpoints/
         ├── cogvideo/
-        │   └── CogVideoX-2b/   
-        │   └── CogVideoX-5b/        
+        │   └── CogVideoX-2b/
+        │   └── CogVideoX-5b/
         │   └── CogVideoX-5b-I2V/
         ├── hunyuan/
         │   └── hunyuan-video-t2v-720p/

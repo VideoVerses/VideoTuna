@@ -8,7 +8,7 @@
 ## Datasets<p id="Datasets"></p>
 First, please prepare standard datasets for evaluation and training.
 
-We present most of prevailing datasets in video frame interpolation, though some are not used in our project. Hope this collection could help your research. 
+We present most of prevailing datasets in video frame interpolation, though some are not used in our project. Hope this collection could help your research.
 
 <table>
 <thead>
@@ -232,8 +232,8 @@ Our training configuration files are provided in [`cfgs`](../cfgs). Please caref
 
 Note:
 
-- If you intend to turn off DDP training, you can switch the key `distributed` from `true` 
+- If you intend to turn off DDP training, you can switch the key `distributed` from `true`
 to `false` in the config file.
 
-- If you do not use wandb, you can switch the key `logger.use_wandb` from `true` 
+- If you do not use wandb, you can switch the key `logger.use_wandb` from `true`
 to `false` in the config file.

@@ -11,4 +11,3 @@ python3 scripts/inference_mochi.py \
     --bs 1 --height $height --width $width \
     --fps 28 \
     --seed 124
-

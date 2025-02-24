@@ -5,7 +5,7 @@ model:
   target: videotuna.base.ddpm3d.LVDMFlow
   params:
     lora_args:
-      # lora_ckpt: "/path/to/lora.ckpt" # no need for the first-time training, only used for resume training. 
+      # lora_ckpt: "/path/to/lora.ckpt" # no need for the first-time training, only used for resume training.
       target_modules:  ["to_q", "to_k", "to_v"]
       lora_rank: 4
       lora_alpha: 1
@@ -30,7 +30,7 @@ model:
 
     diffusion_scheduler_config:
       target: videotuna.base.diffusion_schedulers.LDMScheduler
-      params: 
+      params:
         timesteps: 1000
         linear_start: 0.00085
         linear_end: 0.012
@@ -145,4 +145,3 @@ lightning:
         save_weights_only: False
         # every_n_epochs: 300
         every_n_train_steps: 10
-    

@@ -72,5 +72,5 @@ class LLaVAEvalTrainer(LLaVATrainer):
                 if k != "alias" and "stderr" not in k:
                     metric = k.split(",")[0]
                     result_dict[f"{task}_{metric}"] = v
-            
+
         return result_dict"""

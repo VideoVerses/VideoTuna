@@ -11,7 +11,7 @@ model:
     # cond_stage_trainable: false
     cond_stage_trainable: true
     conditioning_key: crossattn_stdit
-    image_size: # TO CHECK 
+    image_size: # TO CHECK
     - 32
     - 32
     channels: 4
@@ -26,7 +26,7 @@ model:
 
     diffusion_scheduler_config:
       target: videotuna.base.iddpm3d.OpenSoraScheduler
-      params: 
+      params:
         timesteps: 1000
         linear_start: 0.00085
         linear_end: 0.012
@@ -42,7 +42,7 @@ model:
         input_size:
         - 16
         - 32
-        - 32 
+        - 32
     first_stage_config:
       target: videotuna.lvdm.opensoravae.VideoAutoencoderKL
       params:
@@ -53,7 +53,7 @@ model:
       params:
         from_pretrained: "DeepFloyd/t5-v1_1-xxl"
         model_max_length: 120
-        shardformer: False # TODO 
+        shardformer: False # TODO
 
 data:
   target: videotuna.data.lightning_data.DataModuleFromConfig

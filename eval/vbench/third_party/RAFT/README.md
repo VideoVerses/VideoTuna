@@ -28,7 +28,7 @@ python demo.py --model=models/raft-things.pth --path=demo-frames
 ```
 
 ## Required Data
-To evaluate/train RAFT, you will need to download the required datasets. 
+To evaluate/train RAFT, you will need to download the required datasets.
 * [FlyingChairs](https://lmb.informatik.uni-freiburg.de/resources/datasets/FlyingChairs.en.html#flyingchairs)
 * [FlyingThings3D](https://lmb.informatik.uni-freiburg.de/resources/datasets/SceneFlowDatasets.en.html)
 * [Sintel](http://sintel.is.tue.mpg.de/)

@@ -12,4 +12,3 @@ python3 scripts/inference.py \
     --bs 1 --height 320 --width 512 \
     --fps 28 \
     --seed 123
-

@@ -13,7 +13,7 @@ This repository contains the official implementation of the following paper:
 [[Web demos](#web-demos)]
 [Video]
 
-AMT is a **lightweight, fast, and accurate** algorithm for Frame Interpolation. 
+AMT is a **lightweight, fast, and accurate** algorithm for Frame Interpolation.
 It aims to provide practical solutions for **video generation** from **a few given frames (at least two frames)**.
 
 ![Demo gif](assets/amt_demo.gif)
@@ -164,4 +164,3 @@ We also thank all of our contributors.
 <a href="https://github.com/MCG-NKU/AMT/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=MCG-NKU/AMT" />
 </a>
-

@@ -1,6 +1,6 @@
 # Usage: 1. cd ./docker
 # Usage: 2. docker build -t videotuna:v1.0 .
-# Usage: 3. docker run --gpus all -it videotuna:v1.0 /bin/bash 
+# Usage: 3. docker run --gpus all -it videotuna:v1.0 /bin/bash
 
 
 
@@ -9,9 +9,9 @@ WORKDIR /content
 ENV PATH="/home/videotuna/.local/bin:${PATH}"
 
 RUN apt update -y && add-apt-repository -y ppa:git-core/ppa && apt update -y
-RUN apt install -y aria2 git git-lfs unzip ffmpeg python3-tk 
-   
-# ---------------------------- Set up python env ----------------------------   
+RUN apt install -y aria2 git git-lfs unzip ffmpeg python3-tk
+
+# ---------------------------- Set up python env ----------------------------
 RUN git clone https://github.com/VideoVerses/VideoTuna.git &&\
     cd VideoTuna && \
     pip install -r requirements.txt && \

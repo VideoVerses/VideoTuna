@@ -1,11 +1,11 @@
 export TOKENIZERS_PARALLELISM=false
 
 # dependencies
-CONFIG="configs/004_cogvideox/cogvideo5b-i2v.yaml"   # experiment config 
+CONFIG="configs/004_cogvideox/cogvideo5b-i2v.yaml"   # experiment config
 
 # exp saving directory: ${RESROOT}/${CURRENT_TIME}_${EXPNAME}
 RESROOT="results/train"             # experiment saving directory
-EXPNAME="cogvideox_i2v_5b"          # experiment name 
+EXPNAME="cogvideox_i2v_5b"          # experiment name
 CURRENT_TIME=$(date +%Y%m%d%H%M%S)  # current time
 
 # run
