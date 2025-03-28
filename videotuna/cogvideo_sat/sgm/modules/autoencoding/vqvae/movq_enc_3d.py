@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from beartype import beartype
-from beartype.typing import List, Optional, Tuple, Union
+from beartype.typing import Tuple, Union
 from einops import rearrange
 
 

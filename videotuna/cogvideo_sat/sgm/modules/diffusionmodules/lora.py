@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Dict, List, Optional, Set, Tuple, Type, Union
+from typing import List, Optional, Set, Type
 
 import torch
 import torch.nn.functional as F
@@ -324,7 +324,7 @@ def _find_modules_v2(
                 while path:
                     try:
                         parent = parent.get_submodule(path.pop(0))
-                    except:
+                    except Exception:
                         flag = True
                         break
                 if flag:

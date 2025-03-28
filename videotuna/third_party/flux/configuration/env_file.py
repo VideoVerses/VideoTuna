@@ -1,4 +1,6 @@
 import json
+import logging
+import os
 
 env_to_args_map = {
     "RESUME_CHECKPOINT": "--resume_from_checkpoint",
@@ -68,9 +70,6 @@ env_to_args_map = {
     "DISABLE_BENCHMARK": "--disable_benchmark",
 }
 
-import logging
-import os
-import subprocess
 
 logger = logging.getLogger("SimpleTuner")
 logger.setLevel(os.environ.get("SIMPLETUNER_LOG_LEVEL", "INFO"))

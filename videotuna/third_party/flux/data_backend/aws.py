@@ -1,5 +1,4 @@
 import concurrent.futures
-import fnmatch
 import logging
 import os
 import time
@@ -14,7 +13,6 @@ from torch import Tensor
 
 from videotuna.third_party.flux.data_backend.base import BaseDataBackend
 from videotuna.third_party.flux.image_manipulation.load import load_image
-from videotuna.third_party.flux.training.multi_process import _get_rank as get_rank
 
 loggers_to_silence = [
     "botocore.hooks",
@@ -112,7 +110,7 @@ class S3DataBackend(BaseDataBackend):
                 else:
                     # Sleep for a bit before retrying.
                     time.sleep(self.read_retry_interval)
-            except:
+            except Exception:
                 if i == self.read_retry_limit - 1:
                     # We have reached our maximum retry count.
                     raise
@@ -143,7 +141,7 @@ class S3DataBackend(BaseDataBackend):
                 else:
                     # Sleep for a bit before retrying.
                     time.sleep(self.read_retry_interval)
-            except:
+            except Exception:
                 if i == self.read_retry_limit - 1:
                     # We have reached our maximum retry count.
                     raise
@@ -160,7 +158,7 @@ class S3DataBackend(BaseDataBackend):
         real_key = str(s3_key)
         for i in range(self.write_retry_limit):
             try:
-                if type(data) == Tensor:
+                if isinstance(data, Tensor):
                     return self.torch_save(data, real_key)
                 response = self.client.put_object(
                     Body=data,
@@ -319,7 +317,7 @@ class S3DataBackend(BaseDataBackend):
                     return "incorrect"
                 else:
                     return "correct_uncompressed"
-            except Exception as e:
+            except Exception:
                 # If torch.load fails, it's possibly compressed correctly
                 return "correct_compressed"
         elif magic_number[:2] == b"\x1f\x8b":

@@ -11,12 +11,10 @@ import numpy as np
 import torch
 import torchvision
 from decord import VideoReader, cpu
+from lvdm.models.rlhf_utils.rl_ddim import DDIMSampler
+from PIL import Image
 
 sys.path.append("videotuna")
-from lvdm.models.rlhf_utils.rl_ddim import DDIMSampler
-
-# import ipdb
-# st = ipdb.set_trace
 
 
 def batch_ddim_sampling(
@@ -95,10 +93,10 @@ def batch_ddim_sampling(
             try:
                 decode_frame = int(decode_frame)
                 # it's a int
-            except:
+            except Exception:
                 pass
             # modified by haoyu , here we need to distinguish trainable and non-trainable decode.
-            if type(decode_frame) == int:
+            if isinstance(decode_frame, int):
                 frame_index = (
                     random.randint(0, samples.shape[2] - 1)
                     if decode_frame == -1
@@ -153,7 +151,7 @@ def load_model_checkpoint(model, ckpt):
             for key in state_dict["module"].keys():
                 new_pl_sd[key[16:]] = state_dict["module"][key]
             model.load_state_dict(new_pl_sd, strict=full_strict)
-        except:
+        except Exception:
             if "state_dict" in list(state_dict.keys()):
                 state_dict = state_dict["state_dict"]
             model.load_state_dict(state_dict, strict=full_strict)
@@ -209,9 +207,6 @@ def load_video_batch(
         fps_list.append(sample_fps)
 
     return torch.stack(batch_tensor, dim=0)
-
-
-from PIL import Image
 
 
 def load_image_batch(filepath_list, image_size=(256, 256)):

@@ -66,7 +66,6 @@ def load_diffusion_model(args, weight_dtype):
             if primary_device.major >= 9:
                 try:
                     import diffusers
-                    from flash_attn_interface import flash_attn_func
 
                     from videotuna.third_party.flux.models.flux.attention import (
                         FluxAttnProcessor3_0,
@@ -81,7 +80,7 @@ def load_diffusion_model(args, weight_dtype):
                     )
                     if rank == 0:
                         print("Using FlashAttention3_0 for H100 GPU (Single block)")
-                except:
+                except Exception:
                     if rank == 0:
                         logger.warning(
                             "No flash_attn is available, using slower FlashAttention_2_0. Install flash_attn to make use of FA3 for Hopper or newer arch."

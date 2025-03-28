@@ -762,7 +762,7 @@ class DiffusionTransformer(BaseModel):
         self.inner_hidden_size = hidden_size * 4
         try:
             self.dtype = str_to_dtype[kwargs.pop("dtype")]
-        except:
+        except Exception:
             self.dtype = torch.float32
 
         if use_SwiGLU:

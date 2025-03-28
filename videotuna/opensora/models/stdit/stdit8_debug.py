@@ -32,12 +32,9 @@ from videotuna.opensora.models.layers.blocks import (
     T2IFinalLayer,
     TimestepEmbedder,
     approx_gelu,
-    get_1d_sincos_pos_embed,
-    get_2d_sincos_pos_embed,
     get_layernorm,
     t2i_modulate,
 )
-from videotuna.opensora.registry import MODELS
 from videotuna.opensora.utils.ckpt_utils import load_checkpoint
 
 

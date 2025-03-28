@@ -1,22 +1,14 @@
-import math
 from contextlib import nullcontext
-from functools import partial
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Union
 
-import kornia
 import numpy as np
 import torch
 import torch.nn as nn
-from einops import rearrange, repeat
 from omegaconf import ListConfig
-from torch.utils.checkpoint import checkpoint
 from transformers import T5EncoderModel, T5Tokenizer
 
 from ...util import (
-    append_dims,
-    autocast,
     count_params,
-    default,
     disabled_train,
     expand_dims_like,
     instantiate_from_config,
@@ -263,7 +255,7 @@ class FrozenT5Embedder(AbstractEmbModel):
         cache_dir=None,
     ):
         super().__init__()
-        if model_dir is not "google/t5-v1_1-xxl":
+        if model_dir != "google/t5-v1_1-xxl":
             self.tokenizer = T5Tokenizer.from_pretrained(model_dir)
             self.transformer = T5EncoderModel.from_pretrained(model_dir)
         else:

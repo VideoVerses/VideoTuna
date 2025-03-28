@@ -1,6 +1,5 @@
 import logging
 import os
-import re
 
 from torch import nn
 
@@ -25,7 +24,7 @@ def freeze_transformer_blocks(
             f"Invalid freeze_direction value {freeze_direction}. Choose from 'up', 'down'."
         )
     if first_unfrozen_dit_layer < 0 or first_unfrozen_mmdit_layer < 0:
-        raise ValueError(f"Invalid first_unfrozen layer value. Must be greater than 0.")
+        raise ValueError("Invalid first_unfrozen layer value. Must be greater than 0.")
     for name, param in model.named_parameters():
         # Example names:
         #  single_transformer_blocks.31.ff.c_proj.weight
@@ -33,7 +32,7 @@ def freeze_transformer_blocks(
         try:
             layer_group = name.split(".")[0]
             layer_number = int(name.split(".")[1])
-        except Exception as e:
+        except Exception:
             # non-numeric layer.
             continue
         try:

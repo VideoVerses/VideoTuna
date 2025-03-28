@@ -926,7 +926,7 @@ class TextEmbeddingCache(WebhookMixin):
                         # We attempt to load.
                         logging.debug("Loading embed from cache.")
                         prompt_embeds = self.load_from_cache(filename)
-                        if type(prompt_embeds) is tuple and len(prompt_embeds) == 2:
+                        if isinstance(prompt_embeds, tuple) and len(prompt_embeds) == 2:
                             # we have an attention mask stored with the embed.
                             prompt_embeds, attention_mask = prompt_embeds
                         logging.debug(f"Loaded embeds: {prompt_embeds.shape}")

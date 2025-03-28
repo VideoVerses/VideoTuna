@@ -23,7 +23,9 @@ class StaticThresholding:
 def dynamic_threshold(x, p=0.95):
     N, T, C, H, W = x.shape
     x = rearrange(x, "n t c h w -> n c (t h w)")
-    l, r = x.quantile(q=torch.tensor([1 - p, p], device=x.device), dim=-1, keepdim=True)
+    l, r = x.quantile(  # noqa: E741
+        q=torch.tensor([1 - p, p], device=x.device), dim=-1, keepdim=True
+    )
     s = torch.maximum(-l, r)
     threshold_mask = (s > 1).expand(-1, -1, H * W * T)
     if threshold_mask.any():

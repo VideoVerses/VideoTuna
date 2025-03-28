@@ -131,7 +131,7 @@ def _model_load(args, repo_id: str = None):
             f"\npipeline = DiffusionPipeline.from_pretrained(model_id)"
         )
     if args.model_type == "lora" and args.lora_type.lower() == "lycoris":
-        output += f"\nwrapper, _ = create_lycoris_from_weights(lora_scale, adapter_id, pipeline.transformer)"
+        output += "\nwrapper, _ = create_lycoris_from_weights(lora_scale, adapter_id, pipeline.transformer)"
         output += "\nwrapper.merge_to()"
 
     return output
@@ -157,7 +157,7 @@ def _guidance_rescale(args):
 
 def _validation_resolution(args):
     if args.validation_resolution == "" or args.validation_resolution is None:
-        return f"width=1024,\n" f"    height=1024,"
+        return "width=1024,\n" "    height=1024,"
     resolutions = [args.validation_resolution]
     if "," in args.validation_resolution:
         # split the resolution into a list of resolutions

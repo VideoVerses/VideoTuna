@@ -4,12 +4,6 @@ import accelerate
 import torch
 from accelerate.logging import get_logger
 
-logger = get_logger(__name__, log_level=os.environ.get("SIMPLETUNER_LOG_LEVEL", "INFO"))
-
-target_level = os.environ.get("SIMPLETUNER_LOG_LEVEL", "INFO")
-logger.setLevel(target_level)
-
-is_optimi_available = False
 from videotuna.third_party.flux.training.optimizers.adamw_bfloat16 import AdamWBF16
 from videotuna.third_party.flux.training.optimizers.adamw_schedulefree import (
     AdamWScheduleFreeKahan,
@@ -17,8 +11,8 @@ from videotuna.third_party.flux.training.optimizers.adamw_schedulefree import (
 from videotuna.third_party.flux.training.optimizers.soap import SOAP
 
 try:
-    from optimum.quanto import QTensor
-except:
+    pass
+except Exception:
     pass
 
 try:
@@ -38,11 +32,13 @@ except Exception as e:
     print("You need torchao installed for its low-precision optimizers.")
     raise e
 
+logger = get_logger(__name__, log_level=os.environ.get("SIMPLETUNER_LOG_LEVEL", "INFO"))
+
 try:
     import optimi
 
     is_optimi_available = True
-except:
+except Exception:
     logger.error(
         "Could not load optimi library. Please install `torch-optimi` for better memory efficiency."
     )
@@ -52,11 +48,17 @@ try:
     import bitsandbytes
 
     is_bitsandbytes_available = True
-except:
+except Exception:
     if torch.cuda.is_available():
         logger.warning(
             "Could not load bitsandbytes library. BnB-specific optimisers and other functionality will be unavailable."
         )
+
+
+target_level = os.environ.get("SIMPLETUNER_LOG_LEVEL", "INFO")
+logger.setLevel(target_level)
+
+is_optimi_available = False
 
 optimizer_choices = {
     "adamw_bf16": {
@@ -591,7 +593,7 @@ def determine_optimizer_class_with_config(
         optimizer_details = {}
     elif is_quantized and not enable_adamw_bf16:
         logger.error(
-            f"When --base_model_default_dtype=fp32, AdamWBF16 may not be used. Switching to AdamW."
+            "When --base_model_default_dtype=fp32, AdamWBF16 may not be used. Switching to AdamW."
         )
         optimizer_class, optimizer_details = optimizer_parameters("optimi-adamw", args)
     else:

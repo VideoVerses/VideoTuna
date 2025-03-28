@@ -2,14 +2,11 @@ import cv2
 import decord
 import numpy as np
 import torch
-import torchvision.transforms as transforms
 from decord import VideoReader, cpu
 from einops import rearrange
 from PIL import Image
 from torchvision.io import write_video
 from torchvision.utils import save_image
-
-from . import transforms
 
 IMG_EXTS = {"jpg", "bmp", "png", "jpeg", "rgb", "tif"}
 VIDEO_EXTS = {"mp4", "avi", "mov", "flv", "mkv", "webm", "wmv", "mov"}

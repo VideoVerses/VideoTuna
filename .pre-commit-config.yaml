@@ -10,12 +10,12 @@ repos:
         pass_filenames: false
         language: system
         stages: [pre-commit]
-#      - id: linting
-#        name: linting
-#        entry: poetry run lint
-#        pass_filenames: false
-#        language: system
-#        stages: [commit]
+      - id: linting
+        name: linting
+        entry: poetry run lint
+        pass_filenames: false
+        language: system
+        stages: [commit]
 #      - id: type-checking
 #        name: type checking
 #        entry: poetry run type-check

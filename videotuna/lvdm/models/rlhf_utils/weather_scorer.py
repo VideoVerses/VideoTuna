@@ -2,7 +2,7 @@
 import torch
 import torch.nn as nn
 import torchvision
-from transformers import CLIPModel, CLIPProcessor
+from transformers import CLIPModel
 
 
 class SimpleCNN(nn.Module):  # parameter = 6333513

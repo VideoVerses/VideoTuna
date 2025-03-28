@@ -1,13 +1,11 @@
-import logging
 import math
 from abc import ABC, abstractmethod
 from functools import partial
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, Tuple
 
 import torch
-from einops import rearrange, repeat
 
-from ...util import append_dims, default, instantiate_from_config
+from ...util import default, instantiate_from_config
 
 
 class Guider(ABC):
@@ -28,7 +26,10 @@ class VanillaCFG:
 
     def __init__(self, scale, dyn_thresh_config=None):
         self.scale = scale
-        scale_schedule = lambda scale, sigma: scale  # independent of step
+
+        def scale_schedule(scale, _sigma):
+            return scale
+
         self.scale_schedule = partial(scale_schedule, scale)
         self.dyn_thresh = instantiate_from_config(
             default(
@@ -60,10 +61,13 @@ class VanillaCFG:
 class DynamicCFG(VanillaCFG):
     def __init__(self, scale, exp, num_steps, dyn_thresh_config=None):
         super().__init__(scale, dyn_thresh_config)
-        scale_schedule = (
-            lambda scale, sigma, step_index: 1
-            + scale * (1 - math.cos(math.pi * (step_index / num_steps) ** exp)) / 2
-        )
+
+        def scale_schedule(scale, _sigma, step_index):
+            return (
+                1
+                + scale * (1 - math.cos(math.pi * (step_index / num_steps) ** exp)) / 2
+            )
+
         self.scale_schedule = partial(scale_schedule, scale)
         self.dyn_thresh = instantiate_from_config(
             default(

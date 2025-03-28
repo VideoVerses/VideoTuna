@@ -26,7 +26,7 @@ class DDIMSampler(object):
         self.training_mode = False  # default
 
     def register_buffer(self, name, attr):
-        if type(attr) == torch.Tensor:
+        if isinstance(attr, torch.Tensor):
             if attr.device != torch.device("cuda"):
                 attr = attr.to(torch.device("cuda"))
         setattr(self, name, attr)
@@ -44,7 +44,9 @@ class DDIMSampler(object):
         assert (
             alphas_cumprod.shape[0] == self.ddpm_num_timesteps
         ), "alphas have to be defined for each timestep"
-        to_torch = lambda x: x.clone().detach().to(torch.float32).to(self.model.device)
+
+        def to_torch(x):
+            return x.clone().detach().to(torch.float32).to(self.model.device)
 
         self.register_buffer("betas", to_torch(self.model.diffusion_scheduler.betas))
         self.register_buffer("alphas_cumprod", to_torch(alphas_cumprod))
@@ -137,7 +139,7 @@ class DDIMSampler(object):
             if isinstance(conditioning, dict):
                 try:
                     cbs = conditioning[list(conditioning.keys())[0]].shape[0]
-                except:
+                except Exception:
                     cbs = conditioning[list(conditioning.keys())[0]][0].shape[0]
 
                 if cbs != batch_size:
@@ -249,7 +251,7 @@ class DDIMSampler(object):
         init_x0 = False
         clean_cond = kwargs.pop("clean_cond", False)
 
-        if self.training_mode == True:
+        if self.training_mode is True:
             # print("Training mode", self.training_mode)
             if self.backprop_mode == "last":
                 backprop_cutoff_idx = self.ddim_num_steps - 1
@@ -262,7 +264,7 @@ class DDIMSampler(object):
             index = total_steps - i - 1
             ts = torch.full((b,), step, device=device, dtype=torch.long)
 
-            if self.training_mode == True:
+            if self.training_mode is True:
                 if i >= backprop_cutoff_idx:
                     for name, param in self.model.named_parameters():
                         if "lora" in name:

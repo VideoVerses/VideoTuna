@@ -8,7 +8,7 @@ import torchvision
 from PIL import Image
 
 # import albumentations as A
-from transformers import CLIPModel, CLIPProcessor
+from transformers import CLIPModel
 
 # import ipdb
 # st = ipdb.set_trace

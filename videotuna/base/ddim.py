@@ -19,7 +19,7 @@ class DDIMSampler(object):
         self.counter = 0
 
     def register_buffer(self, name, attr):
-        if type(attr) == torch.Tensor:
+        if isinstance(attr, torch.Tensor):
             if attr.device != torch.device("cuda"):
                 attr = attr.to(torch.device("cuda"))
         setattr(self, name, attr)
@@ -37,7 +37,9 @@ class DDIMSampler(object):
         assert (
             alphas_cumprod.shape[0] == self.ddpm_num_timesteps
         ), "alphas have to be defined for each timestep"
-        to_torch = lambda x: x.clone().detach().to(torch.float32).to(self.model.device)
+
+        def to_torch(x):
+            return x.clone().detach().to(torch.float32).to(self.model.device)
 
         self.register_buffer("betas", to_torch(self.model.diffusion_scheduler.betas))
         self.register_buffer("alphas_cumprod", to_torch(alphas_cumprod))
@@ -133,22 +135,24 @@ class DDIMSampler(object):
             if isinstance(conditioning, dict):
                 try:
                     cbs = conditioning[list(conditioning.keys())[0]].shape[0]
-                except:
+                except Exception:
                     try:
                         cbs = conditioning[list(conditioning.keys())[0]][0].shape[0]
-                    except:
+                    except Exception:
                         cbs = int(
                             conditioning[list(conditioning.keys())[0]][0]["y"].shape[0]
                         )
 
                 if cbs != batch_size:
                     print(
-                        f"Warning: Got {cbs} conditionings but batch-size is {batch_size}"
+                        f"Warning: Got {cbs} conditionings but "
+                        f"batch-size is {batch_size}"
                     )
             else:
                 if conditioning.shape[0] != batch_size:
                     print(
-                        f"Warning: Got {conditioning.shape[0]} conditionings but batch-size is {batch_size}"
+                        f"Warning: Got {conditioning.shape[0]} conditionings but "
+                        f"batch-size is {batch_size}"
                     )
 
         self.make_schedule(

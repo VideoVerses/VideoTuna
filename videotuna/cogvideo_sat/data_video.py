@@ -3,6 +3,7 @@ import math
 import os
 import random
 import sys
+import threading
 from fractions import Fraction
 from functools import partial
 from typing import Any, Dict, Optional, Tuple, Union
@@ -22,7 +23,7 @@ from torchvision.io.video import (
     av,
 )
 from torchvision.transforms import InterpolationMode
-from torchvision.transforms.functional import center_crop, resize
+from torchvision.transforms.functional import resize
 
 
 def read_video(
@@ -205,9 +206,6 @@ def load_video(
     tensor_frms = tensor_frms[torch.tensor((indices - start).tolist())]
 
     return pad_last_frame(tensor_frms, num_frames)
-
-
-import threading
 
 
 def load_video_with_timeout(*args, **kwargs):

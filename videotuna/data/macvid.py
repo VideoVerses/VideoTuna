@@ -3,14 +3,11 @@
 UNFINISHED UNFINISHED UNFINISHED
 """
 
-import glob
 import json
 import os
 import random
 
 import decord
-import pandas as pd
-import torch
 import yaml
 from decord import VideoReader, cpu
 from torch.utils.data import Dataset
@@ -94,7 +91,7 @@ class MaCVid(Dataset):
                     continue
                 else:
                     break
-            except:
+            except Exception:
                 index += 1
                 print(f"Load video failed! path = {video_path}")
                 return self.__getitem__(index)

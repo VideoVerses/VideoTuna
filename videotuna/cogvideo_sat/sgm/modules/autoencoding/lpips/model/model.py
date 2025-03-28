@@ -10,7 +10,7 @@ def weights_init(m):
     if classname.find("Conv") != -1:
         try:
             nn.init.normal_(m.weight.data, 0.0, 0.02)
-        except:
+        except Exception:
             nn.init.normal_(m.conv.weight.data, 0.0, 0.02)
     elif classname.find("BatchNorm") != -1:
         nn.init.normal_(m.weight.data, 1.0, 0.02)
@@ -35,9 +35,8 @@ class NLayerDiscriminator(nn.Module):
             norm_layer = nn.BatchNorm2d
         else:
             norm_layer = ActNorm
-        if (
-            type(norm_layer) == functools.partial
-        ):  # no need to use bias as BatchNorm2d has affine parameters
+        if isinstance(n_layers, functools.partial):
+            # no need to use bias as BatchNorm2d has affine parameters
             use_bias = norm_layer.func != nn.BatchNorm2d
         else:
             use_bias = norm_layer != nn.BatchNorm2d

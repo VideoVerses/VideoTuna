@@ -164,7 +164,7 @@ def get_tokenizers(args):
                 revision=args.revision,
                 use_fast=True,
             )
-        except:
+        except Exception:
             raise ValueError(
                 "Could not load tertiary tokenizer (T5-XXL v1.1). Cannot continue."
             )
