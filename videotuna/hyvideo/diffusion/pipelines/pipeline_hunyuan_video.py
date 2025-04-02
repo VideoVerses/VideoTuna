@@ -40,7 +40,6 @@ from diffusers.utils import (
     unscale_lora_layers,
 )
 from diffusers.utils.torch_utils import randn_tensor
-from packaging import version
 
 from ...constants import PRECISION_TO_TYPE
 from ...modules import HYVideoDiffusionTransformer

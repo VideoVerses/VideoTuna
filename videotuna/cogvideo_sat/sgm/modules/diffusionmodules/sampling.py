@@ -584,7 +584,7 @@ class VideoDDIMSampler(BaseDiffusionSampler):
         if ofs is not None:
             additional_model_inputs["ofs"] = ofs
 
-        if isinstance(scale, torch.Tensor) == False and scale == 1:
+        if not isinstance(scale, torch.Tensor) and scale == 1:
             additional_model_inputs["idx"] = x.new_ones([x.shape[0]]) * timestep
             if scale_emb is not None:
                 additional_model_inputs["scale_emb"] = scale_emb

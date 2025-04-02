@@ -5,7 +5,6 @@ import random
 import sys
 import time
 from datetime import timedelta
-from typing import Dict, List, Optional, Tuple
 
 import torch
 from accelerate import InitProcessGroupKwargs
@@ -16,7 +15,6 @@ from videotuna.third_party.flux.training import quantised_precision_levels
 from videotuna.third_party.flux.training.optimizer_param import (
     is_optimizer_deprecated,
     is_optimizer_grad_fp32,
-    map_deprecated_optimizer_parameter,
     optimizer_choices,
 )
 
@@ -1943,7 +1941,7 @@ def parse_cmdline_args(input_args=None):
             print_on_main_thread(f"{key_val}")
         try:
             args = parser.parse_args(input_args)
-        except:
+        except Exception:
             logger.error(f"Could not parse input: {input_args}")
             import traceback
 
@@ -2216,7 +2214,7 @@ def parse_cmdline_args(input_args=None):
                     f"-!- Flux supports a max length of {model_max_seq_length} tokens, but you have supplied `--i_know_what_i_am_doing`, so this limit will not be enforced. -!-"
                 )
                 warning_log(
-                    f"The model will begin to collapse after a short period of time, if the model you are continuing from has not been tuned beyond 256 tokens."
+                    "The model will begin to collapse after a short period of time, if the model you are continuing from has not been tuned beyond 256 tokens."
                 )
         if flux_version == "dev":
             if args.validation_num_inference_steps > 28:
@@ -2322,7 +2320,6 @@ def parse_cmdline_args(input_args=None):
     args.disable_accelerator = os.environ.get("SIMPLETUNER_DISABLE_ACCELERATOR", False)
 
     if "lycoris" == args.lora_type.lower():
-        from lycoris import create_lycoris
 
         if args.lycoris_config is None:
             raise ValueError(

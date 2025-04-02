@@ -48,9 +48,7 @@ def _quanto_model(
     quantize_activations: bool = False,
 ):
     try:
-        from optimum.quanto import QTensor, freeze, quantize
-
-        from videotuna.third_party.flux.training.quantisation import quanto_workarounds
+        from optimum.quanto import freeze, quantize
     except ImportError as e:
         raise ImportError(
             f"To use Quanto, please install the optimum library: `pip install optimum-quanto`: {e}"
@@ -138,14 +136,12 @@ def _torchao_model(
         return model
 
     try:
-        import torchao
         from torchao.float8 import Float8LinearConfig, convert_to_float8_training
         from torchao.prototype.quantized_training import (
             int8_weight_only_quantized_training,
         )
         from torchao.quantization import quantize_
 
-        from videotuna.third_party.flux.training.quantisation import torchao_workarounds
     except ImportError as e:
         raise ImportError(
             f"To use torchao, please install the torchao library: `pip install torchao`: {e}"

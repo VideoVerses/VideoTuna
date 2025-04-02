@@ -3,6 +3,7 @@ import os
 
 import torch
 from diffusers import FluxPipeline
+
 from videotuna.utils.inference_utils import load_prompts_from_txt
 
 
@@ -57,9 +58,16 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model_type", type=str, default="dev", choices=["dev", "schnell"]
     )
-    parser.add_argument("--prompt", type=str, default="A photo of a cat", help="Inference prompt, string or path to a .txt file")
+    parser.add_argument(
+        "--prompt",
+        type=str,
+        default="A photo of a cat",
+        help="Inference prompt, string or path to a .txt file",
+    )
     parser.add_argument("--out_path", type=str, default="./results/t2i/image.png")
-    parser.add_argument("--lora_path", type=str, default=None, help="Full path to lora weights")
+    parser.add_argument(
+        "--lora_path", type=str, default=None, help="Full path to lora weights"
+    )
     parser.add_argument("--width", type=int, default=1360)
     parser.add_argument("--height", type=int, default=768)
     parser.add_argument("--num_inference_steps", type=int, default=4)

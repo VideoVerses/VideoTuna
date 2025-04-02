@@ -3,12 +3,8 @@ from typing import Optional, Union
 
 import pytorch_lightning as pl
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from diffusers.models import AutoencoderKL, AutoencoderKLTemporalDecoder
+from diffusers.models import AutoencoderKL
 from einops import rearrange
-
-from videotuna.base.distributions import DiagonalGaussianDistribution
 
 
 class VideoAutoencoderKL(pl.LightningModule):

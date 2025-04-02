@@ -13,9 +13,11 @@
 # limitations under the License.
 
 import inspect
+from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Union
 
 import numpy as np
+import PIL.Image
 import torch
 from diffusers.image_processor import VaeImageProcessor
 from diffusers.loaders import FluxLoraLoaderMixin
@@ -25,6 +27,7 @@ from diffusers.pipelines.pipeline_utils import DiffusionPipeline
 from diffusers.schedulers import FlowMatchEulerDiscreteScheduler
 from diffusers.utils import (
     USE_PEFT_BACKEND,
+    BaseOutput,
     is_torch_xla_available,
     logging,
     replace_example_docstring,
@@ -913,13 +916,6 @@ class FluxPipeline(DiffusionPipeline, FluxLoraLoaderMixin):
             return (image,)
 
         return FluxPipelineOutput(images=image)
-
-
-from dataclasses import dataclass
-from typing import List, Union
-
-import PIL.Image
-from diffusers.utils import BaseOutput
 
 
 @dataclass

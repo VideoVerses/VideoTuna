@@ -173,8 +173,8 @@ class NLayerDiscriminator(nn.Module):
 
         norm_layer = nn.BatchNorm2d
 
-        if (
-            type(norm_layer) == functools.partial
+        if isinstance(
+            norm_layer, functools.partial
         ):  # no need to use bias as BatchNorm2d has affine parameters
             use_bias = norm_layer.func != nn.BatchNorm2d
         else:
@@ -250,7 +250,7 @@ class NLayerDiscriminator3D(nn.Module):
             norm_layer = nn.BatchNorm3d
         else:
             raise NotImplementedError("Not implemented.")
-        if type(norm_layer) == functools.partial:
+        if isinstance(norm_layer, functools.partial):
             use_bias = norm_layer.func != nn.BatchNorm3d
         else:
             use_bias = norm_layer != nn.BatchNorm3d

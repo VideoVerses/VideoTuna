@@ -94,8 +94,8 @@ class LPIPS(nn.Module):
             for kk in range(len(self.chns))
         ]
         val = res[0]
-        for l in range(1, len(self.chns)):
-            val += res[l]
+        for index in range(1, len(self.chns)):
+            val += res[index]
         return val
 
 

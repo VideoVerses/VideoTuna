@@ -10,7 +10,7 @@ try:
     import xformers.ops
 
     XFORMERS_IS_AVAILBLE = True
-except:
+except Exception:
     XFORMERS_IS_AVAILBLE = False
 
 from videotuna.lvdm.modules.utils import checkpoint, default, exists, zero_module

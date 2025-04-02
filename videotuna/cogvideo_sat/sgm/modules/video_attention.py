@@ -1,6 +1,16 @@
 import torch
 
-from ..modules.attention import *
+from ..modules.attention import (
+    CrossAttention,
+    FeedForward,
+    MemoryEfficientCrossAttention,
+    SpatialTransformer,
+    checkpoint,
+    exists,
+    nn,
+    rearrange,
+    repeat,
+)
 from ..modules.diffusionmodules.util import AlphaBlender, linear, timestep_embedding
 
 
@@ -235,10 +245,10 @@ class SpatialVideoTransformer(SpatialTransformer):
     def forward(
         self,
         x: torch.Tensor,
-        context: Optional[torch.Tensor] = None,
-        time_context: Optional[torch.Tensor] = None,
-        timesteps: Optional[int] = None,
-        image_only_indicator: Optional[torch.Tensor] = None,
+        context: torch.Tensor | None = None,
+        time_context: torch.Tensor | None = None,
+        timesteps: int | None = None,
+        image_only_indicator: torch.Tensor | None = None,
     ) -> torch.Tensor:
         _, _, h, w = x.shape
         x_in = x

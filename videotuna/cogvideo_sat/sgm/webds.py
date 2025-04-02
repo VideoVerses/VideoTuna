@@ -9,7 +9,7 @@ from functools import partial
 import webdataset as wds
 from webdataset import DataPipeline, ResampledShards, tarfile_to_samples
 from webdataset.filters import pipelinefilter
-from webdataset.gopen import gopen, gopen_schemes
+from webdataset.gopen import Pipe, gopen, gopen_schemes
 from webdataset.handlers import reraise_exception
 from webdataset.tariterators import group_by_keys, url_opener
 
@@ -61,7 +61,7 @@ class ConfiguredResampledShards(ResampledShards):
 
             group = get_data_parallel_group()
             print_rank0("Using megatron data parallel group.")
-        except:
+        except Exception:
             from sat.mpu import get_data_parallel_group
 
             try:
@@ -126,7 +126,7 @@ def tar_file_iterator_with_meta(
             meta_list = []
             try:
                 meta_list.append(json.loads(line))
-            except Exception as exn:
+            except Exception:
                 from sat.helpers import print_rank0
 
                 print_rank0(
@@ -135,7 +135,7 @@ def tar_file_iterator_with_meta(
                 )
                 continue
             for item in meta_list:
-                if not item["key"] in meta_data:
+                if item["key"] not in meta_data:
                     meta_data[item["key"]] = {}
                 for meta_name in meta_names:
                     if meta_name in item:
@@ -330,10 +330,6 @@ class MetaDistributedWebDataset(DataPipeline):
             wds.shuffle(shuffle_buffer),
             process_fn,
         )
-
-
-# rclone support
-from webdataset.gopen import Pipe
 
 
 def gopen_rclone(url, mode="rb", bufsize=1024 * 1024 * 32):

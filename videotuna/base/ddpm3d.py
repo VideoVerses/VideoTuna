@@ -7,44 +7,35 @@ https://github.com/CompVis/taming-transformers
 """
 
 import logging
-import os
 import random
 from contextlib import contextmanager
 from functools import partial
 
 import numpy as np
-from einops import rearrange, repeat
-from tqdm import tqdm
-
-mainlogger = logging.getLogger("mainlogger")
-
 import peft
 import pytorch_lightning as pl
 import torch
-import torch.nn as nn
+from einops import rearrange, repeat
 from pytorch_lightning.utilities import rank_zero_only
 from torch.optim.lr_scheduler import CosineAnnealingLR, LambdaLR
 from torchvision.utils import make_grid
+from tqdm import tqdm
 
 from videotuna.base.ddim import DDIMSampler
-from videotuna.base.distributions import DiagonalGaussianDistribution, normal_kl
+from videotuna.base.distributions import DiagonalGaussianDistribution
 from videotuna.base.ema import LitEma
-from videotuna.base.utils_diffusion import make_beta_schedule, rescale_zero_terminal_snr
 
 # import rlhf utils
 from videotuna.lvdm.models.rlhf_utils.batch_ddim import batch_ddim_sampling
 from videotuna.lvdm.models.rlhf_utils.reward_fn import aesthetic_loss_fn
 from videotuna.lvdm.modules.encoders.ip_resampler import ImageProjModel, Resampler
-from videotuna.lvdm.modules.utils import (
-    default,
-    disabled_train,
-    exists,
-    extract_into_tensor,
-    noise_like,
-)
+from videotuna.lvdm.modules.utils import default, disabled_train, extract_into_tensor
 from videotuna.utils.common_utils import instantiate_from_config
 
 __conditioning_keys__ = {"concat": "c_concat", "crossattn": "c_crossattn", "adm": "y"}
+
+
+mainlogger = logging.getLogger("mainlogger")
 
 
 class DDPMFlow(pl.LightningModule):
@@ -430,7 +421,7 @@ class DDPMFlow(pl.LightningModule):
                     f"Parameter {key} from lora_state_dict was not copied to the model."
                 )
                 # print(f"Parameter {key} from lora_state_dict was not copied to the model.")
-        print(f"All Parameters was copied successfully.")
+        print("All Parameters was copied successfully.")
 
     def inject_lora(self):
         """inject lora into the denoising module.
@@ -519,7 +510,7 @@ class LVDMFlow(DDPMFlow):
 
         try:
             self.num_downs = len(first_stage_config.params.ddconfig.ch_mult) - 1
-        except:
+        except Exception:
             self.num_downs = 0
         if not scale_by_std:
             self.scale_factor = scale_factor
@@ -1586,7 +1577,7 @@ class LatentVisualDiffusionFlow(LVDMFlow):
 
         if self.cond_stage_trainable:
             params_cond_stage = [
-                p for p in self.cond_stage_model.parameters() if p.requires_grad == True
+                p for p in self.cond_stage_model.parameters() if p.requires_grad is True
             ]
             mainlogger.info(
                 f"@Training [{len(params_cond_stage)}] Paramters for Cond_stage_model."

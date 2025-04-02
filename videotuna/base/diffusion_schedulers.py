@@ -8,7 +8,6 @@ import torch.nn as nn
 from videotuna.base.utils_diffusion import make_beta_schedule, rescale_zero_terminal_snr
 from videotuna.lvdm.modules.utils import (
     default,
-    disabled_train,
     exists,
     extract_into_tensor,
     noise_like,

@@ -1,5 +1,3 @@
-import copy
-
 import numpy as np
 import torch
 from tqdm import tqdm
@@ -21,7 +19,7 @@ class DDIMSampler(object):
         self.counter = 0
 
     def register_buffer(self, name, attr):
-        if type(attr) == torch.Tensor:
+        if isinstance(attr, torch.Tensor):
             if attr.device != torch.device("cuda"):
                 attr = attr.to(torch.device("cuda"))
         setattr(self, name, attr)
@@ -39,7 +37,9 @@ class DDIMSampler(object):
         assert (
             alphas_cumprod.shape[0] == self.ddpm_num_timesteps
         ), "alphas have to be defined for each timestep"
-        to_torch = lambda x: x.clone().detach().to(torch.float32).to(self.model.device)
+
+        def to_torch(x):
+            return x.clone().detach().to(torch.float32).to(self.model.device)
 
         if self.model.use_scale:
             self.ddim_scale_arr = self.model.scale_arr[self.ddim_timesteps]
@@ -120,7 +120,8 @@ class DDIMSampler(object):
         fs=None,
         timestep_spacing="uniform",  # uniform_trailing for starting from last timestep
         guidance_rescale=0.0,
-        # this has to come in the same format as the conditioning, # e.g. as encoded tokens, ...
+        # this has to come in the same format as the conditioning,
+        # e.g. as encoded tokens, ...
         **kwargs,
     ):
 
@@ -129,7 +130,7 @@ class DDIMSampler(object):
             if isinstance(conditioning, dict):
                 try:
                     cbs = conditioning[list(conditioning.keys())[0]].shape[0]
-                except:
+                except Exception:
                     cbs = conditioning[list(conditioning.keys())[0]][0].shape[0]
 
                 if cbs != batch_size:

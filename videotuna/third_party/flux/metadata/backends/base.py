@@ -779,7 +779,7 @@ class MetadataBackend:
                     logger.debug(
                         f"Received type of metadata update: {type(metadata_update)}, contents: {metadata_update}"
                     )
-                    if type(metadata_update) == dict:
+                    if isinstance(metadata_update, dict):
                         for filepath, meta in metadata_update.items():
                             self.set_metadata_by_filepath(
                                 filepath=filepath, metadata=meta, update_json=False

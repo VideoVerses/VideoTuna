@@ -1,6 +1,6 @@
 import inspect
 from argparse import ArgumentParser
-from typing import Any, Callable, Dict, List, Tuple, Type, TypeVar, Union, cast
+from typing import Any, Callable, Dict, List, Tuple, Type, Union
 
 import pytorch_lightning as pl
 
@@ -149,7 +149,7 @@ def add_trainer_args_to_parser(cls, parent_parser, use_argument_group=True):
         raise RuntimeError("Please only pass an `ArgumentParser` instance.")
     if use_argument_group:
         group_name = _get_abbrev_qualified_cls_name(cls)
-        parser: _ADD_ARGPARSE_RETURN = parent_parser.add_argument_group(group_name)
+        parser = parent_parser.add_argument_group(group_name)
     else:
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
 
@@ -212,7 +212,7 @@ def add_trainer_args_to_parser(cls, parent_parser, use_argument_group=True):
                 required=(arg_default == inspect._empty),
                 **arg_kwargs,
             )
-        except:
+        except Exception:
             # TODO: check the argument appending to the parser
             pass
 

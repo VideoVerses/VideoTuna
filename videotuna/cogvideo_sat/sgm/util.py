@@ -3,6 +3,7 @@ import importlib
 import os
 from functools import partial
 from inspect import isfunction
+from math import sqrt
 
 import fsspec
 import numpy as np
@@ -128,11 +129,11 @@ def get_string_from_tuple(s):
             # Convert the string to a tuple
             t = eval(s)
             # Check if the type of t is tuple
-            if type(t) == tuple:
+            if isinstance(t, tuple):
                 return t[0]
             else:
                 pass
-    except:
+    except Exception:
         pass
     return s
 
@@ -270,7 +271,7 @@ def count_params(model, verbose=False):
 
 
 def instantiate_from_config(config, **extra_kwargs):
-    if not "target" in config:
+    if "target" not in config:
         if config == "__is_first_stage__":
             return None
         elif config == "__is_unconditional__":
@@ -379,9 +380,6 @@ def get_nested_attribute(obj, attribute_path, depth=None, return_key=False):
             current_attribute = getattr(current_attribute, attribute)
 
     return (current_attribute, current_key) if return_key else current_attribute
-
-
-from math import sqrt
 
 
 class SeededNoise:

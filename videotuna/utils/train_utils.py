@@ -1,22 +1,13 @@
-import argparse
-import glob
 import logging
-import multiprocessing as mproc
 import os
-import sys
 from collections import OrderedDict
 
-from omegaconf import OmegaConf
-from packaging import version
-
-mainlogger = logging.getLogger("mainlogger")
-
-from collections import OrderedDict
-
-import pytorch_lightning as pl
 import torch
+from omegaconf import OmegaConf
 
 from videotuna.utils.load_weights import load_from_pretrainedSD_checkpoint
+
+mainlogger = logging.getLogger("mainlogger")
 
 
 def init_workspace(name, logdir, model_config, lightning_config, rank=0):
@@ -25,7 +16,8 @@ def init_workspace(name, logdir, model_config, lightning_config, rank=0):
     cfgdir = os.path.join(workdir, "configs")
     loginfo = os.path.join(workdir, "loginfo")
 
-    # Create logdirs and save configs (all ranks will do to avoid missing directory error if rank:0 is slower)
+    # Create logdirs and save configs
+    # (all ranks will do to avoid missing directory error if rank:0 is slower)
     os.makedirs(workdir, exist_ok=True)
     os.makedirs(ckptdir, exist_ok=True)
     os.makedirs(cfgdir, exist_ok=True)
@@ -90,7 +82,8 @@ def get_trainer_callbacks(lightning_config, config, logdir, ckptdir, logger):
 
     if "metrics_over_trainsteps_checkpoint" in lightning_config.callbacks:
         mainlogger.info(
-            "Caution: Saving checkpoints every n train steps without deleting. This might require some free space."
+            "Caution: Saving checkpoints every n train steps without deleting."
+            " This might require some free space."
         )
         default_metrics_over_trainsteps_ckpt_dict = {
             "metrics_over_trainsteps_checkpoint": {
@@ -159,7 +152,7 @@ def get_trainer_strategy(lightning_config):
 
 
 def load_checkpoints(model, model_cfg):
-    ## special load setting for adapter training
+    # special load setting for adapter training
     if check_config_attribute(model_cfg, "adapter_only"):
         pretrained_ckpt = model_cfg.pretrained_checkpoint
         assert os.path.exists(pretrained_ckpt), (
@@ -170,7 +163,7 @@ def load_checkpoints(model, model_cfg):
         )
         print(f"Loading model from {pretrained_ckpt}")
         ## only load weight for the backbone model (e.g. latent diffusion model)
-        state_dict = torch.load(pretrained_ckpt, map_location=f"cpu")
+        state_dict = torch.load(pretrained_ckpt, map_location="cpu")
         if "state_dict" in list(state_dict.keys()):
             state_dict = state_dict["state_dict"]
         else:
@@ -208,7 +201,7 @@ def load_checkpoints(model, model_cfg):
                 for key in pl_sd["module"].keys():
                     new_pl_sd[key[16:]] = pl_sd["module"][key]
                 model.load_state_dict(new_pl_sd)
-        except:
+        except Exception:
             if "state_dict" in pl_sd.keys():
                 model.load_state_dict(pl_sd["state_dict"], strict=False)
             else:
@@ -217,7 +210,7 @@ def load_checkpoints(model, model_cfg):
         """
         try:
             model = model.load_from_checkpoint(pretrained_ckpt, **model_cfg.params)
-        except:
+        except Exception:
             mainlogger.info("[Warning] checkpoint NOT complete matched. To adapt by skipping ...")
             state_dict = torch.load(pretrained_ckpt, map_location=f"cpu")
             if "state_dict" in list(state_dict.keys()):
@@ -276,7 +269,7 @@ def get_autoresume_path(logdir):
             gs = tmp["global_step"]
             mainlogger.info(f"[INFO] Resume from epoch {e}, global step {gs}!")
             del tmp
-        except:
+        except Exception:
             try:
                 mainlogger.info("Load last.ckpt failed!")
                 ckpts = sorted(
@@ -301,7 +294,8 @@ def get_autoresume_path(logdir):
     else:
         resume_checkpt_path = None
         mainlogger.info(
-            f"[INFO] no checkpoint found in current workspace: {os.path.join(logdir, 'checkpoints')}"
+            f"[INFO] no checkpoint found in current workspace: "
+            f"{os.path.join(logdir, 'checkpoints')}"
         )
 
     return resume_checkpt_path

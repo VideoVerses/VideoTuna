@@ -7,8 +7,7 @@ import os
 import numpy as np
 import torch
 import torch.nn as nn
-from PIL import Image
-from transformers import CLIPModel, CLIPProcessor
+from transformers import CLIPModel
 
 # ASSETS_PATH = files("lvdm.models.rlhf_utils.pretrained_reward_models")
 ASSETS_PATH = "videotuna/lvdm/models/rlhf_utils/pretrained_reward_models"

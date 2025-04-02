@@ -27,7 +27,6 @@ from decord import VideoReader, cpu
 from einops import rearrange
 from PIL import Image
 from torchvision.datasets.folder import pil_loader
-from torchvision.io import write_video
 
 from .datasets_utils import IMG_EXTS, VIDEO_EXTS
 

@@ -1,19 +1,16 @@
 import copy
 import logging
-
-from omegaconf import OmegaConf
-
-mainlogger = logging.getLogger("mainlogger")
-
 from collections import OrderedDict
 
 import torch
+from omegaconf import OmegaConf
 from safetensors import safe_open
-from torch import nn
 
 from videotuna.utils.common_utils import instantiate_from_config
 
 # from lvdm.personalization.lora import net_load_lora
+
+mainlogger = logging.getLogger("mainlogger")
 
 
 def expand_conv_kernel(pretrained_dict):
@@ -29,9 +26,9 @@ def load_from_pretrainedSD_checkpoint(
     model, pretained_ckpt, expand_to_3d=True, adapt_keyname=False
 ):
     mainlogger.info(
-        f"------------------- Load pretrained SD weights -------------------"
+        "------------------- Load pretrained SD weights -------------------"
     )
-    sd_state_dict = torch.load(pretained_ckpt, map_location=f"cpu")
+    sd_state_dict = torch.load(pretained_ckpt, map_location="cpu")
     if "state_dict" in list(sd_state_dict.keys()):
         sd_state_dict = sd_state_dict["state_dict"]
     model_state_dict = model.state_dict()
@@ -83,8 +80,8 @@ def load_from_pretrainedSD_checkpoint(
     # load the new state dict
     try:
         model.load_state_dict(model_state_dict)
-    except:
-        state_dict = torch.load(model_state_dict, map_location=f"cpu")
+    except Exception:
+        state_dict = torch.load(model_state_dict, map_location="cpu")
         if "state_dict" in list(state_dict.keys()):
             state_dict = state_dict["state_dict"]
         model_state_dict = model.state_dict()
@@ -96,9 +93,7 @@ def load_from_pretrainedSD_checkpoint(
         model_state_dict.update(state_dict)
         model.load_state_dict(model_state_dict)
 
-    mainlogger.info(
-        f"---------------------------- Finish! ----------------------------"
-    )
+    mainlogger.info("---------------------------- Finish! ----------------------------")
     return model, empty_paras
 
 
@@ -159,7 +154,7 @@ def load_partial_weights(
     model_dict_ori = copy.deepcopy(model_dict)
 
     mainlogger.info(
-        f"-------------- Load pretrained LDM weights --------------------------"
+        "-------------- Load pretrained LDM weights --------------------------"
     )
     mainlogger.info(f"Num of parameters of target model: {len(model_dict.keys())}")
     mainlogger.info(f"Num of parameters of source model: {len(pretrained_dict.keys())}")
@@ -209,7 +204,7 @@ def load_partial_weights(
     # load the new state dict
     try:
         model2.load_state_dict(model_dict)
-    except:
+    except Exception:
         # if parameter size mismatch, skip them
         skipped = []
         for n, p in model_dict.items():
@@ -229,7 +224,7 @@ def load_partial_weights(
         mainlogger.info(f"Empty parameters: {len(empty_paras)} ")
         # import pdb;pdb.set_trace()
 
-    mainlogger.info(f"-------------- Finish! --------------------------")
+    mainlogger.info("-------------- Finish! --------------------------")
     return model2, empty_paras
 
 
@@ -318,7 +313,7 @@ def convert_lora(
                 LORA_PREFIX_TEXT_ENCODER + "_"
             )[-1].split("_")
             curr_layer = model
-            # if type(model.cond_stage_model) == "FrozenOpenCLIPEmbedder":
+            # if isinstance(model.cond_stage_model, FrozenOpenCLIPEmbedder):
             #     curr_layer = model.cond_stage_model.model
         elif LORA_PREFIX_UNET in key:
             # else:

@@ -108,7 +108,7 @@ def configure_lycoris():
 
     # Prompt user to select an algorithm
     algo = prompt_user(
-        f"Which LyCORIS algorithm would you like to use? (Enter the number corresponding to the algorithm)",
+        "Which LyCORIS algorithm would you like to use? (Enter the number corresponding to the algorithm)",
         "3",  # Default to LoKr
     )
 
@@ -339,7 +339,7 @@ def configure_env():
     whoami = None
     try:
         whoami = huggingface_hub.whoami()
-    except:
+    except Exception:
         pass
     should_retry = True
     while not whoami and should_retry:
@@ -484,7 +484,7 @@ def configure_env():
             model_info = huggingface_hub.model_info(model_name)
             if hasattr(model_info, "id"):
                 can_load_model = True
-        except:
+        except Exception:
             continue
     env_contents["--model_type"] = model_type
     env_contents["--pretrained_model_name_or_path"] = model_name

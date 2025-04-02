@@ -3,7 +3,7 @@
 # Originally licensed under the Apache License, Version 2.0 (the "License");
 # Updated to "Affero GENERAL PUBLIC LICENSE Version 3, 19 November 2007" via extensive updates to attn_mask usage.
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
@@ -33,20 +33,19 @@ from diffusers.utils import (
 )
 from diffusers.utils.torch_utils import maybe_allow_in_graph
 
-logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
-
-is_flash_attn_available = False
-try:
-    from flash_attn_interface import flash_attn_func
-
-    is_flash_attn_available = True
-except:
-    pass
-
 from videotuna.third_party.flux.models.flux.attention import (
     FluxAttnProcessor3_0,
     FluxSingleAttnProcessor3_0,
 )
+
+logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
+
+is_flash_attn_available = False
+try:
+
+    is_flash_attn_available = True
+except Exception:
+    pass
 
 
 class FluxAttnProcessor2_0:

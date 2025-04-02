@@ -4,7 +4,7 @@ import logging
 import os
 from io import BytesIO
 from pathlib import Path
-from typing import Any, BinaryIO, Optional, Union
+from typing import Any, Optional, Union
 
 import pandas as pd
 import requests
@@ -235,7 +235,7 @@ class CSVDataBackend(BaseDataBackend):
         self, filepaths: list, delete_problematic_images: bool = False
     ) -> list:
         """Read a batch of images from the specified filepaths."""
-        if type(filepaths) != list:
+        if not isinstance(filepaths, list):
             raise ValueError(
                 f"read_image_batch must be given a list of image filepaths. we received: {filepaths}"
             )

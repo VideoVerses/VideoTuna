@@ -5,4 +5,3 @@ __all__ = [
 
 from .discriminator_loss import GeneralLPIPSWithDiscriminator
 from .lpips import LatentLPIPS
-from .video_loss import VideoAutoencoderLoss

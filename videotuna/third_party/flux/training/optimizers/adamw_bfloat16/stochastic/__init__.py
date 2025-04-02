@@ -1,16 +1,16 @@
 import torch
-from torch import FloatTensor, Tensor
+from torch import Tensor
 
 
-def swap_first_and_last_dims(tensor: torch.Tensor) -> torch.Tensor:
+def swap_first_and_last_dims(tensor: Tensor) -> Tensor:
     """
     Swap the first dimension with the last dimension of a tensor.
 
     Args:
-        tensor (torch.Tensor): The input tensor of any shape.
+        tensor (Tensor): The input tensor of any shape.
 
     Returns:
-        torch.Tensor: A tensor with the first dimension swapped with the last.
+        Tensor: A tensor with the first dimension swapped with the last.
     """
     # Get the total number of dimensions
     num_dims = len(tensor.shape)
@@ -22,16 +22,16 @@ def swap_first_and_last_dims(tensor: torch.Tensor) -> torch.Tensor:
     return tensor.permute(*new_order)
 
 
-def swap_back_first_and_last_dims(tensor: torch.Tensor) -> torch.Tensor:
+def swap_back_first_and_last_dims(tensor: Tensor) -> Tensor:
     """
     Swap back the first dimension with the last dimension of a tensor
     to its original shape after a swap.
 
     Args:
-        tensor (torch.Tensor): The tensor that had its first and last dimensions swapped.
+        tensor (Tensor): The tensor that had its first and last dimensions swapped.
 
     Returns:
-        torch.Tensor: A tensor with its original shape restored.
+        Tensor: A tensor with its original shape restored.
     """
     # Get the total number of dimensions
     num_dims = len(tensor.shape)
