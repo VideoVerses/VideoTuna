@@ -47,6 +47,7 @@ def inference(args):
             width=args.width,
             num_inference_steps=args.num_inference_steps,
             max_sequence_length=256,
+            generator=torch.Generator().manual_seed(args.seed)
         ).images[0]
         out.save(out_path)
 
@@ -63,5 +64,6 @@ if __name__ == "__main__":
     parser.add_argument("--height", type=int, default=768)
     parser.add_argument("--num_inference_steps", type=int, default=4)
     parser.add_argument("--guidance_scale", type=float, default=0.0)
+    parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
     inference(args)

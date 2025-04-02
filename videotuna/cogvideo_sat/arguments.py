@@ -300,17 +300,18 @@ def getArgs():
                 )
         args.deepspeed_config = deepspeed_config
 
-    initialize_distributed(args)
-    args.seed = args.seed + mpu.get_data_parallel_rank()
-    set_random_seed(args.seed)
-
     args.load = parser.parse_args().load_transformer
     args.input_type = parser.parse_args().input_type
     args.input_file = parser.parse_args().input_file
     args.output_dir = parser.parse_args().output_dir
     args.image_folder = parser.parse_args().image_folder
+    args.seed = parser.parse_args().seed
     args.batch_size = 1
     args.bf16 = True
+
+    initialize_distributed(args)
+    args.seed = args.seed + mpu.get_data_parallel_rank()
+    set_random_seed(args.seed)
 
     del args.deepspeed_config
     args.model_config.first_stage_config.params.cp_size = 1

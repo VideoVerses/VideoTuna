@@ -254,6 +254,7 @@ def main(args, model_cls):
 
             for index in range(args.batch_size):
                 shape = (T, C, H, W) if args.image2video else (T, C, H // 8, W // 8)
+                set_random_seed(args.seed)
                 samples_z = (
                     sample_func(c, uc=uc, batch_size=1, shape=shape)
                     .permute(0, 2, 1, 3, 4)

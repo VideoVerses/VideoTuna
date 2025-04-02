@@ -12,4 +12,5 @@ python scripts/inference_cogVideo_sat_refactor.py \
 --base $base    \
 --mode_type "i2v"   \
 --sampling_num_frames 22    \
---image_folder $image_folder
+--image_folder $image_folder \
+--seed 42

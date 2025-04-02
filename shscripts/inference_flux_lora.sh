@@ -9,4 +9,5 @@ python scripts/inference_flux_lora.py \
     --width 1360 \
     --height 768 \
     --num_inference_steps 50 \
-    --guidance_scale 3.5
+    --guidance_scale 3.5 \
+    --seed 42
