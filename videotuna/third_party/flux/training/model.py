@@ -1,5 +1,4 @@
 import copy
-import glob
 import hashlib
 import json
 import logging
@@ -9,28 +8,30 @@ import random
 import shutil
 import sys
 
+import accelerate
+import diffusers
 import huggingface_hub
 import pytorch_lightning as pl
-import torch.distributed as dist
+import torch
+import torch.nn.functional as F
+import torch.utils.checkpoint
+import transformers
 import wandb
-from pytorch_lightning.callbacks import Callback
-from pytorch_lightning.utilities import rank_zero_only
-from safetensors.torch import save_file
-
-from videotuna.third_party.flux.configuration.configure import model_labels
-from videotuna.third_party.flux.publishing.huggingface import HubManager
-from videotuna.third_party.flux.training.default_settings.safety_check import (
-    safety_check,
-)
-from videotuna.utils.callbacks import LoraModelCheckpoint
+from accelerate import Accelerator
 
 # Quiet down, you.
-os.environ["ACCELERATE_LOG_LEVEL"] = "WARNING"
 from accelerate.logging import get_logger
+from accelerate.utils import set_seed
 from diffusers.models.embeddings import get_2d_rotary_pos_embed
+from pytorch_lightning.utilities import rank_zero_only
+from torch.distributions import Beta
 
 from videotuna.third_party.flux import log_format  # noqa
 from videotuna.third_party.flux.caching.memory import reclaim_memory
+from videotuna.third_party.flux.configuration.configure import (
+    model_classes,
+    model_labels,
+)
 from videotuna.third_party.flux.configuration.loader import load_config
 from videotuna.third_party.flux.data_backend.factory import (
     BatchFetcher,
@@ -38,7 +39,7 @@ from videotuna.third_party.flux.data_backend.factory import (
     random_dataloader_iterator,
 )
 from videotuna.third_party.flux.models.smoldit import get_resize_crop_region_for_grid
-from videotuna.third_party.flux.training import steps_remaining_in_epoch
+from videotuna.third_party.flux.publishing.huggingface import HubManager
 from videotuna.third_party.flux.training.adapter import (
     determine_adapter_target_modules,
     load_lora_weights,
@@ -51,6 +52,9 @@ from videotuna.third_party.flux.training.custom_schedule import (
 from videotuna.third_party.flux.training.deepspeed import (
     deepspeed_zero_init_disabled_context_manager,
     prepare_model_for_deepspeed,
+)
+from videotuna.third_party.flux.training.default_settings.safety_check import (
+    safety_check,
 )
 from videotuna.third_party.flux.training.diffusion_model import load_diffusion_model
 from videotuna.third_party.flux.training.min_snr_gamma import compute_snr
@@ -77,7 +81,41 @@ from videotuna.third_party.flux.training.validation import (
     prepare_validation_prompt_list,
 )
 from videotuna.third_party.flux.training.wrappers import unwrap_model
+from videotuna.utils.callbacks import LoraModelCheckpoint
 
+try:
+    from lycoris import LycorisNetwork
+except Exception:
+    print("[ERROR] Lycoris not available. Please install ")
+from diffusers import (
+    AutoencoderKL,
+    ControlNetModel,
+    DDIMScheduler,
+    DDPMScheduler,
+    EulerAncestralDiscreteScheduler,
+    EulerDiscreteScheduler,
+    FluxTransformer2DModel,
+    PixArtTransformer2DModel,
+    UNet2DConditionModel,
+    UniPCMultistepScheduler,
+)
+from diffusers.utils import check_min_version, convert_state_dict_to_diffusers
+from diffusers.utils.import_utils import is_xformers_available
+from peft import LoraConfig
+from peft.utils import get_peft_model_state_dict
+from tqdm.auto import tqdm
+from transformers.utils import ContextManagers
+
+from videotuna.third_party.flux.models.flux import (
+    apply_flux_schedule_shift,
+    get_mobius_guidance,
+    pack_latents,
+    prepare_latent_image_ids,
+    unpack_latents,
+)
+from videotuna.third_party.flux.training.ema import EMAModel
+
+os.environ["ACCELERATE_LOG_LEVEL"] = "WARNING"
 logger = get_logger(
     "SimpleTuner", log_level=os.environ.get("SIMPLETUNER_LOG_LEVEL", "INFO")
 )
@@ -95,63 +133,13 @@ training_logger.setLevel(training_logger_level)
 # Less important logs.
 filelock_logger.setLevel("WARNING")
 connection_logger.setLevel("WARNING")
-import accelerate
-import diffusers
-import torch
-import torch.nn.functional as F
-import torch.utils.checkpoint
-import transformers
-from accelerate import Accelerator
-from accelerate.utils import set_seed
-from torch.distributions import Beta
-
-from videotuna.third_party.flux.configuration.configure import model_classes
-
-try:
-    from lycoris import LycorisNetwork
-except:
-    print("[ERROR] Lycoris not available. Please install ")
-from diffusers import (
-    AutoencoderKL,
-    ControlNetModel,
-    DDIMScheduler,
-    DDPMScheduler,
-    EulerAncestralDiscreteScheduler,
-    EulerDiscreteScheduler,
-    FluxTransformer2DModel,
-    PixArtTransformer2DModel,
-    StableDiffusion3Pipeline,
-    UNet2DConditionModel,
-    UniPCMultistepScheduler,
-)
-from diffusers.utils import (
-    check_min_version,
-    convert_state_dict_to_diffusers,
-    is_wandb_available,
-)
-from diffusers.utils.import_utils import is_xformers_available
-from peft import LoraConfig
-from peft.utils import get_peft_model_state_dict
-from tqdm.auto import tqdm
-from transformers import CLIPTokenizer, PretrainedConfig
-from transformers.utils import ContextManagers
-
-from videotuna.third_party.flux.models.flux import (
-    apply_flux_schedule_shift,
-    get_mobius_guidance,
-    pack_latents,
-    prepare_latent_image_ids,
-    unpack_latents,
-)
-from videotuna.third_party.flux.models.sdxl.pipeline import StableDiffusionXLPipeline
-from videotuna.third_party.flux.training.ema import EMAModel
 
 is_optimi_available = False
 try:
     from optimi import prepare_for_gradient_release
 
     is_optimi_available = True
-except:
+except Exception:
     pass
 
 # Will error if the minimal version of diffusers is not installed. Remove at your own risks.
@@ -483,7 +471,7 @@ class Model(pl.LightningModule):
         }
         try:
             self.vae = AutoencoderKL.from_pretrained(**self.config.vae_kwargs)
-        except:
+        except Exception:
             logger.warning(
                 "Couldn't load VAE with default path. Trying without a subfolder.."
             )
@@ -763,8 +751,9 @@ class Model(pl.LightningModule):
         memory_after_unload = self.stats_memory_used()
         memory_saved = memory_after_unload - memory_before_unload
         logger.info(
-            f"After nuking text encoders from orbit, we freed {abs(round(memory_saved, 2))} GB of VRAM."
-            " The real memories were the friends we trained a model on along the way."
+            f"After nuking text encoders from orbit, we freed "
+            f"{abs(round(memory_saved, 2))} GB of VRAM. The real memories were the "
+            f"friends we trained a model on along the way."
         )
 
     def init_precision(self):
@@ -788,7 +777,8 @@ class Model(pl.LightningModule):
                 self.config.enable_adamw_bf16 = True
             if self.unet is not None:
                 logger.info(
-                    f"Moving U-net to dtype={self.config.base_weight_dtype}, device={quantization_device}"
+                    f"Moving U-net to dtype={self.config.base_weight_dtype},"
+                    f" device={quantization_device}"
                 )
                 self.unet.to(quantization_device, dtype=self.config.base_weight_dtype)
             elif self.transformer is not None:
@@ -1168,7 +1158,7 @@ class Model(pl.LightningModule):
                 use_deepspeed_scheduler=False,
             )
         else:
-            logger.info(f"Using dummy learning rate scheduler")
+            logger.info("Using dummy learning rate scheduler")
             if torch.backends.mps.is_available():
                 lr_scheduler = None
             else:
@@ -1487,7 +1477,7 @@ class Model(pl.LightningModule):
             structured_data={"message": f"Resuming model: {path}"},
             message_type="init_resume_checkpoint",
         )
-        training_state_filename = f"training_state.json"
+        training_state_filename = "training_state.json"
         if get_rank() > 0:
             training_state_filename = f"training_state-{get_rank()}.json"
         for _, backend in StateTracker.get_data_backends().items():
@@ -1793,16 +1783,16 @@ class Model(pl.LightningModule):
         # we should set should_abort = True on each data backend's vae cache, metadata, and text backend
         for _, backend in StateTracker.get_data_backends().items():
             if "vaecache" in backend:
-                logger.debug(f"Aborting VAE cache")
+                logger.debug("Aborting VAE cache")
                 backend["vaecache"].should_abort = True
             if "metadata_backend" in backend:
-                logger.debug(f"Aborting metadata backend")
+                logger.debug("Aborting metadata backend")
                 backend["metadata_backend"].should_abort = True
             if "text_backend" in backend:
-                logger.debug(f"Aborting text backend")
+                logger.debug("Aborting text backend")
                 backend["text_backend"].should_abort = True
             if "sampler" in backend:
-                logger.debug(f"Aborting sampler")
+                logger.debug("Aborting sampler")
                 backend["sampler"].should_abort = True
         self.should_abort = True
 
@@ -2823,7 +2813,6 @@ class Model(pl.LightningModule):
                     text_encoder_2_lora_layers = None
 
                 if self.config.model_family == "flux":
-                    from diffusers.pipelines import FluxPipeline
 
                     print("saving lora...")
                     self.save_lora()

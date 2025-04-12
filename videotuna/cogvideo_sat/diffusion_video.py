@@ -9,7 +9,6 @@ from omegaconf import ListConfig
 from sat import mpu
 from sat.helpers import print_rank0
 from sgm.modules import UNCONDITIONAL_CONFIG
-from sgm.modules.autoencoding.temporal_ae import VideoDecoder
 from sgm.modules.diffusionmodules.wrappers import OPENAIUNETWRAPPER
 from sgm.util import (
     default,
@@ -109,7 +108,7 @@ class SATVideoDiffusionEngine(nn.Module):
     def disable_untrainable_params(self):
         total_trainable = 0
         for n, p in self.named_parameters():
-            if p.requires_grad == False:
+            if p.requires_grad is not False:
                 continue
             flag = False
             for prefix in self.not_trainable_prefixes:
@@ -285,14 +284,15 @@ class SATVideoDiffusionEngine(nn.Module):
         scale = None
         scale_emb = None
 
-        denoiser = lambda input, sigma, c, **addtional_model_inputs: self.denoiser(
-            self.model,
-            input,
-            sigma,
-            c,
-            concat_images=concat_images,
-            **addtional_model_inputs,
-        )
+        def denoiser(input, sigma, c, **addtional_model_inputs):
+            return self.denoiser(
+                self.model,
+                input,
+                sigma,
+                c,
+                concat_images=concat_images,
+                **addtional_model_inputs,
+            )
 
         samples = self.sampler(
             denoiser, randn, cond, uc=uc, scale=scale, scale_emb=scale_emb, ofs=ofs

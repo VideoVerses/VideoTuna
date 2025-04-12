@@ -1,9 +1,6 @@
-from abc import abstractmethod
 from typing import Any, Tuple
 
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 
 from ....modules.distributions.distributions import DiagonalGaussianDistribution
 from .base import AbstractRegularizer

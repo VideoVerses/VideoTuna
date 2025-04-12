@@ -1,7 +1,8 @@
 import argparse
 import re
 
-from .constants import *
+import constants
+
 from .modules.models import HUNYUAN_VIDEO_CONFIG
 
 
@@ -40,7 +41,7 @@ def add_network_args(parser: argparse.ArgumentParser):
         "--precision",
         type=str,
         default="bf16",
-        choices=PRECISIONS,
+        choices=constants.PRECISIONS,
         help="Precision mode. Options: fp32, fp16, bf16. Applied to the backbone model and optimizer.",
     )
 
@@ -61,14 +62,14 @@ def add_extra_models_args(parser: argparse.ArgumentParser):
         "--vae",
         type=str,
         default="884-16c-hy",
-        choices=list(VAE_PATH),
+        choices=list(constants.VAE_PATH),
         help="Name of the VAE model.",
     )
     group.add_argument(
         "--vae-precision",
         type=str,
         default="fp16",
-        choices=PRECISIONS,
+        choices=constants.PRECISIONS,
         help="Precision mode for the VAE model.",
     )
     group.add_argument(
@@ -82,14 +83,14 @@ def add_extra_models_args(parser: argparse.ArgumentParser):
         "--text-encoder",
         type=str,
         default="llm",
-        choices=list(TEXT_ENCODER_PATH),
+        choices=list(constants.TEXT_ENCODER_PATH),
         help="Name of the text encoder model.",
     )
     group.add_argument(
         "--text-encoder-precision",
         type=str,
         default="fp16",
-        choices=PRECISIONS,
+        choices=constants.PRECISIONS,
         help="Precision mode for the text encoder model.",
     )
     group.add_argument(
@@ -105,21 +106,21 @@ def add_extra_models_args(parser: argparse.ArgumentParser):
         "--tokenizer",
         type=str,
         default="llm",
-        choices=list(TOKENIZER_PATH),
+        choices=list(constants.TOKENIZER_PATH),
         help="Name of the tokenizer model.",
     )
     group.add_argument(
         "--prompt-template",
         type=str,
         default="dit-llm-encode",
-        choices=PROMPT_TEMPLATE,
+        choices=constants.PROMPT_TEMPLATE,
         help="Image prompt template for the decoder-only text encoder model.",
     )
     group.add_argument(
         "--prompt-template-video",
         type=str,
         default="dit-llm-encode-video",
-        choices=PROMPT_TEMPLATE,
+        choices=constants.PROMPT_TEMPLATE,
         help="Video prompt template for the decoder-only text encoder model.",
     )
     group.add_argument(
@@ -139,14 +140,14 @@ def add_extra_models_args(parser: argparse.ArgumentParser):
         "--text-encoder-2",
         type=str,
         default="clipL",
-        choices=list(TEXT_ENCODER_PATH),
+        choices=list(constants.TEXT_ENCODER_PATH),
         help="Name of the second text encoder model.",
     )
     group.add_argument(
         "--text-encoder-precision-2",
         type=str,
         default="fp16",
-        choices=PRECISIONS,
+        choices=constants.PRECISIONS,
         help="Precision mode for the second text encoder model.",
     )
     group.add_argument(
@@ -159,7 +160,7 @@ def add_extra_models_args(parser: argparse.ArgumentParser):
         "--tokenizer-2",
         type=str,
         default="clipL",
-        choices=list(TOKENIZER_PATH),
+        choices=list(constants.TOKENIZER_PATH),
         help="Name of the second tokenizer model.",
     )
     group.add_argument(

@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Any
 
 import torch
-from regex import regex
 
 from videotuna.third_party.flux.data_backend.base import BaseDataBackend
 from videotuna.third_party.flux.image_manipulation.load import load_image
@@ -151,7 +150,7 @@ class LocalDataBackend(BaseDataBackend):
         self, filepaths: list, delete_problematic_images: bool = False
     ) -> list:
         """Read a batch of images from the specified filepaths."""
-        if type(filepaths) != list:
+        if not isinstance(filepaths, list):
             raise ValueError(
                 f"read_image_batch must be given a list of image filepaths. we received: {filepaths}"
             )
@@ -195,7 +194,7 @@ class LocalDataBackend(BaseDataBackend):
         if self.compress_cache:
             try:
                 stored_tensor = self._decompress_torch(stored_tensor)
-            except Exception as e:
+            except Exception:
                 pass
 
         if hasattr(stored_tensor, "seek"):

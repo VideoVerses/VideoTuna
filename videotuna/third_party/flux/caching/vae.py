@@ -870,7 +870,7 @@ class VAECache(WebhookMixin):
                 " These samples likely do not exist in the storage pool any longer."
             )
         for filepath, element in zip(available_filepaths, batch_output):
-            if type(filepath) != str:
+            if not isinstance(filepath, str):
                 raise ValueError(
                     f"Received unknown filepath type ({type(filepath)}) value: {filepath}"
                 )
@@ -879,11 +879,11 @@ class VAECache(WebhookMixin):
             self.process_queue.put((filepath, element, aspect_bucket))
 
     def _process_raw_filepath(self, raw_filepath: str):
-        if type(raw_filepath) == str or len(raw_filepath) == 1:
+        if isinstance(raw_filepath, str) or len(raw_filepath) == 1:
             filepath = raw_filepath
         elif len(raw_filepath) == 2:
             basename, filepath = raw_filepath
-        elif type(raw_filepath) == Path or type(raw_filepath) == numpy_str:
+        elif isinstance(raw_filepath, Path) or isinstance(raw_filepath, numpy_str):
             filepath = str(raw_filepath)
         else:
             raise ValueError(

@@ -5,7 +5,6 @@ import operator
 import os
 from typing import Tuple
 
-import colossalai
 import torch
 import torch.distributed as dist
 import torch.nn as nn
@@ -270,7 +269,7 @@ def save_frequently(
     save_dir: str,
     shape_dict: dict,
 ):
-    save_dir = os.path.join(save_dir, f"last")
+    save_dir = os.path.join(save_dir, "last")
     os.makedirs(os.path.join(save_dir, "model"), exist_ok=True)
 
     booster.save_model(model, os.path.join(save_dir, "model"), shard=True)

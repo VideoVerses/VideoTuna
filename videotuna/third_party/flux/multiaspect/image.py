@@ -58,10 +58,10 @@ class MultiaspectImage:
     def calculate_new_size_by_pixel_edge(
         aspect_ratio: float, resolution: int, original_size: tuple
     ):
-        if type(aspect_ratio) != float:
+        if not isinstance(aspect_ratio, float):
             raise ValueError(f"Aspect ratio must be a float, not {type(aspect_ratio)}")
-        if type(resolution) != int and (
-            type(resolution) != float or int(resolution) != resolution
+        if not isinstance(resolution, int) and (
+            not isinstance(resolution, float) or int(resolution) != resolution
         ):
             raise ValueError(f"Resolution must be an int, not {type(resolution)}")
 

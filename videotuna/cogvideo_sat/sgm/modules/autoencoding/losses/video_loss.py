@@ -1,12 +1,11 @@
 from math import log2
-from typing import Any, Union
+from typing import Any
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torchvision
 from beartype import beartype
-from einops import einsum, rearrange, repeat
+from einops import einsum, rearrange
 from einops.layers.torch import Rearrange
 from kornia.filters import filter3d
 from sgm.modules.autoencoding.vqvae.movq_enc_3d import CausalConv3d, DownSample3D

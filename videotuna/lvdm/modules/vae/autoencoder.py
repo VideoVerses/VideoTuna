@@ -1,6 +1,5 @@
 import os
 
-import numpy as np
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
@@ -41,7 +40,7 @@ class AutoencoderKL(pl.LightningModule):
         self.test_args = test_args
         self.logdir = logdir
         if colorize_nlabels is not None:
-            assert type(colorize_nlabels) == int
+            assert isinstance(colorize_nlabels, int)
             self.register_buffer("colorize", torch.randn(3, colorize_nlabels, 1, 1))
         if monitor is not None:
             self.monitor = monitor
@@ -89,7 +88,7 @@ class AutoencoderKL(pl.LightningModule):
         try:
             self._cur_epoch = sd["epoch"]
             sd = sd["state_dict"]
-        except:
+        except Exception:
             self._cur_epoch = "null"
         keys = list(sd.keys())
         for k in keys:

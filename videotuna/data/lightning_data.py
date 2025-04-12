@@ -1,5 +1,3 @@
-import argparse
-import glob
 import os
 import sys
 from functools import partial
@@ -9,11 +7,11 @@ import pytorch_lightning as pl
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-os.chdir(sys.path[0])
-sys.path.append("..")
-
 from videotuna.data.base import Txt2ImgIterableBaseDataset
 from videotuna.utils.common_utils import instantiate_from_config
+
+os.chdir(sys.path[0])
+sys.path.append("..")
 
 
 def worker_init_fn(_):
@@ -164,7 +162,7 @@ class DataModuleFromConfig(pl.LightningDataModule):
             is_iterable_dataset = isinstance(
                 self.datasets["train"], Txt2ImgIterableBaseDataset
             )
-        except:
+        except Exception:
             is_iterable_dataset = isinstance(
                 self.datasets["test"], Txt2ImgIterableBaseDataset
             )

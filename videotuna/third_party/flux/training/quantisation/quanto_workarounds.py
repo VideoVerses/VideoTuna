@@ -4,7 +4,6 @@ import torch
 if torch.cuda.is_available():
     # the marlin fp8 kernel needs some help with dtype casting for some reason
     # see: https://github.com/huggingface/optimum-quanto/pull/296#issuecomment-2380719201
-    from optimum.quanto.library.extensions.cuda import ext as quanto_ext
 
     # Save the original operator
     original_gemm_f16f8_marlin = torch.ops.quanto.gemm_f16f8_marlin

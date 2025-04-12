@@ -1,8 +1,12 @@
 import json
+import logging
+import os
 from pathlib import Path
 
 import regex as re
+from tqdm import tqdm
 
+from videotuna.third_party.flux.data_backend.base import BaseDataBackend
 from videotuna.third_party.flux.training import image_file_extensions
 from videotuna.third_party.flux.training.multi_process import _get_rank as get_rank
 from videotuna.third_party.flux.training.state_tracker import StateTracker
@@ -84,13 +88,6 @@ def prompt_library_injection(new_prompts: dict) -> dict:
     global prompts
     return {**prompts, **new_prompts}
 
-
-import logging
-import os
-
-from tqdm import tqdm
-
-from videotuna.third_party.flux.data_backend.base import BaseDataBackend
 
 logger = logging.getLogger("PromptHandler")
 logger.setLevel(os.environ.get("SIMPLETUNER_LOG_LEVEL", "INFO"))
@@ -258,12 +255,12 @@ class PromptHandler:
             raise ValueError(
                 f"Could not locate caption for image {image_path} in sampler_backend {sampler_backend_id} with filename column {filename_column}, caption column {caption_column}, and a parquet database with {len(parquet_db)} entries."
             )
-        if type(image_caption) == bytes:
+        if isinstance(image_caption, bytes):
             image_caption = image_caption.decode("utf-8")
         if image_caption:
             image_caption = image_caption.strip()
         if prepend_instance_prompt:
-            if type(image_caption) == list:
+            if isinstance(image_caption, list):
                 image_caption = [instance_prompt + " " + x for x in image_caption]
             else:
                 image_caption = instance_prompt + " " + image_caption
@@ -309,7 +306,7 @@ class PromptHandler:
         try:
             image_caption = data_backend.read(caption_file)
             # Convert from bytes to str:
-            if type(image_caption) == bytes:
+            if isinstance(image_caption, bytes):
                 image_caption = image_caption.decode("utf-8")
 
             # any newlines? split into array
@@ -407,7 +404,7 @@ class PromptHandler:
         backend_config = StateTracker.get_data_backend_config(
             data_backend_id=data_backend.id
         )
-        if type(all_image_files) == list and type(all_image_files[0]) == tuple:
+        if isinstance(all_image_files, list) and isinstance(all_image_files[0], tuple):
             all_image_files = all_image_files[0][2]
         from tqdm import tqdm
 
@@ -449,7 +446,7 @@ class PromptHandler:
                         data_backend=data_backend,
                         sampler_backend_id=data_backend.id,
                     )
-                except:
+                except Exception:
                     continue
             elif caption_strategy == "instanceprompt":
                 return [instance_prompt]
@@ -506,7 +503,7 @@ class PromptHandler:
         if not caption_filter_list or caption_filter_list == "":
             return captions
         if (
-            type(caption_filter_list) == str
+            isinstance(caption_filter_list, str)
             and os.path.splitext(caption_filter_list)[1] == ".json"
         ):
             # It's a path to a filter list. Load it in JSON format.
@@ -520,7 +517,7 @@ class PromptHandler:
                 )
                 raise e
         elif (
-            type(caption_filter_list) == str
+            isinstance(caption_filter_list, str)
             and os.path.splitext(caption_filter_list)[1] == ".txt"
         ):
             # We have a plain text list of filter strings/regex. Load them into an array:
@@ -536,7 +533,7 @@ class PromptHandler:
                 )
                 raise e
         # We have the filter list. Is it valid and non-empty?
-        if type(caption_filter_list) != list or len(caption_filter_list) == 0:
+        if not isinstance(caption_filter_list, list) or len(caption_filter_list) == 0:
             logger.debug(
                 f"Data backend '{data_backend.id}' has an invalid or empty caption filter list."
             )
@@ -585,7 +582,7 @@ class PromptHandler:
                     pattern = re.compile(filter_item)
                     try:
                         regex_modified_caption = pattern.sub("", modified_caption)
-                    except:
+                    except Exception:
                         regex_modified_caption = modified_caption
                     if regex_modified_caption != modified_caption:
                         # logger.debug(

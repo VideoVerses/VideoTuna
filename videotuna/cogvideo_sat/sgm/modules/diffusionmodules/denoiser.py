@@ -1,4 +1,4 @@
-from typing import Dict, Union
+from typing import Dict
 
 import torch
 import torch.nn as nn

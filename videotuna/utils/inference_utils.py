@@ -1,6 +1,4 @@
-import glob
 import os
-import sys
 from collections import OrderedDict
 
 import cv2
@@ -54,14 +52,14 @@ def load_model_checkpoint(model, ckpt):
             for key in state_dict["module"].keys():
                 new_pl_sd[key[16:]] = state_dict["module"][key]
             model.load_state_dict(new_pl_sd, strict=full_strict)
-        except:
+        except Exception:
             if "state_dict" in list(state_dict.keys()):
                 state_dict = state_dict["state_dict"]
             try:
                 model.model.diffusion_model.load_state_dict(
                     state_dict, strict=full_strict
                 )
-            except:
+            except Exception:
                 model.load_state_dict(state_dict, strict=False)
         return model
 
@@ -142,9 +140,8 @@ def load_inputs_v2v(input_dir, video_size=None, video_frames=None):
         print(prompt_files)
         raise ValueError(f"Error: found NO prompt file in {input_dir}")
     prompt_list = load_prompts_from_txt(prompt_file)
-    n_samples = len(prompt_list)
 
-    ## load videos
+    # load videos
     video_filepaths = get_target_filelist(input_dir, ext="mp4")
     video_filenames = [
         os.path.split(video_filepath)[-1] for video_filepath in video_filepaths

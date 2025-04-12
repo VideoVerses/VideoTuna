@@ -56,7 +56,7 @@ class ActPredScorer(torch.nn.Module):
 
         try:
             target_class_idx = self.model.config.label2id[target_action]
-        except:
+        except Exception:
             target_class_idx = self.model.config.label2id[mapping_func(target_action)]
         return target_class_idx
 

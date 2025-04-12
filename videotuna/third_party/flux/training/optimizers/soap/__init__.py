@@ -1,7 +1,6 @@
 from itertools import chain
 
 import torch
-import torch.nn as nn
 import torch.optim as optim
 
 # Parts of the code are modifications of Pytorch's AdamW optimizer
@@ -407,7 +406,7 @@ class SOAP(optim.Optimizer):
                 _, Q = torch.linalg.eigh(
                     m + 1e-30 * torch.eye(m.shape[0], device=m.device)
                 )
-            except:
+            except Exception:
                 _, Q = torch.linalg.eigh(
                     m.to(torch.float64) + 1e-30 * torch.eye(m.shape[0], device=m.device)
                 )

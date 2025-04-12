@@ -5,8 +5,7 @@ import torch
 import torch.distributed
 import torch.nn as nn
 import torch.nn.functional as F
-from beartype import beartype
-from beartype.typing import List, Optional, Tuple, Union
+from beartype.typing import Tuple, Union
 from einops import rearrange
 from sgm.util import (
     get_context_parallel_group,

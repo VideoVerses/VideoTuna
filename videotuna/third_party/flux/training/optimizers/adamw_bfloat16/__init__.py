@@ -3,19 +3,17 @@ Different versions appeared,
 they have identical interface, but sutiable for different scenarios.
 """
 
-__version__ = "0.2.0"
+import torch
+from torch.optim.optimizer import Optimizer
 
-__all__ = ["AdamW_BF16"]
+from .stochastic import add_stochastic_, addcdiv_stochastic_
+
+__version__ = "0.2.0"
 
 """
 This implementation uses torch.compile to speed up,
 should be suitable for different backends.
 """
-
-import torch
-from torch.optim.optimizer import Optimizer
-
-from .stochastic import add_stochastic_, addcdiv_stochastic_
 
 
 class AdamWBF16(Optimizer):

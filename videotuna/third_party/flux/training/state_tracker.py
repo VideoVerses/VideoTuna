@@ -80,7 +80,7 @@ class StateTracker:
             if cache_path.exists():
                 try:
                     cache_path.unlink()
-                except:
+                except Exception:
                     pass
 
     @classmethod

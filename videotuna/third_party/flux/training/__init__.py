@@ -1,3 +1,5 @@
+import torch
+
 quantised_precision_levels = [
     "no_change",
     "int8-quanto",
@@ -5,7 +7,6 @@ quantised_precision_levels = [
     "int2-quanto",
     "int8-torchao",
 ]
-import torch
 
 if torch.cuda.is_available():
     quantised_precision_levels.extend(

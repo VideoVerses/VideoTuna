@@ -15,8 +15,9 @@
 import inspect
 from typing import Any, Callable, Dict, List, Optional, Union
 
+import PIL.Image
 import torch
-from diffusers.image_processor import VaeImageProcessor
+from diffusers.image_processor import PipelineImageInput, VaeImageProcessor
 from diffusers.loaders import FromSingleFileMixin, SD3LoraLoaderMixin
 from diffusers.models.autoencoders import AutoencoderKL
 from diffusers.models.transformers import SD3Transformer2DModel
@@ -1012,17 +1013,6 @@ class StableDiffusion3Pipeline(
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Dict, List, Optional, Union
-
-import PIL.Image
-import torch
-from diffusers.image_processor import PipelineImageInput
-from transformers import (
-    CLIPTextModelWithProjection,
-    CLIPTokenizer,
-    T5EncoderModel,
-    T5TokenizerFast,
-)
 
 if is_torch_xla_available():
     import torch_xla.core.xla_model as xm

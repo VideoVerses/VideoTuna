@@ -1,5 +1,4 @@
 import copy
-import glob
 import hashlib
 import json
 import logging
@@ -21,8 +20,17 @@ from videotuna.third_party.flux.training.default_settings.safety_check import (
 
 # Quiet down, you.
 os.environ["ACCELERATE_LOG_LEVEL"] = "WARNING"
+import accelerate
+import diffusers
+import torch.nn.functional as F
+import torch.utils.checkpoint
+import transformers
+from accelerate import Accelerator
 from accelerate.logging import get_logger
+from accelerate.utils import set_seed
+from configure import model_classes
 from diffusers.models.embeddings import get_2d_rotary_pos_embed
+from torch.distributions import Beta
 
 from videotuna.third_party.flux import log_format  # noqa
 from videotuna.third_party.flux.caching.memory import reclaim_memory
@@ -33,7 +41,6 @@ from videotuna.third_party.flux.data_backend.factory import (
     random_dataloader_iterator,
 )
 from videotuna.third_party.flux.models.smoldit import get_resize_crop_region_for_grid
-from videotuna.third_party.flux.training import steps_remaining_in_epoch
 from videotuna.third_party.flux.training.adapter import (
     determine_adapter_target_modules,
     load_lora_weights,
@@ -73,6 +80,40 @@ from videotuna.third_party.flux.training.validation import (
 )
 from videotuna.third_party.flux.training.wrappers import unwrap_model
 
+try:
+    from lycoris import LycorisNetwork
+except Exception:
+    print("[ERROR] Lycoris not available. Please install ")
+from diffusers import (
+    AutoencoderKL,
+    ControlNetModel,
+    DDIMScheduler,
+    DDPMScheduler,
+    EulerAncestralDiscreteScheduler,
+    EulerDiscreteScheduler,
+    FluxTransformer2DModel,
+    PixArtTransformer2DModel,
+    StableDiffusion3Pipeline,
+    UNet2DConditionModel,
+    UniPCMultistepScheduler,
+)
+from diffusers.utils import check_min_version, convert_state_dict_to_diffusers
+from diffusers.utils.import_utils import is_xformers_available
+from peft import LoraConfig
+from peft.utils import get_peft_model_state_dict
+from tqdm.auto import tqdm
+from transformers.utils import ContextManagers
+
+from videotuna.third_party.flux.models.flux import (
+    apply_flux_schedule_shift,
+    get_mobius_guidance,
+    pack_latents,
+    prepare_latent_image_ids,
+    unpack_latents,
+)
+from videotuna.third_party.flux.models.sdxl.pipeline import StableDiffusionXLPipeline
+from videotuna.third_party.flux.training.ema import EMAModel
+
 logger = get_logger(
     "SimpleTuner", log_level=os.environ.get("SIMPLETUNER_LOG_LEVEL", "INFO")
 )
@@ -90,62 +131,13 @@ training_logger.setLevel(training_logger_level)
 # Less important logs.
 filelock_logger.setLevel("WARNING")
 connection_logger.setLevel("WARNING")
-import accelerate
-import diffusers
-import torch
-import torch.nn.functional as F
-import torch.utils.checkpoint
-import transformers
-from accelerate import Accelerator
-from accelerate.utils import set_seed
-from configure import model_classes
-from torch.distributions import Beta
-
-try:
-    from lycoris import LycorisNetwork
-except:
-    print("[ERROR] Lycoris not available. Please install ")
-from diffusers import (
-    AutoencoderKL,
-    ControlNetModel,
-    DDIMScheduler,
-    DDPMScheduler,
-    EulerAncestralDiscreteScheduler,
-    EulerDiscreteScheduler,
-    FluxTransformer2DModel,
-    PixArtTransformer2DModel,
-    StableDiffusion3Pipeline,
-    UNet2DConditionModel,
-    UniPCMultistepScheduler,
-)
-from diffusers.utils import (
-    check_min_version,
-    convert_state_dict_to_diffusers,
-    is_wandb_available,
-)
-from diffusers.utils.import_utils import is_xformers_available
-from peft import LoraConfig
-from peft.utils import get_peft_model_state_dict
-from tqdm.auto import tqdm
-from transformers import CLIPTokenizer, PretrainedConfig
-from transformers.utils import ContextManagers
-
-from videotuna.third_party.flux.models.flux import (
-    apply_flux_schedule_shift,
-    get_mobius_guidance,
-    pack_latents,
-    prepare_latent_image_ids,
-    unpack_latents,
-)
-from videotuna.third_party.flux.models.sdxl.pipeline import StableDiffusionXLPipeline
-from videotuna.third_party.flux.training.ema import EMAModel
 
 is_optimi_available = False
 try:
     from optimi import prepare_for_gradient_release
 
     is_optimi_available = True
-except:
+except Exception:
     pass
 
 # Will error if the minimal version of diffusers is not installed. Remove at your own risks.
@@ -476,7 +468,7 @@ class Trainer:
         }
         try:
             self.vae = AutoencoderKL.from_pretrained(**self.config.vae_kwargs)
-        except:
+        except Exception:
             logger.warning(
                 "Couldn't load VAE with default path. Trying without a subfolder.."
             )
@@ -1161,7 +1153,7 @@ class Trainer:
                 use_deepspeed_scheduler=False,
             )
         else:
-            logger.info(f"Using dummy learning rate scheduler")
+            logger.info("Using dummy learning rate scheduler")
             if torch.backends.mps.is_available():
                 lr_scheduler = None
             else:
@@ -1480,7 +1472,7 @@ class Trainer:
             structured_data={"message": f"Resuming model: {path}"},
             message_type="init_resume_checkpoint",
         )
-        training_state_filename = f"training_state.json"
+        training_state_filename = "training_state.json"
         if get_rank() > 0:
             training_state_filename = f"training_state-{get_rank()}.json"
         for _, backend in StateTracker.get_data_backends().items():
@@ -1786,16 +1778,16 @@ class Trainer:
         # we should set should_abort = True on each data backend's vae cache, metadata, and text backend
         for _, backend in StateTracker.get_data_backends().items():
             if "vaecache" in backend:
-                logger.debug(f"Aborting VAE cache")
+                logger.debug("Aborting VAE cache")
                 backend["vaecache"].should_abort = True
             if "metadata_backend" in backend:
-                logger.debug(f"Aborting metadata backend")
+                logger.debug("Aborting metadata backend")
                 backend["metadata_backend"].should_abort = True
             if "text_backend" in backend:
-                logger.debug(f"Aborting text backend")
+                logger.debug("Aborting text backend")
                 backend["text_backend"].should_abort = True
             if "sampler" in backend:
-                logger.debug(f"Aborting sampler")
+                logger.debug("Aborting sampler")
                 backend["sampler"].should_abort = True
         self.should_abort = True
 

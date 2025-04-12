@@ -147,7 +147,7 @@ class ParquetMetadataBackend(MetadataBackend):
             if not identifier_includes_extension:
                 filename = os.path.splitext(filename)[0]
 
-            if type(caption_column) == list:
+            if isinstance(caption_column, list):
                 caption = None
                 if len(caption_column) > 0:
                     caption = [row[c] for c in caption_column]
@@ -160,9 +160,9 @@ class ParquetMetadataBackend(MetadataBackend):
                 raise ValueError(
                     f"Could not locate caption for image {filename} in sampler_backend {self.id} with filename column {filename_column}, caption column {caption_column}, and a parquet database with {len(self.parquet_database)} entries."
                 )
-            if type(caption) == bytes:
+            if isinstance(caption, bytes):
                 caption = caption.decode("utf-8")
-            elif type(caption) == list:
+            elif isinstance(caption, list):
                 caption = [c.strip() for c in caption if c.strip()]
             if caption:
                 caption = caption.strip()
@@ -387,7 +387,6 @@ class ParquetMetadataBackend(MetadataBackend):
 
             # Now, pull metadata updates from the queue
             if len(metadata_updates) > 0 and file in metadata_updates:
-                metadata_update = metadata_updates[file]
                 self.set_metadata_by_filepath(
                     filepath=file, metadata=metadata_updates[file], update_json=False
                 )
@@ -422,7 +421,7 @@ class ParquetMetadataBackend(MetadataBackend):
             return series_or_scalar
         elif isinstance(series_or_scalar, numpy.int64):
             new_type = int(series_or_scalar)
-            if type(new_type) != int:
+            if not isinstance(new_type, int):
                 raise ValueError(f"Unsupported data type: {type(series_or_scalar)}.")
             return new_type
         else:
@@ -516,7 +515,7 @@ class ParquetMetadataBackend(MetadataBackend):
                     )
                     try:
                         self.data_backend.delete(image_path_str)
-                    except:
+                    except Exception:
                         pass
                 statistics.setdefault("skipped", {}).setdefault("too_small", 0)
                 statistics["skipped"]["too_small"] += 1

@@ -125,6 +125,6 @@ module = [
 ]
 ignore_missing_imports = true
 
-[tool.ruff]
+[tool.ruff.lint]
 select = ["E", "F", "C90"]
-ignore = []
+ignore = ["E501", "C901"]

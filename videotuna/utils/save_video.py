@@ -178,10 +178,9 @@ def log_local(batch_logs, save_dir, filename, save_fps=10, rescale=True):
         elif isinstance(value, torch.Tensor) and value.dim() == 5:
             # save video grids
             video = value  # b,c,t,h,w
-            ## only save grayscale or rgb mode
+            # only save grayscale or rgb mode
             if video.shape[1] != 1 and video.shape[1] != 3:
                 continue
-            n = video.shape[0]
             video = video.permute(2, 0, 1, 3, 4)  # t,n,c,h,w
             frame_grids = [
                 torchvision.utils.make_grid(framesheet, nrow=int(1))
@@ -208,10 +207,9 @@ def log_local(batch_logs, save_dir, filename, save_fps=10, rescale=True):
         elif isinstance(value, torch.Tensor) and value.dim() == 4:
             # save image grids
             img = value
-            ## only save grayscale or rgb mode
+            # only save grayscale or rgb mode
             if img.shape[1] != 1 and img.shape[1] != 3:
                 continue
-            n = img.shape[0]
             grid = torchvision.utils.make_grid(img, nrow=1)
             path = os.path.join(save_dir, "%s-%s.jpg" % (key, filename))
             save_img_grid(grid, path, rescale)
@@ -245,7 +243,7 @@ def prepare_to_log(batch_logs, max_images=100000, clamp=True):
     return batch_logs
 
 
-# ----------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 
 
 def fill_with_black_squares(video, desired_len: int) -> Tensor:
@@ -263,7 +261,7 @@ def fill_with_black_squares(video, desired_len: int) -> Tensor:
     )
 
 
-# ----------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 def load_num_videos(data_path, num_videos):
     # first argument can be either data_path of np array
     if isinstance(data_path, str):
@@ -281,7 +279,7 @@ def load_num_videos(data_path, num_videos):
 def npz_to_video_grid(
     data_path, out_path, num_frames, fps, num_videos=None, nrow=None, verbose=True
 ):
-    # videos = torch.tensor(np.load(data_path)['arr_0']).permute(0,1,4,2,3).div_(255).mul_(2) - 1.0 # NTHWC->NTCHW, np int -> torch tensor 0-1
+    # videos = torch.tensor(np.load(data_path)['arr_0']).permute(0,1,4,2,3).div_(255).mul_(2) - 1.0 # NTHWC->NTCHW, np int -> torch tensor 0-1  # noqa: E501
     if isinstance(data_path, str):
         videos = load_num_videos(data_path, num_videos)
     elif isinstance(data_path, np.ndarray):

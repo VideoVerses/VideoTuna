@@ -1,14 +1,6 @@
-import datetime
 import logging
 import os
 import time
-
-import numpy as np
-from einops import rearrange
-from omegaconf import OmegaConf
-from PIL import Image
-
-mainlogger = logging.getLogger("mainlogger")
 
 import pytorch_lightning as pl
 import torch
@@ -17,6 +9,8 @@ from pytorch_lightning.callbacks import Callback
 from pytorch_lightning.utilities import rank_zero_info, rank_zero_only
 
 from .save_video import log_local, prepare_to_log
+
+mainlogger = logging.getLogger("mainlogger")
 
 
 class LoraModelCheckpoint(pl.callbacks.ModelCheckpoint):

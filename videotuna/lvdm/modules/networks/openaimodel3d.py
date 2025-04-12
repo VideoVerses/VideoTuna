@@ -654,7 +654,7 @@ class UNetModel(nn.Module):
         emb = self.time_embed(t_emb)
 
         if self.fps_cond:
-            if type(fps) == int:
+            if isinstance(fps, int):
                 fps = torch.full_like(timesteps, fps)
             fps_emb = timestep_embedding(fps, self.model_channels, repeat_only=False)
             emb += self.fps_embedding(fps_emb)

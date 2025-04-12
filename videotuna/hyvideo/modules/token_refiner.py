@@ -8,7 +8,7 @@ from .activation_layers import get_activation_layer
 from .attenion import attention
 from .embed_layers import TextProjection, TimestepEmbedder
 from .mlp_layers import MLP
-from .modulate_layers import apply_gate, modulate
+from .modulate_layers import apply_gate
 from .norm_layers import get_norm_layer
 
 

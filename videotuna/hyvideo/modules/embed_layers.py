@@ -2,7 +2,6 @@ import math
 
 import torch
 import torch.nn as nn
-from einops import rearrange, repeat
 
 from ..utils.helpers import to_2tuple
 

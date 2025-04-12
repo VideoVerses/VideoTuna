@@ -1,11 +1,10 @@
-import json
 import os
 from pathlib import Path
 
 import pytorch_lightning as pl
 from accelerate.logging import get_logger
 from sklearn.model_selection import train_test_split
-from torch.utils.data import DataLoader, DistributedSampler
+from torch.utils.data import DataLoader
 
 from videotuna.third_party.flux.data_backend.factory import configure_multi_databackend
 from videotuna.third_party.flux.training.state_tracker import StateTracker
@@ -14,6 +13,7 @@ logger = get_logger(
     "SimpleTuner", log_level=os.environ.get("SIMPLETUNER_LOG_LEVEL", "INFO")
 )
 
+
 def create_txt_labels_from_dir(data_dir, caption):
     """
     Create multiple txt files, each txt file is the content of the caption string.
@@ -21,6 +21,7 @@ def create_txt_labels_from_dir(data_dir, caption):
     for image in os.listdir(data_dir):
         with open(os.path.join(data_dir, Path(image).stem) + ".txt", "w") as f:
             f.write(caption)
+
 
 class ModelData(pl.LightningDataModule):
     def __init__(

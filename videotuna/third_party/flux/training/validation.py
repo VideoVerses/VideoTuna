@@ -1,19 +1,21 @@
 import logging
 import os
+import time
 
 import numpy as np
 import torch
 import wandb
+from diffusers import AutoencoderKL, DDIMScheduler
 
 # from toolsegacy.pipeline import StableDiffusionPipeline
 from diffusers.schedulers import (
-    DDIMScheduler,
     DDPMScheduler,
     EulerAncestralDiscreteScheduler,
     EulerDiscreteScheduler,
     FlowMatchEulerDiscreteScheduler,
     UniPCMultistepScheduler,
 )
+from diffusers.utils import is_wandb_available
 from diffusers.utils.torch_utils import is_compiled_module
 from PIL import Image, ImageDraw, ImageFont
 from tqdm import tqdm
@@ -24,6 +26,7 @@ from videotuna.third_party.flux.models.sdxl.pipeline import (
     StableDiffusionXLPipeline,
 )
 from videotuna.third_party.flux.multiaspect.image import MultiaspectImage
+from videotuna.third_party.flux.prompts import PromptHandler
 from videotuna.third_party.flux.training.state_tracker import StateTracker
 from videotuna.third_party.flux.training.wrappers import unwrap_model
 
@@ -50,14 +53,6 @@ SCHEDULER_NAME_MAP = {
     "ddpm": DDPMScheduler,
 }
 
-import logging
-import os
-import time
-
-from diffusers import AutoencoderKL, DDIMScheduler
-from diffusers.utils import is_wandb_available
-
-from videotuna.third_party.flux.prompts import PromptHandler
 
 if is_wandb_available():
     import wandb
@@ -141,8 +136,6 @@ def retrieve_validation_images():
 
 
 def prepare_validation_prompt_list(args, embed_cache):
-    validation_negative_prompt_embeds = None
-    validation_negative_pooled_embeds = None
     validation_prompts = (
         [""] if not StateTracker.get_args().validation_disable_unconditional else []
     )

@@ -5,7 +5,6 @@ import os
 import queue
 import threading
 import time
-from math import sqrt
 
 import torch
 from tqdm import tqdm
@@ -20,10 +19,7 @@ from videotuna.third_party.flux.multiaspect.dataset import MultiAspectDataset
 from videotuna.third_party.flux.multiaspect.sampler import MultiAspectSampler
 from videotuna.third_party.flux.prompts import PromptHandler
 from videotuna.third_party.flux.training.collate import collate_fn
-from videotuna.third_party.flux.training.default_settings import (
-    default,
-    latest_config_version,
-)
+from videotuna.third_party.flux.training.default_settings import latest_config_version
 from videotuna.third_party.flux.training.exceptions import MultiDatasetExhausted
 from videotuna.third_party.flux.training.multi_process import _get_rank as get_rank
 from videotuna.third_party.flux.training.multi_process import rank_info, should_log

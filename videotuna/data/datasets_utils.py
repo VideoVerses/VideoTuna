@@ -2,7 +2,6 @@ import cv2
 import decord
 import numpy as np
 import torch
-import torchvision.transforms as transforms
 from decord import VideoReader, cpu
 from einops import rearrange
 from PIL import Image

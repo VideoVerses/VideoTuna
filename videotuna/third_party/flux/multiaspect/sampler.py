@@ -172,7 +172,7 @@ class MultiAspectSampler(torch.utils.data.Sampler):
                 prepend_instance_prompt=self.prepend_instance_prompt,
                 instance_prompt=self.instance_prompt,
             )
-            if type(validation_prompt) == list:
+            if isinstance(validation_prompt, list):
                 validation_prompt = random.choice(validation_prompt)
                 self.debug_log(
                     f"Selecting random prompt from list: {validation_prompt}"
@@ -442,7 +442,7 @@ class MultiAspectSampler(torch.utils.data.Sampler):
                 prepend_instance_prompt=self.prepend_instance_prompt,
                 instance_prompt=self.instance_prompt,
             )
-            if type(instance_prompt) == list:
+            if isinstance(instance_prompt, list):
                 instance_prompt = random.choice(instance_prompt)
                 self.debug_log(f"Selecting random prompt from list: {instance_prompt}")
             image_metadata["instance_prompt_text"] = instance_prompt

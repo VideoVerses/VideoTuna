@@ -5,17 +5,16 @@ from os import environ
 
 from diffusers.utils import is_wandb_available
 
+from videotuna.third_party.flux.training.error_handling import (
+    validate_deepspeed_compat_from_args,
+)
 from videotuna.third_party.flux.training.multi_process import _get_rank as get_rank
-from videotuna.third_party.flux.training.state_tracker import StateTracker
 
 logger = logging.getLogger(__name__)
 if get_rank() == 0:
     logger.setLevel(environ.get("SIMPLETUNER_LOG_LEVEL", "INFO"))
 else:
     logger.setLevel(logging.ERROR)
-from videotuna.third_party.flux.training.error_handling import (
-    validate_deepspeed_compat_from_args,
-)
 
 
 def safety_check(args, accelerator):
@@ -48,7 +47,6 @@ def safety_check(args, accelerator):
             raise ImportError(
                 "Make sure to install wandb if you want to use it for logging during training."
             )
-        import wandb
     if accelerator is not None and (
         hasattr(accelerator.state, "deepspeed_plugin")
         and accelerator.state.deepspeed_plugin is not None
@@ -120,6 +118,6 @@ def safety_check(args, accelerator):
         and args.flux_schedule_auto_shift
     ):
         logger.error(
-            f"--flux_schedule_auto_shift cannot be combined with --flux_schedule_shift. Please set --flux_schedule_shift to 0 if you want to train with --flux_schedule_auto_shift."
+            "--flux_schedule_auto_shift cannot be combined with --flux_schedule_shift. Please set --flux_schedule_shift to 0 if you want to train with --flux_schedule_auto_shift."
         )
         sys.exit(1)

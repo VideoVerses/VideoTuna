@@ -1,33 +1,23 @@
 import enum
 import logging
 import math
-import os
 import random
-from contextlib import contextmanager
 from functools import partial
 
 import numpy as np
-from einops import rearrange, repeat
-from omegaconf.listconfig import ListConfig
-from tqdm import tqdm
-
-mainlogger = logging.getLogger("mainlogger")
-
 import torch
-import torch.nn as nn
+from einops import rearrange
+from omegaconf.listconfig import ListConfig
 from pytorch_lightning.utilities import rank_zero_only
 from torch.optim.lr_scheduler import CosineAnnealingLR, LambdaLR
 from torchvision.utils import make_grid
+from tqdm import tqdm
 
 from videotuna.base.ddim import DDIMSampler
 from videotuna.base.ddpm3d import DDPMFlow
 from videotuna.base.diffusion_schedulers import DDPMScheduler
 from videotuna.base.distributions import DiagonalGaussianDistribution, normal_kl
-from videotuna.base.utils_diffusion import (
-    discretized_gaussian_log_likelihood,
-    make_beta_schedule,
-    rescale_zero_terminal_snr,
-)
+from videotuna.base.utils_diffusion import discretized_gaussian_log_likelihood
 from videotuna.lvdm.modules.utils import (
     default,
     disabled_train,
@@ -36,6 +26,8 @@ from videotuna.lvdm.modules.utils import (
     noise_like,
 )
 from videotuna.utils.common_utils import instantiate_from_config
+
+mainlogger = logging.getLogger("mainlogger")
 
 
 def mean_flat(tensor: torch.Tensor, mask=None) -> torch.Tensor:
@@ -1039,7 +1031,7 @@ class LatentDiffusion(SpacedDiffusion):
 
         try:
             self.num_downs = len(first_stage_config.params.ddconfig.ch_mult) - 1
-        except:
+        except Exception:
             self.num_downs = 0
         if not scale_by_std:
             self.scale_factor = scale_factor
@@ -1305,7 +1297,7 @@ class LatentDiffusion(SpacedDiffusion):
                     key: [cond["c_crossattn"][0]["y"]],
                     "mask": [cond["c_crossattn"][0]["mask"]],
                 }
-            except:
+            except Exception:
                 cond = {key: [cond["y"]], "mask": [cond["mask"]]}  # support mask for T5
         else:
             if isinstance(cond, dict):

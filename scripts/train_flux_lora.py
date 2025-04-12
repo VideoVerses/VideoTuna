@@ -23,6 +23,7 @@ from videotuna.third_party.flux.training.state_tracker import StateTracker
 logger = logging.getLogger("SimpleTuner")
 logger.setLevel(environ.get("SIMPLETUNER_LOG_LEVEL", "INFO"))
 
+
 def add_timestamp_to_output_dir(output_dir):
     time_str = time.strftime("%Y%m%d%H%M%S")
     folder_name = output_dir.stem
@@ -33,6 +34,7 @@ def add_timestamp_to_output_dir(output_dir):
     output_dir = output_dir.parent / folder_name
     return str(output_dir)
 
+
 def config_process(config):
     # add timestamp to the output_dir
     output_dir = Path(config["--output_dir"])
@@ -41,6 +43,7 @@ def config_process(config):
     with open(args.config_path, "w") as f:
         json.dump(config, f, indent=4)
     return config
+
 
 def load_yaml_config(config_path):
     with open(config_path) as f:
@@ -58,6 +61,7 @@ def load_yaml_config(config_path):
 
     return config, data_config_json
 
+
 def load_json_config(config_path, data_config_path):
     # load config files
     with open(config_path) as f:
@@ -67,6 +71,7 @@ def load_json_config(config_path, data_config_path):
     # process config
     config = config_process(config)
     return config, data_config
+
 
 def main(args):
     try:

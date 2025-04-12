@@ -2,7 +2,7 @@ import math
 import os
 from abc import abstractmethod
 from functools import partial
-from typing import Iterable, List, Optional, Tuple, Union
+from typing import Iterable, Optional
 
 import numpy as np
 import torch as th
@@ -600,7 +600,7 @@ class UNetModel(nn.Module):
             assert (
                 use_spatial_transformer
             ), "Fool!! You forgot to use the spatial transformer for your cross-attention conditioning..."
-            if type(context_dim) == ListConfig:
+            if isinstance(context_dim, ListConfig):
                 context_dim = list(context_dim)
 
         if num_heads_upsample == -1:

@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from einops import rearrange
 
-from .movq_enc_3d import CausalConv3d, DownSample3D, Upsample3D
+from .movq_enc_3d import CausalConv3d, Upsample3D
 
 
 def cast_tuple(t, length=1):

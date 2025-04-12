@@ -231,7 +231,7 @@ class WebVid(Dataset):
                     continue
                 else:
                     pass
-            except:
+            except Exception:
                 index += 1
                 print(f"Load video failed! path = {video_path}")
                 continue
@@ -257,7 +257,7 @@ class WebVid(Dataset):
             try:
                 frames = video_reader.get_batch(frame_indices)
                 break
-            except:
+            except Exception:
                 print(f"Get frames failed! path = {video_path}")
                 index += 1
                 continue

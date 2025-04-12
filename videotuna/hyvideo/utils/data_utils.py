@@ -1,7 +1,5 @@
 import math
 
-import numpy as np
-
 
 def align_to(value, alignment):
     """align hight, width according to alignment

@@ -4,12 +4,9 @@ import math
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from beartype import beartype
-from beartype.typing import List, Optional, Tuple, Union
 from einops import rearrange
 
-from .movq_enc_3d import CausalConv3d, DownSample3D, Upsample3D
+from .movq_enc_3d import CausalConv3d, Upsample3D
 
 
 def cast_tuple(t, length=1):

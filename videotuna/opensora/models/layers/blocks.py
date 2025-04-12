@@ -29,7 +29,9 @@ from videotuna.opensora.acceleration.communications import (
 )
 from videotuna.opensora.acceleration.parallel_states import get_sequence_parallel_group
 
-approx_gelu = lambda: nn.GELU(approximate="tanh")
+
+def approx_geluapprox_gelu():
+    return nn.GELU(approximate="tanh")
 
 
 class LlamaRMSNorm(nn.Module):

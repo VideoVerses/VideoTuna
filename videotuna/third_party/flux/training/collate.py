@@ -5,6 +5,7 @@ from os import environ
 
 import numpy as np
 import torch
+from torchvision.transforms import ToTensor
 
 from videotuna.third_party.flux.image_manipulation.training_sample import TrainingSample
 from videotuna.third_party.flux.training.multi_process import rank_info
@@ -13,7 +14,6 @@ from videotuna.third_party.flux.training.state_tracker import StateTracker
 logger = logging.getLogger("collate_fn")
 logger.setLevel(environ.get("SIMPLETUNER_COLLATE_LOG_LEVEL", "INFO"))
 rank_text = rank_info()
-from torchvision.transforms import ToTensor
 
 # Convert PIL Image to PyTorch Tensor
 to_tensor = ToTensor()
@@ -252,7 +252,7 @@ def compute_single_embedding(
         prompt_embeds = text_embed_cache.compute_embeddings_for_legacy_prompts(
             [caption]
         )
-        if type(prompt_embeds) == tuple:
+        if isinstance(prompt_embeds, tuple):
             if StateTracker.get_model_family() in ["pixart_sigma", "smoldit"]:
                 # PixArt requires the attn mask be returned, too.
                 prompt_embeds, attn_mask = prompt_embeds

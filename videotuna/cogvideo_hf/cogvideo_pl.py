@@ -5,21 +5,12 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 # from videotuna.base.ddpm3d import DDPM
 import pytorch_lightning as pl
 import torch
-from diffusers import (
-    AutoencoderKLCogVideoX,
-    CogVideoXDPMScheduler,
-    CogVideoXTransformer3DModel,
-)
+from diffusers import CogVideoXDPMScheduler
 from diffusers.callbacks import MultiPipelineCallbacks, PipelineCallback
 from diffusers.models.embeddings import get_3d_rotary_pos_embed
 from diffusers.utils.torch_utils import randn_tensor
 from diffusers.video_processor import VideoProcessor
-from peft import (
-    LoraConfig,
-    get_peft_model,
-    get_peft_model_state_dict,
-    set_peft_model_state_dict,
-)
+from peft import get_peft_model
 from transformers import T5EncoderModel, T5Tokenizer
 
 from videotuna.utils.common_utils import instantiate_from_config

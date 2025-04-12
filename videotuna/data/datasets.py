@@ -4,7 +4,7 @@ import sys
 sys.path.append(os.getcwd())
 import copy
 import random
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Union
 
 import pandas as pd
 import torch
@@ -215,7 +215,7 @@ class DatasetFromCSV(torch.utils.data.Dataset):
                 data_item = self.getitem(index)
                 self.safe_data_list.add(index)
                 return data_item
-            except (ValueError, AssertionError) as e:
+            except (ValueError, AssertionError):
                 import traceback
 
                 traceback.print_exc()

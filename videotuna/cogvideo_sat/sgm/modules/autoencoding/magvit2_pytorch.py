@@ -2,7 +2,7 @@ import copy
 import pickle
 from collections import namedtuple
 from functools import partial, wraps
-from math import ceil, log2, sqrt
+from math import log2
 from pathlib import Path
 
 import torch

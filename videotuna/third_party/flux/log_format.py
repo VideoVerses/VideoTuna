@@ -1,5 +1,6 @@
 import logging
 import os
+import warnings
 
 from colorama import Back, Fore, Style, init
 
@@ -76,7 +77,6 @@ torchdistlogger.setLevel("WARNING")
 torch_utils_logger = logging.getLogger("diffusers.utils.torch_utils")
 torch_utils_logger.setLevel("ERROR")
 
-import warnings
 
 # Suppress specific PIL warning
 warnings.filterwarnings(

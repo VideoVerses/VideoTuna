@@ -1,9 +1,15 @@
 import logging
 import math
 import os
+from dataclasses import dataclass
+from typing import Optional, Tuple, Union
 
 import accelerate
 import torch
+from diffusers.configuration_utils import ConfigMixin, register_to_config
+from diffusers.optimization import get_scheduler
+from diffusers.schedulers.scheduling_utils import SchedulerMixin
+from diffusers.utils import BaseOutput
 from torch.optim.lr_scheduler import LambdaLR, LRScheduler
 
 from videotuna.third_party.flux.training.state_tracker import StateTracker
@@ -486,9 +492,6 @@ class Sine(LRScheduler):
             )
 
 
-from diffusers.optimization import get_scheduler
-
-
 def get_lr_scheduler(
     args, optimizer, accelerator, logger, use_deepspeed_scheduler=False
 ):
@@ -585,14 +588,6 @@ def get_lr_scheduler(
 # limitations under the License.
 
 # DISCLAIMER: This code is strongly influenced by https://github.com/leffff/euler-scheduler
-
-from dataclasses import dataclass
-from typing import Optional, Tuple, Union
-
-import torch
-from diffusers.configuration_utils import ConfigMixin, register_to_config
-from diffusers.schedulers.scheduling_utils import SchedulerMixin
-from diffusers.utils import BaseOutput
 
 
 @dataclass

@@ -11,7 +11,7 @@ def _get_rank():
 def rank_info():
     try:
         return f"(Rank: {_get_rank()}) "
-    except:
+    except Exception:
         return ""
 
 
