@@ -203,6 +203,7 @@ Task|Model|Command|Length (#Frames)|Resolution|Inference Time|GPU Memory (GB)|
 |T2I|Flux-dev|`poetry run inference-flux-dev --enable_vae_tiling --enable_sequential_cpu_offload`|1|768x1360|4.2min|2G|
 |T2I|Flux-schnell|`poetry run inference-flux-schnell`|1|768x1360|1s|37G|
 |T2I|Flux-schnell|`poetry run inference-flux-schnell --enable_vae_tiling --enable_sequential_cpu_offload`|1|768x1360|24s|2G|
+|T2I|Sana|`poetry run inference-sana`|1|1024x1024|0.8s|10G|
 
 ### 4. Finetune T2V models
 #### (1) Prepare dataset
@@ -234,9 +235,10 @@ All  training commands were tested on H800 80G GPUs.
 
 **T2I**
 
-|Task|Model|Mode|Command|More Details|#GPUs|
-|:----|:---------|:---------------|:-----------------------------------------|:----------------------------|:------|
-|T2I|Flux|Lora Fine-tune|`poetry run train-flux-lora`|[docs/finetune_flux.md](docs/finetune_flux.md)|1|
+|Task|Model|Mode|Command|More Details|Resolution|Iteration Time (s/it)|GPU Memory (GB)|#GPUs|
+|:---|:----|:---|:------|:-----------|:---------|:-------------|:--------------|-----|
+|T2I|Flux|Lora Fine-tune|`poetry run train-flux-lora`|[docs/finetune_flux.md](docs/finetune_flux.md)|512x512  | 0.96 | 23G |1|
+|T2I|Sana|Lora Fine-tune|`poetry run train-sana-lora`|[docs/finetune_sana.md](docs/finetune_sana.md)|1024x1024| 0.13 | 18G |1|
 
 
 ### 5. Evaluation
