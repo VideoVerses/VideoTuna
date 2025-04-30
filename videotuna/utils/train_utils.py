@@ -53,7 +53,7 @@ def check_config_attribute(config, name):
         return None
 
 
-def get_trainer_callbacks(lightning_config, config, logdir, ckptdir, logger):
+def get_trainer_callbacks(lightning_config, logdir, ckptdir):
     default_callbacks_cfg = {
         "model_checkpoint": {
             "target": "pytorch_lightning.callbacks.ModelCheckpoint",
@@ -79,14 +79,6 @@ def get_trainer_callbacks(lightning_config, config, logdir, ckptdir, logger):
         },
         "cuda_callback": {"target": "videotuna.utils.callbacks.CUDACallback"},
     }
-
-    ## optional setting for saving checkpoints
-    # monitor_metric = check_config_attribute(config.flow.params, "monitor")
-    # if monitor_metric is not None:
-    #     mainlogger.info(f"Monitoring {monitor_metric} as checkpoint metric.")
-    #     default_callbacks_cfg["model_checkpoint"]["params"]["monitor"] = monitor_metric
-    #     default_callbacks_cfg["model_checkpoint"]["params"]["save_top_k"] = 3
-    #     default_callbacks_cfg["model_checkpoint"]["params"]["mode"] = "min"
 
     if "callbacks" in lightning_config:
         callbacks_cfg = lightning_config.callbacks

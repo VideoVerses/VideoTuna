@@ -6,6 +6,7 @@ import torch.cuda.amp as amp
 import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
+from tqdm import tqdm
 
 __all__ = [
     'WanVAE',
@@ -157,7 +158,7 @@ class Resample(nn.Module):
                         torch.cat([feat_cache[idx][:, :, -1:, :, :], x], 2))
                     feat_cache[idx] = cache_x
                     feat_idx[0] += 1
-        return x
+        return x, feat_cache, feat_idx
 
     def init_weight(self, conv):
         conv_weight = conv.weight
@@ -217,7 +218,7 @@ class ResidualBlock(nn.Module):
                 feat_idx[0] += 1
             else:
                 x = layer(x)
-        return x + h
+        return x + h, feat_cache, feat_idx
 
 
 class AttentionBlock(nn.Module):
@@ -335,14 +336,14 @@ class Encoder3d(nn.Module):
         ## downsamples
         for layer in self.downsamples:
             if feat_cache is not None:
-                x = layer(x, feat_cache, feat_idx)
+                x, feat_cache, feat_idx = layer(x, feat_cache, feat_idx)
             else:
                 x = layer(x)
 
         ## middle
         for layer in self.middle:
             if isinstance(layer, ResidualBlock) and feat_cache is not None:
-                x = layer(x, feat_cache, feat_idx)
+                x, feat_cache, feat_idx = layer(x, feat_cache, feat_idx)
             else:
                 x = layer(x)
 
@@ -363,7 +364,7 @@ class Encoder3d(nn.Module):
                 feat_idx[0] += 1
             else:
                 x = layer(x)
-        return x
+        return x, feat_cache, feat_idx
 
 
 class Decoder3d(nn.Module):
@@ -441,14 +442,14 @@ class Decoder3d(nn.Module):
         ## middle
         for layer in self.middle:
             if isinstance(layer, ResidualBlock) and feat_cache is not None:
-                x = layer(x, feat_cache, feat_idx)
+                x, feat_cache, feat_idx = layer(x, feat_cache, feat_idx)
             else:
                 x = layer(x)
 
         ## upsamples
         for layer in self.upsamples:
             if feat_cache is not None:
-                x = layer(x, feat_cache, feat_idx)
+                x, feat_cache, feat_idx = layer(x, feat_cache, feat_idx)
             else:
                 x = layer(x)
 
@@ -469,7 +470,7 @@ class Decoder3d(nn.Module):
                 feat_idx[0] += 1
             else:
                 x = layer(x)
-        return x
+        return x, feat_cache, feat_idx
 
 
 def count_conv3d(model):
@@ -519,15 +520,15 @@ class WanVAE_(nn.Module):
         t = x.shape[2]
         iter_ = 1 + (t - 1) // 4
         ## 对encode输入的x，按时间拆分为1、4、4、4....
-        for i in range(iter_):
+        for i in tqdm(range(iter_)):
             self._enc_conv_idx = [0]
             if i == 0:
-                out = self.encoder(
+                out, self._enc_feat_map, self._enc_conv_idx = self.encoder(
                     x[:, :, :1, :, :],
                     feat_cache=self._enc_feat_map,
                     feat_idx=self._enc_conv_idx)
             else:
-                out_ = self.encoder(
+                out_, self._enc_feat_map, self._enc_conv_idx = self.encoder(
                     x[:, :, 1 + 4 * (i - 1):1 + 4 * i, :, :],
                     feat_cache=self._enc_feat_map,
                     feat_idx=self._enc_conv_idx)
@@ -554,12 +555,12 @@ class WanVAE_(nn.Module):
         for i in range(iter_):
             self._conv_idx = [0]
             if i == 0:
-                out = self.decoder(
+                out, self._feat_map, self._conv_idx  = self.decoder(
                     x[:, :, i:i + 1, :, :],
                     feat_cache=self._feat_map,
                     feat_idx=self._conv_idx)
             else:
-                out_ = self.decoder(
+                out_, self._feat_map, self._conv_idx = self.decoder(
                     x[:, :, i:i + 1, :, :],
                     feat_cache=self._feat_map,
                     feat_idx=self._conv_idx)

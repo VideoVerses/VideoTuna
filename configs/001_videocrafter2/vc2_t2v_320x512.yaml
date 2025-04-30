@@ -1,6 +1,4 @@
 flow:
-  base_learning_rate: 6.0e-06 # 1.5e-04
-  scale_lr: False
   # empty_params_only: True # disable this means finetuning all parameters
   target: videotuna.flow.videocrafter.VideocrafterFlow
   params:
@@ -89,6 +87,18 @@ flow:
         layer: penultimate
         
 train:
+  ckpt: checkpoints/videocrafter/t2v_v2_512_split
+  name: train_vc_t2v
+  logdir: results/train
+  seed: 42
+  debug: false  
+  first_stage_key: video
+  cond_stage_key: caption
+
+  lr_config:
+    base_learning_rate: 6.0e-06
+    scale_lr: False
+
   data:
     target: videotuna.data.lightningdata.DataModuleFromConfig
     params:

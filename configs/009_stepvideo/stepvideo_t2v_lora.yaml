@@ -1,0 +1,134 @@
+flow:
+  target: videotuna.flow.stepvideo.StepVideoModelFlow
+  params:
+    ckpt_path: checkpoints/stepvideo/stepvideo-t2v
+    denoiser_ckpt_path: ${flow.params.ckpt_path}/transformer
+    scheduler_ckpt_path: ${flow.params.ckpt_path}/scheduler
+    first_stage_ckpt_path: ${flow.params.ckpt_path}/vae
+    cond_stage_ckpt_path: ${flow.params.ckpt_path}/step_llm
+    cond_stage_2_ckpt_path: ${flow.params.ckpt_path}/hunyuan_clip
+    enable_model_cpu_offload: True
+    enable_sequential_cpu_offload: False
+
+    scheduler_config: 
+      target: videotuna.models.stepvideo.stepvideo.diffusion.scheduler.FlowMatchDiscreteScheduler
+      use_from_pretrained: True
+      params:
+        pretrained_model_name_or_path: ${flow.params.scheduler_ckpt_path}
+
+    denoiser_config:
+      target: videotuna.models.stepvideo.stepvideo.modules.model.StepVideoModel
+      use_from_pretrained: True
+      params:
+        pretrained_model_name_or_path: ${flow.params.denoiser_ckpt_path}
+        torch_dtype: ${dtype_resolver:torch.bfloat16}
+        attention_type: torch
+
+    first_stage_config:
+      target: videotuna.models.stepvideo.stepvideo.vae.vae.AutoencoderKL
+      params:
+        z_channels: 64
+        model_path: ${flow.params.first_stage_ckpt_path}/vae_v2.safetensors
+        version: 2
+
+    cond_stage_config:
+      target: videotuna.models.stepvideo.stepvideo.text_encoder.stepllm.STEP1TextEncoder
+      params:
+        model_dir: ${flow.params.cond_stage_ckpt_path}
+        max_length: 320
+
+    cond_stage_2_config:
+      target: videotuna.models.stepvideo.stepvideo.text_encoder.clip.HunyuanClip
+      params:
+        model_dir: ${flow.params.cond_stage_2_ckpt_path}
+        max_length: 77
+
+    lora_config: 
+      target: peft.LoraConfig
+      params:
+        r: 16
+        lora_alpha: 16.0 
+        init_lora_weights: True
+        target_modules: [wq, wkv, wo, ff.net.0.proj, ffn.net.2]
+train:
+  ckpt: checkpoints/stepvideo/stepvideo-t2v
+  name: train_stepvideo_t2v_lora
+  logdir: results/train
+  seed: 42
+  debug: false         
+  first_stage_key: video
+  cond_stage_key: caption
+
+  lr_config:
+    base_learning_rate: 1e-4
+    scale_lr: False
+
+  data:
+    target: videotuna.data.lightningdata.DataModuleFromConfig
+    params:
+      batch_size: 1
+      num_workers: 16
+      wrap: false
+      train:
+        target: videotuna.data.datasets.DatasetFromCSV
+        params:
+          csv_path: data/apply_lipstick/metadata.csv
+          height: 544
+          width: 992
+          frame_interval: 1
+          train: True
+
+  lightning:
+    strategy: deepspeed_stage_3_offload
+    trainer:
+      accelerator: gpu
+      benchmark: True
+      num_nodes: 1
+      accumulate_grad_batches: 1
+      max_epochs: 2000
+      precision: bf16
+    callbacks:
+      image_logger:
+        target: videotuna.utils.callbacks.ImageLogger
+        params:
+          batch_frequency: 50
+          max_images: 6
+          to_local: True # save videos into files
+          log_images_kwargs:
+            unconditional_guidance_scale: 12.0 # need this, otherwise it is grey
+      model_checkpoint:
+        target: videotuna.utils.callbacks.VideoTunaModelCheckpoint
+        params:
+          filename: "{epoch:03}-{step:09}"
+          save_only_selected_model: True
+          selected_model: ["denoiser"]
+          save_weights_only: False
+          save_on_train_epoch_end: False
+          save_last: True
+          every_n_epochs: 0
+          every_n_train_steps: 50
+
+inference:
+  ckpt_path: checkpoints/stepvideo/stepvideo-t2v
+  mode: t2v
+  savedir: results/t2v/stepvideo
+  seed: 42
+  height: 544
+  width: 992
+  frames: 51 
+  num_inference_steps: 50
+  time_shift: 13.0
+  unconditional_guidance_scale: 12.0
+  prompt_file: '一名宇航员在月球上发现一块石碑，上面印有“stepfun”字样，闪闪发光'
+  uncond_prompt: ''
+  pos_prompt: ''
+  n_samples_prompt: 1
+  bs: 1
+  savefps: 28
+  enable_model_cpu_offload: True
+  enable_sequential_cpu_offload: False
+
+  mapping:
+    inference.ckpt_path : flow.params.ckpt_path
+    inference.enable_model_cpu_offload: flow.params.enable_model_cpu_offload
+    inference.enable_sequential_cpu_offload: flow.params.enable_sequential_cpu_offload

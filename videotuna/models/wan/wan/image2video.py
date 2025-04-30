@@ -1,6 +1,6 @@
 # Copyright 2024-2025 The Alibaba Wan Team Authors. All rights reserved.
 import gc
-import logging
+from loguru import logger
 import math
 import os
 import random
@@ -16,6 +16,7 @@ import torch.cuda.amp as amp
 import torch.distributed as dist
 import torchvision.transforms.functional as TF
 from tqdm import tqdm
+from PIL import Image
 
 from .distributed.fsdp import shard_model
 from .modules.clip import CLIPModel, XLMRobertaCLIP
@@ -26,6 +27,7 @@ from .utils.fm_solvers import (FlowDPMSolverMultistepScheduler,
                                get_sampling_sigmas, retrieve_timesteps)
 from .utils.fm_solvers_unipc import FlowUniPCMultistepScheduler
 from ....utils.common_utils import monitor_resources
+from ....schedulers.flow_matching import FlowMatchScheduler
 
 class WanI2V:
 
@@ -372,3 +374,56 @@ class WanI2V:
 
     def enable_vram_management(self):
         pass
+
+
+    def training_step(self, batch, batch_idx, 
+                      first_stage_key:str, 
+                      cond_stage_key:str,
+                      model_offload:bool = True,
+                      dtype:torch.dtype = torch.bfloat16,
+                      device:str = "cuda"):
+        videos = batch[first_stage_key]
+        first_frame = videos[:, :, 0:1, :, :]
+        
+        ## compute latent and embeddings
+        with torch.no_grad():
+            if model_offload:
+                self.vae.model.to(device)
+                latents = torch.stack(self.vae.encode(videos)).to(dtype=dtype, device=device).detach()
+                videos[:, :, 1:, :, :] = 0
+                y = torch.stack(self.vae.encode(videos)).to(dtype=dtype, device=device).detach()
+                self.vae.model.to('cpu')
+                self.text_encoder.model.to(device)
+                text_cond_embed = self.text_encoder(batch[cond_stage_key], device)
+                self.text_encoder.model.to('cpu')
+                self.clip.model.to(device)
+                clip_context = self.clip.visual(first_frame)
+                self.clip.model.to('cpu')
+            else:
+                latents = torch.stack(self.vae.encode(videos)).to(dtype=dtype, device=device).detach()
+                videos[:, :, 1:, :, :] = 0
+                y = torch.stack(self.vae.encode(videos)).to(dtype=dtype, device=device).detach()
+                text_cond_embed = self.text_encoder(batch[cond_stage_key], device)
+                clip_context = self.clip.visual(first_frame)
+
+        ## scheduler
+        self.scheduler : FlowMatchScheduler = FlowMatchScheduler(shift=5, sigma_min=0.0, extra_one_step=True)
+        self.scheduler.set_timesteps(1000, training=True)
+
+        ## noise
+        b, c, f, h, w = latents.shape
+        noise = torch.randn_like(latents)
+        timestep_ids = torch.randint(0, self.scheduler.num_train_timesteps, (b,))
+        timesteps = self.scheduler.timesteps[timestep_ids].to(dtype=dtype, device=device)
+        noisy_latents = self.scheduler.add_noise(latents, noise, timesteps).to(dtype=dtype, device=device)
+        training_target = noise.to(device) - latents
+
+        # compute loss
+        mask = torch.zeros((b, 4, f, h, w), device=device, dtype=dtype)
+        mask[:, :, 0, :, :] = 1
+        y = torch.cat([mask, y], dim=1)
+
+        noise_pred = self.model(x=noisy_latents, t=timesteps, context=text_cond_embed, clip_fea=clip_context, seq_len=None, y=y)
+        loss = torch.nn.functional.mse_loss(torch.stack(noise_pred).float(), training_target.float())
+        loss = loss * self.scheduler.training_weight(timesteps).to(device=device)
+        return loss

@@ -214,6 +214,8 @@ All  training commands were tested on H800 80G GPUs.
 
 |Task|Model|Mode|Command|More Details|#GPUs|
 |:----|:---------|:---------------|:-----------------------------------------|:----------------------------|:------|
+|T2V|Wan Video|Lora Fine-tune|`poetry run train-wan2-1-t2v-lora`|[docs/finetune_wan.md](docs/finetune_wan.md)|1|
+|T2V|Wan Video|Full Fine-tune|`poetry run train-wan2-1-t2v-fullft`|[docs/finetune_wan.md](docs/finetune_wan.md)|1|
 |T2V|Hunyuan Video|Lora Fine-tune|`poetry run train-hunyuan-t2v-lora`|[docs/finetune_hunyuanvideo.md](docs/finetune_hunyuanvideo.md)|2|
 |T2V|CogvideoX|Lora Fine-tune|`poetry run train-cogvideox-t2v-lora`|[docs/finetune_cogvideox.md](docs/finetune_cogvideox.md)|1|
 |T2V|CogvideoX|Full Fine-tune|`poetry run train-cogvideox-t2v-fullft`|[docs/finetune_cogvideox.md](docs/finetune_cogvideox.md)|4|
@@ -227,6 +229,8 @@ All  training commands were tested on H800 80G GPUs.
 
 |Task|Model|Mode|Command|More Details|#GPUs|
 |:----|:---------|:---------------|:-----------------------------------------|:----------------------------|:------|
+|I2V|Wan Video|Lora Fine-tune|`poetry run train-wan2-1-i2v-lora`|[docs/finetune_wan.md](docs/finetune_wan.md)|1|
+|I2V|Wan Video|Full Fine-tune|`poetry run train-wan2-1-i2v-fullft`|[docs/finetune_wan.md](docs/finetune_wan.md)|1|
 |I2V|CogvideoX|Lora Fine-tune|`poetry run train-cogvideox-i2v-lora`|[docs/finetune_cogvideox.md](docs/finetune_cogvideox.md)|1|
 |I2V|CogvideoX|Full Fine-tune|`poetry run train-cogvideox-i2v-fullft`|[docs/finetune_cogvideox.md](docs/finetune_cogvideox.md)|4|
 

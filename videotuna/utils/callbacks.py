@@ -11,6 +11,7 @@ from weakref import proxy
 from collections import OrderedDict
 from typing_extensions import override
 from typing import Any, Literal, Optional, Union
+from loguru import logger
 
 mainlogger = logging.getLogger("mainlogger")
 
@@ -172,6 +173,7 @@ class VideoTunaModelCheckpoint(pl.callbacks.ModelCheckpoint):
         new_filepath = os.path.join(new_dirpath, original_dirpath_list[-1])
         trainer.save_checkpoint(new_filepath, self.save_weights_only)
     
+    @rank_zero_only
     def _save_training_checkpoint(
         self,
         trainer: "pl.Trainer",
@@ -185,15 +187,30 @@ class VideoTunaModelCheckpoint(pl.callbacks.ModelCheckpoint):
         new_dirpath = '/'.join(new_dirpath_list)
         if not os.path.exists(new_dirpath):
             os.makedirs(new_dirpath)
-        
-        original_filename = original_dirpath_list[-1]
-        for seleted in self.selected_model:
-            model = getattr(pl_module, seleted)
-            state_dict = model.state_dict()
-            save_dict = {'state_dict': state_dict}
-            new_filename = original_filename.replace('flow', seleted)
-            new_filepath = os.path.join(new_dirpath, new_filename)
-            torch.save(save_dict, new_filepath)
+
+        if trainer.strategy.__class__.__name__  == "DeepSpeedStrategy":
+            from deepspeed.utils.zero_to_fp32 import get_fp32_state_dict_from_zero_checkpoint
+            original_filename = original_dirpath_list[-1]
+            deepspeed_flow_path = original_dirpath_list[:-1] + ['flow', original_filename]
+            state_dict = get_fp32_state_dict_from_zero_checkpoint('/'.join(deepspeed_flow_path))
+    
+            for seleted in self.selected_model:
+                new_state_dict = {name.replace(f"{seleted}.", ""): param for name, param in state_dict.items() if name.startswith(seleted)}
+                save_dict = {'state_dict': new_state_dict}
+                new_filename = original_filename.replace('flow', seleted)
+                new_filepath = os.path.join(new_dirpath, new_filename)
+                torch.save(save_dict, new_filepath)
+                logger.info(f"Deepspeed Saving model {seleted} with {len(new_state_dict)} params to {new_filepath}")
+        else:
+            original_filename = original_dirpath_list[-1]
+            for seleted in self.selected_model:
+                model = getattr(pl_module, seleted)
+                state_dict = model.state_dict()
+                save_dict = {'state_dict': state_dict}
+                new_filename = original_filename.replace('flow', seleted)
+                new_filepath = os.path.join(new_dirpath, new_filename)
+                torch.save(save_dict, new_filepath)
+                logger.info(f"Saving model {seleted} with {len(state_dict)} params  to {new_filepath}")
     
     def _format_ckpt_path(
         self,
@@ -345,7 +362,7 @@ class ImageLogger(Callback):
 
 class CUDACallback(Callback):
     # see https://github.com/SeanNaren/minGPT/blob/master/mingpt/callback.py
-    def on_train_epoch_start(self, trainer, pl_module):
+    def on_train_batch_start(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", batch: Any, batch_idx: int):
         # Reset the memory use counter
         # lightning update
         gpu_index = trainer.strategy.root_device.index
@@ -353,7 +370,7 @@ class CUDACallback(Callback):
         torch.cuda.synchronize(gpu_index)
         self.start_time = time.time()
 
-    def on_train_epoch_end(self, trainer, pl_module):
+    def on_train_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", outputs: STEP_OUTPUT, batch: Any, batch_idx: int):
         gpu_index = trainer.strategy.root_device.index
         torch.cuda.synchronize(gpu_index)
         max_memory = torch.cuda.max_memory_allocated(gpu_index) / 2**20
@@ -366,4 +383,6 @@ class CUDACallback(Callback):
             rank_zero_info(f"Average Epoch time: {epoch_time:.2f} seconds")
             rank_zero_info(f"Average Peak memory {max_memory:.2f}MiB")
         except AttributeError:
+            rank_zero_info(f"Average Epoch time: {epoch_time:.2f} seconds")
+            rank_zero_info(f"Average Peak memory {max_memory:.2f}MiB")
             pass

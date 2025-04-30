@@ -6,7 +6,8 @@ import torch.cuda.amp as amp
 import torch.nn as nn
 from diffusers.configuration_utils import ConfigMixin, register_to_config
 from diffusers.models.modeling_utils import ModelMixin
-
+from tqdm import tqdm
+from loguru import logger
 from .attention import flash_attention
 
 __all__ = ['WanModel']
@@ -484,9 +485,11 @@ class WanModel(ModelMixin, ConfigMixin):
         x,
         t,
         context,
-        seq_len,
+        seq_len=None,
         clip_fea=None,
         y=None,
+        grad_offload=True,
+        activation_checkpointing=True
     ):
         r"""
         Forward pass through the diffusion model
@@ -525,6 +528,8 @@ class WanModel(ModelMixin, ConfigMixin):
             [torch.tensor(u.shape[2:], dtype=torch.long) for u in x])
         x = [u.flatten(2).transpose(1, 2) for u in x]
         seq_lens = torch.tensor([u.size(1) for u in x], dtype=torch.long)
+        if seq_len is None:
+            seq_len = seq_lens.max()
         assert seq_lens.max() <= seq_len
         x = torch.cat([
             torch.cat([u, u.new_zeros(1, seq_len - u.size(1), u.size(2))],
@@ -560,9 +565,23 @@ class WanModel(ModelMixin, ConfigMixin):
             context=context,
             context_lens=context_lens)
 
-        for block in self.blocks:
-            x = block(x, **kwargs)
-
+        def create_custom_forward(module):
+            def custom_forward(*inputs):
+                return module(*inputs)
+            return custom_forward
+        
+        for block in tqdm(self.blocks):
+            if self.training and activation_checkpointing:
+                if grad_offload:
+                    #logger.info("activation checkpointing with cpu offload")
+                    with torch.autograd.graph.save_on_cpu():
+                        x = torch.utils.checkpoint.checkpoint(create_custom_forward(block), x, e0, seq_lens, grid_sizes, self.freqs, context, context_lens, use_reentrant=False)
+                else:
+                    #logger.info("activation checkpointing")
+                    x = torch.utils.checkpoint.checkpoint(create_custom_forward(block), x, e0, seq_lens, grid_sizes, self.freqs, context, context_lens, use_reentrant=False)
+            else:
+                x = block(x, **kwargs)
+                
         # head
         x = self.head(x, e)
 

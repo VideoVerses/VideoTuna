@@ -283,8 +283,7 @@ class STEP1TextEncoder(torch.nn.Module):
         self.max_length = max_length
         self.text_tokenizer = Wrapped_StepChatTokenizer(os.path.join(model_dir, 'step1_chat_tokenizer.model'))
         logger.info("Directly loading STEP1TextEncoder weights")
-        text_encoder = Step1Model.from_pretrained(model_dir)
-        self.text_encoder = text_encoder.to(torch.bfloat16)
+        self.text_encoder = Step1Model.from_pretrained(model_dir, torch_dtype=torch.bfloat16)
         
     @torch.no_grad
     def forward(self, prompts, with_mask=True, max_length=None, device='cuda'):

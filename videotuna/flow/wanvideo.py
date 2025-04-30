@@ -2,6 +2,7 @@ import torch
 from loguru import logger
 import random
 import os
+import math
 import torch.distributed as dist
 from typing import Any, Dict, List, Optional, Union
 from pathlib import Path
@@ -48,9 +49,9 @@ class WanVideoModelFlow(GenerationBase):
         first_stage_config: Dict[str, Any],
         cond_stage_config: Dict[str, Any],
         denoiser_config: Dict[str, Any],
-        scheduler_config: Dict[str, Any],
-        cond_stage_2_config: Dict[str, Any] = None,
-        lr_scheduler_config: Optional[Dict[str, Any]] = None,
+        scheduler_config: Optional[Dict[str, Any]] = None,
+        cond_stage_2_config: Optional[Dict[str, Any]] = None,
+        lora_config: Optional[Dict[str, Any]] = None,
         task: str = "t2v-14B",            
         ckpt_path: Optional[str] = None,    
         offload_model: Optional[bool] = None, 
@@ -76,7 +77,7 @@ class WanVideoModelFlow(GenerationBase):
             denoiser_config=denoiser_config,
             scheduler_config=scheduler_config,
             cond_stage_2_config=cond_stage_2_config,
-            lr_scheduler_config=lr_scheduler_config,
+            lora_config=lora_config,
             trainable_components=[]
         )
         logger.info("WanVideo flow: class init finished")
@@ -100,13 +101,14 @@ class WanVideoModelFlow(GenerationBase):
             logger.info(
                 f"offload_model is not specified, set to {offload_model}.")
         if world_size > 1:
-            torch.cuda.set_device(local_rank)
-            dist.init_process_group(
-                backend="nccl",
-                init_method="env://",
-                rank=rank,
-                world_size=world_size)
-            logger.info("WanVideo flow: Init Process Group")
+            pass
+            # torch.cuda.set_device(local_rank)
+            # dist.init_process_group(
+            #     backend="nccl",
+            #     init_method="env://",
+            #     rank=rank,
+            #     world_size=world_size)
+            # logger.info("WanVideo flow: Init Process Group")
         else:
             assert not (
                 t5_fsdp or dit_fsdp
@@ -359,14 +361,34 @@ class WanVideoModelFlow(GenerationBase):
             raise ValueError("Error: invalid mode, we currently only support t2v and i2v for wanvideo")
 
     def from_pretrained(self,
-                        ckpt_path: Optional[Union[str, Path]] = None):
+                        ckpt_path: Optional[Union[str, Path]] = None,
+                        denoiser_ckpt_path: Optional[Union[str, Path]] = None,
+                        lora_ckpt_path: Optional[Union[str, Path]] = None,
+                        ignore_missing_ckpts: bool = False):
         if "t2v" in self.task or "t2i" in self.task:
             self.wan_t2v.load_weight()
+            #this is only used to load trained denoiser_ckpt_path, 
+            #so we set ignore missing ckpts avoid duplicate loading
+            self.load_denoiser(ckpt_path, denoiser_ckpt_path, True)
         else:
             self.wan_i2v.load_weight()
+            self.load_denoiser(ckpt_path, denoiser_ckpt_path, True)
     
     def enable_vram_management(self):
         if "t2v" in self.task or "t2i" in self.task:
             self.wan_t2v.enable_vram_management()
         else:
             self.wan_i2v.enable_vram_management()
+    
+    def training_step(self, batch, batch_idx):
+        #self.first_stage_model.disable_cache()
+        if "t2v" in self.task or "t2i" in self.task:
+            loss = self.wan_t2v.training_step(batch, batch_idx, self.first_stage_key, self.cond_stage_key)
+        else:
+            loss = self.wan_i2v.training_step(batch, batch_idx, self.first_stage_key, self.cond_stage_key)
+        self.log("train_loss", loss, prog_bar=True, on_step=True)
+        return loss
+    
+    @torch.no_grad()
+    def log_images(self, batch, **kwargs):
+        pass

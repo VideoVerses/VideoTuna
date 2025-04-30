@@ -9,7 +9,6 @@ class HunyuanClip(nn.Module):
         Hunyuan clip code copied from https://github.com/huggingface/diffusers/blob/main/src/diffusers/pipelines/hunyuandit/pipeline_hunyuandit.py
         hunyuan's clip used BertModel and BertTokenizer, so we copy it.
     """
-    @with_empty_init
     def __init__(self, model_dir, max_length=77, torch_dtype: torch.dtype = torch.bfloat16):
         super(HunyuanClip, self).__init__()
         

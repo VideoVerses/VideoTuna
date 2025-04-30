@@ -124,6 +124,10 @@ train-opensorav10 = 'scripts:train_opensorav10'
 train-videocrafter-lora = 'scripts:train_videocrafter_lora'
 train-videocrafter-v2 = 'scripts:train_videocrafter_v2'
 train-hunyuan-t2v-lora = 'scripts:train_hunyuan_t2v_lora'
+train-wan2-1-i2v-lora = 'scripts:train_wan2_1_i2v_lora'
+train-wan2-1-i2v-fullft = 'scripts:train_wan2_1_i2v_fullft'
+train-wan2-1-t2v-lora = 'scripts:train_wan2_1_t2v_lora'
+train-wan2-1-t2v-fullft = 'scripts:train_wan2_1_t2v_fullft'
 
 [tool.black]
 line-length = 88

@@ -739,7 +739,6 @@ class StepVideoTransformerBlock(nn.Module):
 class StepVideoModel(ModelMixin, ConfigMixin):
     _no_split_modules = ["StepVideoTransformerBlock", "PatchEmbed"]
 
-    @with_empty_init
     @register_to_config
     def __init__(
         self,
