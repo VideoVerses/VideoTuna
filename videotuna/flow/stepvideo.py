@@ -13,6 +13,7 @@ from omegaconf import OmegaConf, DictConfig
 
 from videotuna.base.generation_base import GenerationBase
 from videotuna.utils.common_utils import instantiate_from_config
+from videotuna.schedulers.flow_matching import FlowMatchScheduler
 
 
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
@@ -50,9 +51,9 @@ class StepVideoModelFlow(GenerationBase):
         first_stage_config: Dict[str, Any],
         cond_stage_config: Dict[str, Any],
         denoiser_config: Dict[str, Any],
-        scheduler_config: Dict[str, Any],
-        cond_stage_2_config: Dict[str, Any] = None,
-        lr_scheduler_config: Optional[Dict[str, Any]] = None,
+        scheduler_config: Optional[Dict[str, Any]] = None,
+        cond_stage_2_config: Optional[Dict[str, Any]] = None,
+        lora_config: Optional[Dict[str, Any]] = None,
         ring_degree: int = 1,
         ulysses_degree: int = 1,
         tensor_parallel_degree: int = 1,
@@ -74,7 +75,7 @@ class StepVideoModelFlow(GenerationBase):
             denoiser_config=denoiser_config,
             scheduler_config=scheduler_config,
             cond_stage_2_config=cond_stage_2_config,
-            lr_scheduler_config=lr_scheduler_config,
+            lora_config=lora_config,
             trainable_components=[]
         )
         
@@ -391,7 +392,10 @@ class StepVideoModelFlow(GenerationBase):
 
 
     def from_pretrained(self,
-                        ckpt_path: Optional[Union[str, Path]] = None):
+                        ckpt_path: Optional[Union[str, Path]] = None,
+                        denoiser_ckpt_path: Optional[Union[str, Path]] = None,
+                        lora_ckpt_path: Optional[Union[str, Path]] = None,
+                        ignore_missing_ckpts: bool = False):
         logger.info("StepVideoModelFlow: start load weight")
         self.load_lib(ckpt_path)
         self.first_stage_model.load_weight()
@@ -402,3 +406,43 @@ class StepVideoModelFlow(GenerationBase):
             logger.info("StepVideoModelFlow: apply tensor parallel")
             tp_applicator = TensorParallelApplicator(get_tensor_model_parallel_world_size(), get_tensor_model_parallel_rank())
             tp_applicator.apply_to_model(self.denoiser)    
+        
+    def training_step(self, batch, batch_idx):
+        model_offload: bool = True,
+        dtype: torch.dtype = torch.bfloat16,
+        device: str = "cuda"
+        first_stage_key = self.first_stage_key
+        cond_stage_key = self.cond_stage_key
+
+        if model_offload:
+            self.first_stage_model.to(device)
+        latents = torch.stack(self.first_stage_model.encode(batch[first_stage_key])).to(dtype=dtype, device=device).detach()
+        if model_offload:
+            self.first_stage_model.to('cpu')
+            self.cond_stage_model.to(device)
+        text_cond_embed, text_cond_embed_mask  = self.cond_stage_model(batch[cond_stage_key], device)
+        if model_offload:
+            self.cond_stage_model.to('cpu')
+
+        ## scheduler
+        self.scheduler : FlowMatchScheduler = FlowMatchScheduler(shift=5, sigma_min=0.0, extra_one_step=True)
+        self.scheduler.set_timesteps(1000, training=True)
+
+        ## noise
+        B = len(latents)
+        noise = torch.randn_like(latents)
+        timestep_id = torch.randint(0, self.scheduler.num_train_timesteps, (1,))
+        timestep = self.scheduler.timesteps[timestep_id].to(dtype=dtype, device=device)
+        noisy_latents = self.scheduler.add_noise(latents, noise, timestep).to(dtype=dtype, device=device)
+        training_target = noise.to(device) - latents
+
+        # compute loss
+        noise_pred = self.model(x=noisy_latents, t=timestep, context=text_cond_embed, seq_len=None)
+        loss = torch.nn.functional.mse_loss(torch.stack(noise_pred).float(), training_target.float())
+        loss = loss * self.scheduler.training_weight(timestep).to(device=device)
+        self.log("train_loss", loss, prog_bar=True, on_step=True)
+        return loss
+    
+    @torch.no_grad()
+    def log_images(self, batch, **kwargs):
+        pass

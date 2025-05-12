@@ -1,0 +1,156 @@
+flow:
+  target: videotuna.flow.wanvideo.WanVideoModelFlow
+  params:
+    task: "i2v-14B"                  
+    ckpt_path: "checkpoints/wan/Wan2.1-I2V-14B-480P"                    
+    offload_model: true               
+    ulysses_size: 1                  
+    ring_size: 1                     
+    t5_fsdp: false                    
+    t5_cpu: false                     
+    dit_fsdp: false                   
+    use_prompt_extend: false          
+    prompt_extend_method: "local_qwen" 
+    prompt_extend_model: null         
+    prompt_extend_target_lang: "zh"   
+    seed: 42                     
+
+    denoiser_config:
+      target: videotuna.models.wan.wan.modules.model.WanModel
+      use_from_pretrained: true
+      params:
+        pretrained_model_name_or_path: ${flow.params.ckpt_path}
+
+    first_stage_config:
+      target: videotuna.models.wan.wan.modules.vae.WanVAE_
+      params:
+        dim: 96
+        z_dim: 16
+        dim_mult: [1, 2, 4, 4]
+        num_res_blocks: 2
+        attn_scales: []
+        temperal_downsample: [false, true, true]
+        dropout: 0.0
+
+    cond_stage_config:
+      target: videotuna.models.wan.wan.modules.t5.T5Encoder
+      params:
+        dim: 4096
+        dim_attn: 4096
+        dim_ffn: 10240
+        num_heads: 64
+        num_buckets: 32
+        shared_pos: false
+        dropout: 0.1
+        vocab: 256384
+        num_layers: 24
+
+      
+    cond_stage_2_config:
+      target: videotuna.models.wan.wan.modules.clip.XLMRobertaCLIP
+      params:
+        embed_dim: 1024
+        image_size: 224
+        patch_size: 14
+        vision_dim: 1280
+        vision_mlp_ratio: 4
+        vision_heads: 16
+        vision_layers: 32
+        vision_pool: "token"
+        activation: "gelu"
+        vocab_size: 250002
+        max_text_len: 514
+        type_size: 1
+        pad_id: 1
+        text_dim: 1024
+        text_heads: 16
+        text_layers: 24
+        text_post_norm: true
+        text_dropout: 0.1
+        attn_dropout: 0.0
+        proj_dropout: 0.0
+        embedding_dropout: 0.0
+
+train:
+  ckpt: checkpoints/wan/Wan2.1-I2V-14B-480P
+  name: train_wan_i2v_fullft
+  logdir: results/train
+  seed: 42
+  debug: false         
+  first_stage_key: video
+  cond_stage_key: caption
+  mapping:
+    train.ckpt : flow.params.ckpt_path
+
+  lr_config:
+    base_learning_rate: 6.0e-06
+    scale_lr: False
+
+  data:
+    target: videotuna.data.lightningdata.DataModuleFromConfig
+    params:
+      batch_size: 1
+      num_workers: 16
+      wrap: false
+      train:
+        target: videotuna.data.datasets.DatasetFromCSV
+        params:
+          csv_path: data/apply_lipstick/metadata.csv
+          height: 480
+          width: 832
+          num_frames: 81
+          frame_interval: 1
+          train: True
+
+  lightning:
+    strategy: deepspeed_stage_3_offload
+    trainer:
+      accelerator: gpu
+      benchmark: True
+      num_nodes: 1
+      accumulate_grad_batches: 1
+      max_epochs: 2000
+      precision: bf16-mixed
+    callbacks:
+      image_logger:
+        target: videotuna.utils.callbacks.ImageLogger
+        params:
+          batch_frequency: 50
+          max_images: 6
+          to_local: True # save videos into files
+          log_images_kwargs:
+            unconditional_guidance_scale: 12.0 # need this, otherwise it is grey
+      model_checkpoint:
+        target: videotuna.utils.callbacks.VideoTunaModelCheckpoint
+        params:
+          filename: "{epoch:03}-{step:09}"
+          save_only_selected_model: True
+          selected_model: ["denoiser"]
+          save_weights_only: False
+          save_on_train_epoch_end: False
+          save_last: True
+          every_n_epochs: 0
+          every_n_train_steps: 50
+
+inference:
+  mode: i2v
+  ckpt_path: checkpoints/wan/Wan2.1-I2V-14B-480P
+  savedir: results/i2v/wanvideo
+  seed: 42
+  height: 480
+  width: 832
+  prompt_dir: "inputs/i2v/576x1024"
+  solver: "unipc"           
+  num_inference_steps: 40                
+  time_shift: 3.0                
+  unconditional_guidance_scale: 5.0                       
+  frames: 81
+  n_samples_prompt: 1
+  bs: 1
+  savefps: 16
+  enable_model_cpu_offload: true
+
+  mapping:
+    inference.ckpt_path : flow.params.ckpt_path
+    inference.seed : flow.params.seed
+    inference.enable_model_cpu_offload : flow.params.offload_model

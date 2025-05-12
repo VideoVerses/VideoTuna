@@ -214,3 +214,12 @@ def save_metrics(gpu: List[float],
     }
     with open(f"{savedir}/metric.json", "w") as f:
         json.dump(metrics, f, indent=4)
+    
+def get_dist_info():
+    try:
+        local_rank = int(os.environ.get("LOCAL_RANK"))
+        global_rank = int(os.environ.get("RANK"))
+        num_rank = int(os.environ.get("WORLD_SIZE"))
+    except:
+        local_rank, global_rank, num_rank = 0, 0, 1
+    return local_rank, global_rank, num_rank

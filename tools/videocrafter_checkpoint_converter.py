@@ -1,6 +1,8 @@
 import os
 import torch
 from collections import OrderedDict
+from videotuna.base.generation_base import Component
+
 ckpt = torch.load("checkpoints/videocrafter/t2v_v2_512/model.ckpt")
 state_dict = ckpt['state_dict']
 
@@ -32,8 +34,8 @@ for k, v in state_dict.items():
 
 os.makedirs("checkpoints/videocrafter/t2v_v2_512_split", exist_ok=True)
 torch.save(new_ckpt, "checkpoints/videocrafter/t2v_v2_512_split/model_new.ckpt")
-torch.save(denoiser_ckpt, "checkpoints/videocrafter/t2v_v2_512_split/denoiser.ckpt")
-torch.save(first_stage_ckpt, "checkpoints/videocrafter/t2v_v2_512_split/first_stage.ckpt")
-torch.save(cond_stage_ckpt, "checkpoints/videocrafter/t2v_v2_512_split/cond_stage.ckpt")
+torch.save(denoiser_ckpt, f"checkpoints/videocrafter/t2v_v2_512_split/{Component.DENOISER.get_component_path()}")
+torch.save(first_stage_ckpt, f"checkpoints/videocrafter/t2v_v2_512_split/{Component.FIRST_STAGE_MODEL.get_component_path()}")
+torch.save(cond_stage_ckpt, f"checkpoints/videocrafter/t2v_v2_512_split/{Component.COND_STAGE_MODEL.get_component_path()}")
 
 print('Finish!')

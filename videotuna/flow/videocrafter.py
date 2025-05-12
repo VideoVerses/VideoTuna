@@ -54,8 +54,9 @@ class VideocrafterFlow(GenerationBase):
         first_stage_config: Dict[str, Any],
         cond_stage_config: Dict[str, Any],
         denoiser_config: Dict[str, Any],
-        scheduler_config: Dict[str, Any],
-        lr_scheduler_config: Optional[Dict[str, Any]] = None,
+        scheduler_config: Optional[Dict[str, Any]] = None,
+        cond_stage_2_config: Optional[Dict[str, Any]] = None,
+        lora_config: Optional[Dict[str, Any]] = None,
         loss_type: str = "l2",
         ckpt_path: Optional[Union[str, Path]] = None,
         ignore_keys: List[str] = [],
@@ -96,11 +97,12 @@ class VideocrafterFlow(GenerationBase):
         *args, **kwargs
     ):
         super().__init__(
-            first_stage_config,
-            cond_stage_config,
-            denoiser_config,
-            scheduler_config,
-            lr_scheduler_config,
+            first_stage_config=first_stage_config,
+            cond_stage_config=cond_stage_config,
+            cond_stage_2_config=cond_stage_2_config,
+            denoiser_config=denoiser_config,
+            scheduler_config=scheduler_config,
+            lora_config=lora_config,
         )
         # DDPMFlow related
         assert parameterization in ["eps", "x0", "v"], 'currently only supporting "eps" and "x0" and "v"'

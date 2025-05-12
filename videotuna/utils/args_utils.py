@@ -10,23 +10,14 @@ from enum import Enum
 from pytorch_lightning import Trainer
 from videotuna.utils.lightning_utils import add_trainer_args_to_parser
 from loguru import logger
-
+import os
 
 class VideoMode(Enum):
     I2V = "i2v"
     T2V = "t2v"
 
 
-MANDATORY_INFERENCE_ARGS = ["mode", 
-                            "savedir", 
-                            "seed",
-                            "height", 
-                            "width", 
-                            "savefps",
-                            "n_samples_prompt", 
-                            "bs", 
-                            "unconditional_guidance_scale", 
-                            "ckpt_path"]
+MANDATORY_INFERENCE_ARGS = ["savedir"]
 
 
 def prepare_train_args(parser: argparse.Namespace):
@@ -37,23 +28,63 @@ def prepare_train_args(parser: argparse.Namespace):
     :param config: The config object.
     :return: The updated args, config object.
     """
-
+    ## let parser recognize Trainer args
     parser = add_trainer_args_to_parser(Trainer, parser)
 
+    ## let parser recognize and replace yaml configs such as flow.target or train.ckpt
     args, unknown = parser.parse_known_args()
 
-    # load yaml config: "flow" | "train" | "inference"
     configs = [OmegaConf.load(cfg) for cfg in args.base]
     cli = OmegaConf.from_dotlist(unknown)
     config = OmegaConf.merge(*configs, cli)
 
-    if args.ckpt is not None:
-        config["flow"]["pretrained_checkpoint"] = args.ckpt
-    if args.lorackpt is not None:
-        config["flow"]["params"]["lora_args"]["lora_ckpt"] = args.lorackpt
+    ## parser args replace train config 
+    train_config = config.get("train", OmegaConf.create())
+    for k, v in vars(args).items():
+        if not k in train_config.keys():
+            train_config[k] = v
+        else:
+            if v is not None:
+                train_config[k] = v
 
-    return args, config
+    if OmegaConf.select(config, 'train.mapping') is not None:
+        for source_path, target_path in config.train.mapping.items():
+            if not path_exists(config, source_path):
+                raise ValueError(f"Error: invalid mapping {source_path} not exists")
+            if not path_exists(config, target_path):
+                raise ValueError(f"Error: invalid mapping {target_path} not exists")
+            
+            value = OmegaConf.select(config, source_path)
+            if value is not None:
+                OmegaConf.update(config, target_path, value)
+                logger.info(f"update {target_path} by {source_path} value: {value}")
+    logger.info(f"All Config: {OmegaConf.to_yaml(config)}")
+    def resolve_dtype(dtype_str):
+        mapping = {
+            "torch.float16": torch.float16,
+            "torch.float32": torch.float32,
+            "torch.float64": torch.float64,
+            "torch.bfloat16": torch.bfloat16,
+        }
+        return mapping.get(dtype_str)
+    OmegaConf.register_new_resolver("dtype_resolver", resolve_dtype)
 
+    ## extract trainer config
+    trainer_config = config.train.lightning.trainer 
+    for k in get_nondefault_trainer_args(args):
+        trainer_config[k] = getattr(args, k)
+    return config
+
+def get_nondefault_trainer_args(args):
+    parser = argparse.ArgumentParser()
+    parser = add_trainer_args_to_parser(Trainer, parser)
+
+    default_trainer_args = parser.parse_args([])
+    return sorted(
+        k
+        for k in vars(default_trainer_args)
+        if getattr(args, k) != getattr(default_trainer_args, k)
+    )
 
 # omegaconf has bug, does not work as expected
 def path_exists(cfg, path):
@@ -137,14 +168,7 @@ def process_savedir(savedir: str):
     """
 
     save_time = time.strftime("%Y%m%d_%H%M%S")
-    savedir = f"{savedir}_{save_time}"
-
-    # remove empty directories
-    parent_dir = Path(savedir).parent
-    if parent_dir.is_dir():
-        for child in parent_dir.iterdir():
-            if child.is_dir() and not any(child.iterdir()):
-                child.rmdir()
+    savedir = os.path.join(savedir, save_time)
     
     # create the savedir
     Path(savedir).mkdir(parents=True, exist_ok=True)

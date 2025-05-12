@@ -31,6 +31,15 @@ def get_parser():
     )
     #
     parser.add_argument("--ckpt_path", type=str, default=None, help="checkpoint path")
+    parser.add_argument(
+        "--lorackpt",
+        type=str,
+        default=None,
+        help="[Optional] checkpoint path for lora model. ",
+    )
+    parser.add_argument(
+        "--trained_ckpt", type=str, default=None, help="denoiser full checkpoint"
+    )
     parser.add_argument("--config", type=str, default=None, help="model config (yaml) path")
     parser.add_argument(
         "--prompt_file",
@@ -144,14 +153,6 @@ def get_parser():
         default=None,
         help="generate generative frame interpolation (gfi) or not",
     )
-    # lora args
-    parser.add_argument(
-        "--lorackpt",
-        type=str,
-        default=None,
-        help="[Optional] checkpoint path for lora model. ",
-    )
-    #
     parser.add_argument("--savefps", type=str, default=None, help="video fps to generate")
     parser.add_argument(
         "--time_shift", 
@@ -218,7 +219,7 @@ def run_inference(args, gpu_num=1, rank=0, **kwargs):
     # 1.3 vram management (default to cuda)
     flow_config = config.pop("flow", OmegaConf.create(flags={"allow_objects": True}))
     flow : GenerationBase = instantiate_from_config(flow_config, resolve=True)
-    flow.from_pretrained(inference_config.ckpt_path)
+    flow.from_pretrained(inference_config.ckpt_path, inference_config.trained_ckpt, inference_config.lorackpt)
     flow.enable_vram_management()
     flow.eval()
 

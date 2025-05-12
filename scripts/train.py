@@ -206,7 +206,7 @@ if __name__ == "__main__":
     print(f"logger save_dir: {trainer_kwargs['logger'].save_dir}")
     ## setup callbacks
     callbacks_cfg = get_trainer_callbacks(
-        lightning_config, config, workdir, ckptdir, logger
+        lightning_config, workdir, ckptdir
     )
     callbacks_cfg["image_logger"]["params"]["save_dir"] = workdir
     trainer_kwargs["callbacks"] = [

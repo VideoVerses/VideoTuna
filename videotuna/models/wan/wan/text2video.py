@@ -1,6 +1,6 @@
 # Copyright 2024-2025 The Alibaba Wan Team Authors. All rights reserved.
 import gc
-import logging
+from loguru import logger
 import math
 import os
 import random
@@ -9,11 +9,13 @@ import types
 from contextlib import contextmanager
 from functools import partial
 from typing import Union
+from pathlib import Path
 
 import torch
 import torch.cuda.amp as amp
 import torch.distributed as dist
 from tqdm import tqdm
+from typing import Optional
 
 from .distributed.fsdp import shard_model
 from .modules.model import WanModel
@@ -23,6 +25,7 @@ from .utils.fm_solvers import (FlowDPMSolverMultistepScheduler,
                                get_sampling_sigmas, retrieve_timesteps)
 from .utils.fm_solvers_unipc import FlowUniPCMultistepScheduler
 from ....utils.common_utils import monitor_resources
+from ....schedulers.flow_matching import FlowMatchScheduler
 
 class WanT2V:
 
@@ -281,3 +284,49 @@ class WanT2V:
 
     def enable_vram_management(self):
         pass
+
+    def get_seq_len(self, frames:int=81, width:int=1280, height:int=720):
+        target_shape = (self.vae.model.z_dim, (frames - 1) // self.vae_stride[0] + 1,
+                        height // self.vae_stride[1],
+                        width // self.vae_stride[2])
+
+        seq_len = math.ceil((target_shape[2] * target_shape[3]) /
+                            (self.patch_size[1] * self.patch_size[2]) *
+                            target_shape[1] / self.sp_size) * self.sp_size
+        return seq_len
+    
+    def training_step(self, batch, batch_idx, 
+                      first_stage_key:str, 
+                      cond_stage_key:str,
+                      model_offload:bool = True,
+                      dtype:torch.dtype = torch.bfloat16,
+                      device:str = "cuda"):
+        with torch.no_grad():
+            if not model_offload:
+                latents = torch.stack(self.vae.encode(batch[first_stage_key])).to(dtype=dtype, device=device).detach()
+                text_cond_embed = self.text_encoder(batch[cond_stage_key], device)
+            else:
+                self.vae.model.to(device)
+                latents = torch.stack(self.vae.encode(batch[first_stage_key])).to(dtype=dtype, device=device).detach()
+                self.vae.model.to('cpu')
+                self.text_encoder.model.to(device)
+                text_cond_embed = self.text_encoder(batch[cond_stage_key], device)
+                self.text_encoder.model.to('cpu')
+
+        ## scheduler
+        self.scheduler : FlowMatchScheduler = FlowMatchScheduler(shift=5, sigma_min=0.0, extra_one_step=True)
+        self.scheduler.set_timesteps(1000, training=True)
+
+        ## noise
+        B = len(latents)
+        noise = torch.randn_like(latents)
+        timestep_id = torch.randint(0, self.scheduler.num_train_timesteps, (1,))
+        timestep = self.scheduler.timesteps[timestep_id].to(dtype=dtype, device=device)
+        noisy_latents = self.scheduler.add_noise(latents, noise, timestep).to(dtype=dtype, device=device)
+        training_target = noise.to(device) - latents
+
+        # compute loss
+        noise_pred = self.model(x=noisy_latents, t=timestep, context=text_cond_embed, seq_len=None)
+        loss = torch.nn.functional.mse_loss(torch.stack(noise_pred).float(), training_target.float())
+        loss = loss * self.scheduler.training_weight(timestep).to(device=device)
+        return loss

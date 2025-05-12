@@ -184,9 +184,9 @@ class HunyuanVideoFlow(GenerationBase):
         first_stage_config: Dict[str, Any],
         cond_stage_config: Dict[str, Any],
         denoiser_config: Dict[str, Any],
-        scheduler_config: Dict[str, Any],
-        cond_stage_2_config: Dict[str, Any] = None,
-        lr_scheduler_config: Optional[Dict[str, Any]] = None,
+        scheduler_config: Optional[Dict[str, Any]] = None,
+        cond_stage_2_config: Optional[Dict[str, Any]] = None,
+        lora_config: Optional[Dict[str, Any]] = None,
         use_cpu_offload=False,
         device=0,
         logger=None,
@@ -221,7 +221,7 @@ class HunyuanVideoFlow(GenerationBase):
             denoiser_config=denoiser_config,
             scheduler_config=scheduler_config,
             cond_stage_2_config=cond_stage_2_config,
-            lr_scheduler_config=lr_scheduler_config,
+            lora_config=lora_config,
             trainable_components=[]
         )
         self.use_cpu_offload = use_cpu_offload
@@ -284,7 +284,11 @@ class HunyuanVideoFlow(GenerationBase):
             self.default_negative_prompt = NEGATIVE_PROMPT
 
     def from_pretrained(self,
-                        ckpt_path: Optional[Union[str, Path]] = None, device = None):
+                        ckpt_path: Optional[Union[str, Path]] = None,
+                        denoiser_ckpt_path: Optional[Union[str, Path]] = None,
+                        lora_ckpt_path: Optional[Union[str, Path]] = None,
+                        ignore_missing_ckpts: bool = False,
+                        device: str = "cuda"):
         """
         Initialize the Inference pipeline.
     

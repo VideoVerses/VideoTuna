@@ -5,15 +5,16 @@ import sys
 
 import pytorch_lightning as pl
 import torch
-from omegaconf import OmegaConf
+from omegaconf import OmegaConf, DictConfig
 from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.cli import LightningCLI
 from transformers import logging as transf_logging
 
 # sys.path.insert(1, os.path.join(sys.path[0], '..'))
 sys.path.insert(0, os.getcwd())
+from videotuna.base.generation_base import GenerationBase
 from videotuna.utils.args_utils import prepare_train_args
-from videotuna.utils.common_utils import instantiate_from_config
+from videotuna.utils.common_utils import instantiate_from_config, get_dist_info
 from videotuna.utils.lightning_utils import add_trainer_args_to_parser
 from videotuna.utils.train_utils import (
     check_config_attribute,
@@ -46,13 +47,6 @@ def get_parser(**parser_kwargs):
         "Parameters can be overwritten or added with command-line options of the form `--key value`.",
         default=list(),
     )
-
-    parser.add_argument(
-        "--train", "-t", action="store_true", default=False, help="train"
-    )
-    parser.add_argument("--val", "-v", action="store_true", default=False, help="val")
-    parser.add_argument("--test", action="store_true", default=False, help="test")
-
     parser.add_argument(
         "--logdir",
         "-l",
@@ -77,157 +71,66 @@ def get_parser(**parser_kwargs):
         help="resume from full-info checkpoint",
     )
     parser.add_argument(
-        "--trained_ckpt", type=str, default=None, help="pretrained current model checkpoint"
+        "--trained_ckpt", type=str, default=None, help="denoiser full checkpoint"
     )
     parser.add_argument(
-        "--lorackpt", type=str, default=None, help="pretrained current model checkpoint"
+        "--lorackpt", type=str, default=None, help="denoiser lora checkpoint"
     )
     return parser
 
 
-def get_nondefault_trainer_args(args):
-    parser = argparse.ArgumentParser()
-    parser = add_trainer_args_to_parser(Trainer, parser)
+def setup_logger(config: DictConfig):
+    ## 1. dist info
+    local_rank, global_rank, num_rank = get_dist_info()
 
-    default_trainer_args = parser.parse_args([])
-    return sorted(
-        k
-        for k in vars(default_trainer_args)
-        if getattr(args, k) != getattr(default_trainer_args, k)
-    )
+    ## 2. config
+    train_config : DictConfig = config.get("train", OmegaConf.create())
+    lightning_config : DictConfig = train_config.get("lightning", OmegaConf.create())
 
-
-if __name__ == "__main__":
-    now = datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
-    try:
-        local_rank = int(os.environ.get("LOCAL_RANK"))
-        global_rank = int(os.environ.get("RANK"))
-        num_rank = int(os.environ.get("WORLD_SIZE"))
-    except:
-        local_rank, global_rank, num_rank = 0, 0, 1
-
-    parser = get_parser()
-    args, config = prepare_train_args(parser)
-
-    ## disable transformer warning
+    ## 3. init logger
+    seed_everything(train_config.seed)
     transf_logging.set_verbosity_error()
-    seed_everything(args.seed)
-
-    train_config = config.pop("train", OmegaConf.create())
-    lightning_config = train_config.pop("lightning", OmegaConf.create())
-    trainer_config = lightning_config.get("trainer", OmegaConf.create())
-
-    ## setup workspace directories
+    now = datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
     workdir, ckptdir, cfgdir, loginfo = init_workspace(
-        args.name, args.logdir, config, lightning_config, global_rank
+        train_config.name, train_config.logdir, config, lightning_config, global_rank
     )
     logger = set_logger(
         logfile=os.path.join(loginfo, "log_%d:%s.txt" % (global_rank, now))
     )
+    train_config['workdir'] = workdir
+    train_config['ckptdir'] = ckptdir
+    return logger
+
+if __name__ == "__main__":
+    ## prepare args and logger
+    local_rank, global_rank, num_rank = get_dist_info()
+    parser = get_parser()
+    config = prepare_train_args(parser)
+    logger = setup_logger(config)   
+
+    ## load flow
     logger.info("@lightning version: %s [>=2.0 required]" % pl.__version__)
-
-    ## MODEL CONFIG >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     logger.info("***** Configuring Model *****")
-    config.flow.params.logdir = workdir
+    train_config: DictConfig = config['train']
+    flow_config: DictConfig = config['flow']
+    flow : GenerationBase = instantiate_from_config(flow_config, resolve=True)
+    flow.from_pretrained(train_config['ckpt'], train_config['trained_ckpt'], train_config['lorackpt'])
 
-    flow = instantiate_from_config(config.flow)
-    if args.resume_ckpt is not None:
-        print("Resuming from checkpoint {}".format(args.resume_ckpt))
-    else:
-        flow.from_pretrained(args.ckpt)
-    if args.trained_ckpt is not None:
-        flow.load_trained_ckpt(args.trained_ckpt)
-    # if len(flow.lora_args) != 0:
-    #     flow.inject_lora()
-    ## update trainer config
-    for k in get_nondefault_trainer_args(args):
-        trainer_config[k] = getattr(args, k)
+    ## load trainer
+    flow.init_trainer(train_config)
+    trainer = flow.trainer
+    data = flow.data
 
-    print(f"trainer_config: {trainer_config}")
-    num_nodes = trainer_config.num_nodes
-    ngpu_per_node = trainer_config.devices
-    logger.info(f"Running on {num_rank}={num_nodes}x{ngpu_per_node} GPUs")
-
-    ## setup learning rate
-    base_lr = config.flow.base_learning_rate
-    bs = train_config.data.params.batch_size
-    if getattr(config.flow, "scale_lr", True):
-        flow.learning_rate = num_rank * bs * base_lr
-    else:
-        flow.learning_rate = base_lr
-
-    ## DATA CONFIG >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-    logger.info("***** Configuring Data *****")
-    data = instantiate_from_config(train_config.data)
-    data.setup()
-    for k in data.datasets:
-        logger.info(
-            f"{k}, {data.datasets[k].__class__.__name__}, {len(data.datasets[k])}"
-        )
-
-    ## TRAINER CONFIG >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-    logger.info("***** Configuring Trainer *****")
-    if "accelerator" not in trainer_config:
-        trainer_config["accelerator"] = "gpu"
-
-    ## setup trainer args: pl-logger and callbacks
-    trainer_kwargs = dict()
-    trainer_kwargs["num_sanity_val_steps"] = 0
-    logger_cfg = get_trainer_logger(lightning_config, workdir, args.debug)
-    trainer_kwargs["logger"] = instantiate_from_config(logger_cfg)
-    print(f"logger save_dir: {trainer_kwargs['logger'].save_dir}")
-    ## setup callbacks
-    callbacks_cfg = get_trainer_callbacks(
-        lightning_config, config, workdir, ckptdir, logger
-    )
-    callbacks_cfg["image_logger"]["params"]["save_dir"] = workdir
-    trainer_kwargs["callbacks"] = [
-        instantiate_from_config(callbacks_cfg[k]) for k in callbacks_cfg
-    ]
-    strategy_cfg = get_trainer_strategy(lightning_config)
-    trainer_kwargs["strategy"] = (
-        strategy_cfg
-        if type(strategy_cfg) == str
-        else instantiate_from_config(strategy_cfg)
-    )
-    trainer_kwargs["sync_batchnorm"] = False
-
-    # merge args for trainer
-    print(f"trainer_kwargs: {trainer_kwargs}")
-    trainer = Trainer(**trainer_config, **trainer_kwargs)
-
-    ## allow checkpointing via USR1
-    def melk(*args, **kwargs):
-        ## run all checkpoint hooks
-        if trainer.global_rank == 0:
-            print("Summoning checkpoint.")
-            ckpt_path = os.path.join(ckptdir, "last_summoning.ckpt")
-            trainer.save_checkpoint(ckpt_path)
-
-    def divein(*args, **kwargs):
-        if trainer.global_rank == 0:
-            import pudb
-
-            pudb.set_trace()
-
-    import signal
-
-    signal.signal(signal.SIGUSR1, melk)
-    signal.signal(signal.SIGUSR2, divein)
-
-    ## Running LOOP >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    ## train
     logger.info("***** Running the Loop *****")
-
-    if args.train:
-        try:
-            # Strategy is automatically managed, no need to manually check it here
-            logger.info(f"<Training in {trainer.strategy.__class__.__name__} Mode>")
-            # Please refer to https://lightning.ai/docs/pytorch/stable/api/lightning.pytorch.plugins.precision.MixedPrecision.html for Automatic Mixed Precision (AMP) training
-            if trainer.strategy == "deepspeed":
-                with torch.cuda.amp.autocast():
-                    trainer.fit(flow, data, ckpt_path=args.resume_ckpt)
-            else:
-                trainer.fit(flow, data, ckpt_path=args.resume_ckpt)
-        except Exception as e:
-            logger.error(f"Training failed: {str(e)}")
-            raise
+    try:
+        logger.info(f"<Training in {trainer.strategy.__class__.__name__} Mode>")
+        if trainer.strategy.__class__.__name__  == "DeepSpeedStrategy":
+            logger.info("deepspeed needs autocast")
+            with torch.cuda.amp.autocast():
+                trainer.fit(flow, data, ckpt_path=train_config.resume_ckpt)
+        else:
+            trainer.fit(flow, data, ckpt_path=train_config.resume_ckpt)
+    except Exception as e:
+        logger.error(f"Training failed: {str(e)}")
+        raise

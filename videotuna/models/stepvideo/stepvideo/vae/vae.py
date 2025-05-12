@@ -893,7 +893,6 @@ class DiagonalGaussianDistribution(object):
             return x
 
 class AutoencoderKL(nn.Module):
-    @with_empty_init
     def __init__(self,
         in_channels=3,
         out_channels=3,
