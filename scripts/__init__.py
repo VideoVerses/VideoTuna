@@ -327,6 +327,45 @@ def inference_flux_lora():
     )
     exit(result.returncode)
 
+def inference_sana():
+    model_path = "Efficient-Large-Model/Sana_1600M_1024px_BF16_diffusers"
+    prompt = "inputs/t2i/prompts.txt"
+    out_path = "results/t2i/sana"
+    result = subprocess.run(
+        ["python", "scripts/inference_sana.py", 
+         "--model_path", model_path, 
+         "--out_path", out_path, 
+         "--width", "1024", 
+         "--height", "1024", 
+         "--num_inference_steps", "20", 
+         "--guidance_scale", "4.5",
+         "--prompt", prompt,
+         "--seed", "42"
+        ] + sys.argv[1:], 
+        check=False
+    )
+    exit(result.returncode)
+
+def inference_sana_lora():
+    model_path = "Efficient-Large-Model/Sana_1600M_1024px_BF16_diffusers"
+    lora_path = "YOUR_LORA_CKPT"
+    prompt = "inputs/t2i/prompts_sana_lora.txt"
+    out_path = "results/t2i/sana_lora"
+    result = subprocess.run(
+        ["python", "scripts/inference_sana.py", 
+         "--model_path", model_path, 
+         "--lora_path", lora_path, 
+         "--out_path", out_path, 
+         "--width", "1024", 
+         "--height", "1024", 
+         "--num_inference_steps", "20", 
+         "--guidance_scale", "4.5",
+         "--prompt", prompt,
+         "--seed", "42"
+        ] + sys.argv[1:], 
+        check=False
+    )
+    exit(result.returncode)
 
 def inference_hunyuan_t2v():
     result = subprocess.run(
@@ -729,6 +768,19 @@ def train_dynamicrafter():
     )
     exit(result.returncode)
 
+def train_sana_lora():
+    config="configs/010_sana/sana.yaml"
+    result = subprocess.run(
+        ["accelerate", "launch", 
+         "--mixed_precision=bf16", 
+         "--num_processes=1", 
+         "--num_machines=1", 
+         "scripts/train_sana_lora.py", 
+         "--base", config, 
+        ] + sys.argv[1:], 
+        check=False
+    )
+    exit(result.returncode)
 
 def train_flux_lora():
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
