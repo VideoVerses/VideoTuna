@@ -1,0 +1,3 @@
+[submodule "videotuna/vendor/simpletuner"]
+	path = videotuna/vendor/simpletuner
+	url = https://github.com/bghira/SimpleTuner.git

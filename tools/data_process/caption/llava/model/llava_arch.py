@@ -16,11 +16,11 @@
 import math
 import random
 import re
-import time
 from abc import ABC, abstractmethod
 
 import torch
 import torch.nn as nn
+
 from llava.constants import (
     DEFAULT_IM_END_TOKEN,
     DEFAULT_IM_START_TOKEN,
@@ -29,7 +29,7 @@ from llava.constants import (
     IMAGE_TOKEN_INDEX,
 )
 from llava.mm_utils import get_anyres_image_grid_shape
-from llava.utils import rank0_print, rank_print
+from llava.utils import rank0_print
 
 from .multimodal_encoder.builder import build_vision_tower
 from .multimodal_projector.builder import build_vision_projector
@@ -37,7 +37,6 @@ from .multimodal_resampler.builder import build_vision_resampler
 
 
 class LlavaMetaModel:
-
     def __init__(self, config):
         super(LlavaMetaModel, self).__init__(config)
 
@@ -191,7 +190,6 @@ def unpad_image(tensor, original_size):
 
 
 class LlavaMetaForCausalLM(ABC):
-
     @abstractmethod
     def get_model(self):
         pass

@@ -1,25 +1,43 @@
 import sys
+from pathlib import Path
 
 sys.path.append(".")
 
-import os
 import unittest
 
 import videotuna.data.transforms as transforms
 from videotuna.data.datasets import DatasetFromCSV
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+TOY_VIDEO_CSV = REPO_ROOT / "videotuna/data/anno_files/toy_video_dataset.csv"
+TOY_IMAGE_CSV = REPO_ROOT / "videotuna/data/anno_files/toy_image_dataset.csv"
+TOY_VIDEOS_DIR = REPO_ROOT / "videotuna/data/toy_videos"
+TOY_IMAGES_DIR = REPO_ROOT / "videotuna/data/toy_images"
+
+
+def _use_dummy_video(transform_video):
+    if not TOY_VIDEOS_DIR.exists():
+        transform_video.transforms[0] = transforms.LoadDummyVideo(
+            (100, 100), probs_fail=0.5
+        )
+
+
+def _use_dummy_image(transform_image):
+    if not TOY_IMAGES_DIR.exists():
+        transform_image.transforms[0] = transforms.LoadDummyImage(probs_fail=0.5)
+
+
+def _has_toy_images():
+    return TOY_IMAGE_CSV.is_file()
+
 
 class TestDatasets(unittest.TestCase):
-
     def test_video_dataset_from_csv(self):
         transform_video = transforms.get_transforms_video()
-        if not os.path.exists("videotuna/data/toy_videos"):
-            transform_video.transforms[0] = transforms.LoadDummyVideo(
-                (100, 100), probs_fail=0.5
-            )
+        _use_dummy_video(transform_video)
         dataset = DatasetFromCSV(
-            "videotuna/data/anno_files/toy_video_dataset.csv",
-            "videotuna/data/toy_videos",
+            TOY_VIDEO_CSV,
+            str(TOY_VIDEOS_DIR),
             transform={"video": transform_video},
         )
         for i in range(min(5, len(dataset))):
@@ -34,7 +52,8 @@ class TestDatasets(unittest.TestCase):
 
         transform_video.transforms[0] = transforms.LoadDummyVideo(probs_fail=0.4)
         dataset = DatasetFromCSV(
-            "videotuna/data/anno_files/toy_video_dataset.csv",
+            TOY_VIDEO_CSV,
+            str(TOY_VIDEOS_DIR),
             transform={"video": transform_video},
         )
         for i in range(min(5, len(dataset))):
@@ -45,14 +64,14 @@ class TestDatasets(unittest.TestCase):
 
     def test_video_dataset_wo_transforms_from_csv(self):
         dataset = DatasetFromCSV(
-            "videotuna/data/anno_files/toy_video_dataset.csv",
-            "videotuna/data/toy_videos",
+            TOY_VIDEO_CSV,
+            str(TOY_VIDEOS_DIR),
         )
-        if not os.path.exists("videotuna/data/toy_videos"):
+        if not TOY_VIDEOS_DIR.exists():
             transform_video = dataset.transform["video"]
             transform_video.transforms[0] = transforms.LoadDummyVideo(probs_fail=0.5)
             dataset = DatasetFromCSV(
-                "videotuna/data/anno_files/toy_video_dataset.csv",
+                TOY_VIDEO_CSV,
                 transform={"video": transform_video},
             )
         for i in range(min(5, len(dataset))):
@@ -65,13 +84,13 @@ class TestDatasets(unittest.TestCase):
         self.assertEqual(len(dataset), 128)
         self.assertEqual(dataset[0]["video"].shape[2], 256)
 
+    @unittest.skipUnless(_has_toy_images(), "toy image annotations not available")
     def test_image_dataset_from_csv(self):
         transform_image = transforms.get_transforms_image()
-        if not os.path.exists("videotuna/data/toy_images"):
-            transform_image.transforms[0] = transforms.LoadDummyImage(probs_fail=0.5)
+        _use_dummy_image(transform_image)
         dataset = DatasetFromCSV(
-            "videotuna/data/anno_files/toy_image_dataset.csv",
-            "videotuna/data/toy_images",
+            TOY_IMAGE_CSV,
+            str(TOY_IMAGES_DIR),
             transform={"image": transform_image},
         )
         for i in range(min(5, len(dataset))):
@@ -84,14 +103,14 @@ class TestDatasets(unittest.TestCase):
         self.assertEqual(len(dataset), 16)
         self.assertEqual(dataset[0]["video"].shape[2], 256)
 
+    @unittest.skipUnless(_has_toy_images(), "toy image annotations not available")
     def test_multi_res(self):
         # Test Video
         transform_video = transforms.get_transforms_video()
-        if not os.path.exists("videotuna/data/toy_videos"):
-            transform_video.transforms[0] = transforms.LoadDummyVideo(probs_fail=0.5)
+        _use_dummy_video(transform_video)
         dataset = DatasetFromCSV(
-            "videotuna/data/anno_files/toy_video_dataset.csv",
-            "videotuna/data/toy_videos",
+            TOY_VIDEO_CSV,
+            str(TOY_VIDEOS_DIR),
             transform={"video": transform_video},
             use_multi_res=True,
         )
@@ -107,11 +126,10 @@ class TestDatasets(unittest.TestCase):
 
         # Test Image
         transform_image = transforms.get_transforms_image()
-        if not os.path.exists("videotuna/data/toy_images"):
-            transform_image.transforms[0] = transforms.LoadDummyImage(probs_fail=0.5)
+        _use_dummy_image(transform_image)
         dataset = DatasetFromCSV(
-            "videotuna/data/anno_files/toy_image_dataset.csv",
-            "videotuna/data/toy_images",
+            TOY_IMAGE_CSV,
+            str(TOY_IMAGES_DIR),
             transform={"image": transform_image},
             use_multi_res=True,
         )
@@ -125,20 +143,19 @@ class TestDatasets(unittest.TestCase):
         self.assertEqual(len(dataset), 16)
         self.assertEqual(dataset[0]["video"].shape[2], 256)
 
+    @unittest.skipUnless(_has_toy_images(), "toy image annotations not available")
     def test_concat_dataset_from_csv(self):
         transform_video = transforms.get_transforms_video()
-        if not os.path.exists("videotuna/data/toy_videos"):
-            transform_video.transforms[0] = transforms.LoadDummyVideo(probs_fail=0.5)
+        _use_dummy_video(transform_video)
 
         transform_image = transforms.get_transforms_image()
-        if not os.path.exists("videotuna/data/toy_images"):
-            transform_image.transforms[0] = transforms.LoadDummyImage(probs_fail=0.5)
+        _use_dummy_image(transform_image)
         dataset = DatasetFromCSV(
             [
-                "videotuna/data/anno_files/toy_video_dataset.csv",
-                "videotuna/data/anno_files/toy_image_dataset.csv",
+                TOY_VIDEO_CSV,
+                TOY_IMAGE_CSV,
             ],
-            ["videotuna/data/toy_videos", "videotuna/data/toy_images"],
+            [str(TOY_VIDEOS_DIR), str(TOY_IMAGES_DIR)],
             transform={"video": transform_video, "image": transform_image},
         )
         for i in range(min(5, len(dataset))):
@@ -153,11 +170,10 @@ class TestDatasets(unittest.TestCase):
 
     def test_anno_wo_meta_info(self):
         transform_video = transforms.get_transforms_video()
-        if not os.path.exists("videotuna/data/toy_videos"):
-            transform_video.transforms[0] = transforms.LoadDummyVideo(probs_fail=0.5)
+        _use_dummy_video(transform_video)
         dataset = DatasetFromCSV(
-            "videotuna/data/anno_files/toy_video_dataset.csv",
-            "videotuna/data/toy_videos",
+            TOY_VIDEO_CSV,
+            str(TOY_VIDEOS_DIR),
             transform={"video": transform_video},
             use_multi_res=True,
         )
@@ -178,11 +194,10 @@ class TestDatasets(unittest.TestCase):
 
     def test_anno_wo_meta_info_wo_multi_res(self):
         transform_video = transforms.get_transforms_video()
-        if not os.path.exists("videotuna/data/toy_videos"):
-            transform_video.transforms[0] = transforms.LoadDummyVideo(probs_fail=0.5)
+        _use_dummy_video(transform_video)
         dataset = DatasetFromCSV(
-            "videotuna/data/anno_files/toy_video_dataset.csv",
-            "videotuna/data/toy_videos",
+            TOY_VIDEO_CSV,
+            str(TOY_VIDEOS_DIR),
             transform={"video": transform_video},
             use_multi_res=False,
         )
@@ -203,13 +218,12 @@ class TestDatasets(unittest.TestCase):
 
     def test_video_dataset_from_csv_with_split(self):
         transform_video = transforms.get_transforms_video()
-        if not os.path.exists("videotuna/data/toy_videos"):
-            transform_video.transforms[0] = transforms.LoadDummyVideo(probs_fail=0.5)
+        _use_dummy_video(transform_video)
 
         # Test Training Dataset
         train_dataset = DatasetFromCSV(
-            "videotuna/data/anno_files/toy_video_dataset.csv",
-            "videotuna/data/toy_videos",
+            TOY_VIDEO_CSV,
+            str(TOY_VIDEOS_DIR),
             transform={"video": transform_video},
             split_val=True,
         )
@@ -225,8 +239,8 @@ class TestDatasets(unittest.TestCase):
 
         # Test Validation Dataset
         val_dataset = DatasetFromCSV(
-            "videotuna/data/anno_files/toy_video_dataset.csv",
-            "videotuna/data/toy_videos",
+            TOY_VIDEO_CSV,
+            str(TOY_VIDEOS_DIR),
             transform={"video": transform_video},
             train=False,
             split_val=True,
@@ -240,7 +254,7 @@ class TestDatasets(unittest.TestCase):
         print(f"len(dataset): {len(val_dataset)}")
         self.assertLessEqual(len(val_dataset), 128)
         self.assertEqual(val_dataset[0]["video"].shape[2], 256)
-        # Check if the sum of the lengths of the training and validation datasets is equal to the total number of samples
+        # Check train + validation lengths sum to total sample count
         self.assertEqual(len(train_dataset) + len(val_dataset), 128)
 
 

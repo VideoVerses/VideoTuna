@@ -1,5 +1,3 @@
-import copy
-
 import numpy as np
 import torch
 from tqdm import tqdm
@@ -9,7 +7,7 @@ from videotuna.utils.diffusion_utils import (
     make_ddim_timesteps,
     rescale_noise_cfg,
 )
-from videotuna.models.lvdm.modules.utils import extract_into_tensor, noise_like
+from videotuna.utils.sched_utils import extract_into_tensor, noise_like
 
 
 class DDIMSampler(object):
@@ -21,7 +19,7 @@ class DDIMSampler(object):
         self.counter = 0
 
     def register_buffer(self, name, attr):
-        if type(attr) == torch.Tensor:
+        if isinstance(attr, torch.Tensor):
             if attr.device != torch.device("cuda"):
                 attr = attr.to(torch.device("cuda"))
         setattr(self, name, attr)
@@ -39,7 +37,9 @@ class DDIMSampler(object):
         assert (
             alphas_cumprod.shape[0] == self.ddpm_num_timesteps
         ), "alphas have to be defined for each timestep"
-        to_torch = lambda x: x.clone().detach().to(torch.float32).to(self.model.device)
+
+        def to_torch(x):
+            return x.clone().detach().to(torch.float32).to(self.model.device)
 
         if self.model.use_scale:
             self.ddim_scale_arr = self.model.scale_arr[self.ddim_timesteps]
@@ -120,26 +120,28 @@ class DDIMSampler(object):
         fs=None,
         timestep_spacing="uniform",  # uniform_trailing for starting from last timestep
         guidance_rescale=0.0,
-        # this has to come in the same format as the conditioning, # e.g. as encoded tokens, ...
+        # this has to come in the same format as the conditioning,
+        # e.g. as encoded tokens, ...
         **kwargs,
     ):
-
         # check condition bs
         if conditioning is not None:
             if isinstance(conditioning, dict):
                 try:
                     cbs = conditioning[list(conditioning.keys())[0]].shape[0]
-                except:
+                except Exception:
                     cbs = conditioning[list(conditioning.keys())[0]][0].shape[0]
 
                 if cbs != batch_size:
                     print(
-                        f"Warning: Got {cbs} conditionings but batch-size is {batch_size}"
+                        f"Warning: Got {cbs} conditionings "
+                        f"but batch-size is {batch_size}"
                     )
             else:
                 if conditioning.shape[0] != batch_size:
                     print(
-                        f"Warning: Got {conditioning.shape[0]} conditionings but batch-size is {batch_size}"
+                        f"Warning: Got {conditioning.shape[0]} conditionings "
+                        f"but batch-size is {batch_size}"
                     )
 
         # print('==> timestep_spacing: ', timestep_spacing, guidance_rescale)
@@ -250,12 +252,15 @@ class DDIMSampler(object):
 
         clean_cond = kwargs.pop("clean_cond", False)
 
-        # cond_copy, unconditional_conditioning_copy = copy.deepcopy(cond), copy.deepcopy(unconditional_conditioning)
+        # cond_copy, unconditional_conditioning_copy = (
+        #     copy.deepcopy(cond), copy.deepcopy(unconditional_conditioning)
+        # )
         for i, step in enumerate(iterator):
             index = total_steps - i - 1
             ts = torch.full((b,), step, device=device, dtype=torch.long)
 
-            ## use mask to blend noised original latent (img_orig) & new sampled latent (img)
+            ## use mask to blend noised original latent (img_orig)
+            ## & new sampled latent (img)
             if mask is not None:
                 assert x0 is not None
                 if clean_cond:
@@ -435,7 +440,6 @@ class DDIMSampler(object):
         use_original_steps=False,
         callback=None,
     ):
-
         timesteps = (
             np.arange(self.ddpm_num_timesteps)
             if use_original_steps

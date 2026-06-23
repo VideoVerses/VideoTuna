@@ -1,147 +1,262 @@
 [tool.poetry]
-name = "videotuna"
-version = "0.1.0"
-description = "Videotuna is a useful codebase for text-to-video applications"
-authors = ["Yingqing He <yhebm@connect.ust.hk>", "Yazhou Xing <yxingag@connect.ust.hk>"]
+name = "privtune"
+version = "0.2.0"
+description = "PrivTune is a private-domain LoRA training platform for still-image and short-video generation — Flux T2I style training, Wan 2.1 T2V LoRA training, and Wan 2.2 Diffusers validation inference."
+authors = [
+    "Yingqing He <yhebm@connect.ust.hk>",
+    "Yazhou Xing <yxingag@connect.ust.hk>",
+]
 readme = "README.md"
+packages = [{ include = "videotuna" }]
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
+# Default install (`poetry install -E cuda --with training`) = NVIDIA CUDA + domain LoRA training stack.
+# AMD ROCm: `poetry install -E rocm` then `poetry run install-rocm`
+# CPU dev:  `poetry install -E cpu` then `poetry run install-cpu-torch` (see docs/install-cpu.md)
+# Note: `cpu` extra is a marker; CPU torch wheels come from `install-cpu-torch`.
+# Training: `poetry install -E cuda --with training`
+# Optional faster video decode (Wan dataloading):
+#   `poetry install -E cuda --with training -E video-fast`
+# Optional Wan transformer quant (quanto backend):
+#   `poetry install -E cuda -E quanto`
+# Optional Flux Trackio experiment tracking:
+#   `poetry install -E cuda --with training -E trackio`
+# Dev:      `poetry install --with dev`
+
 [tool.poetry.dependencies]
-python = "^3.10"
-deepspeed = "0.16.5"
+python = "^3.11"
 av = "12.3.0"
 beautifulsoup4 = "4.12.3"
-colossalai = "0.3.6"
-peft = "^0.12.0"
-bitsandbytes = "^0.45.0"
-decord = "0.6.0"
+peft = "^0.17.0"
 einops = "0.8.0"
-fire = "0.6.0"
-torch = "2.2.2"
+cyclopts = "^3.0.0"
+torch = { version = "^2.6.0", source = "pytorch-cu126" }
+torchvision = { version = "^0.21.0", source = "pytorch-cu126" }
+triton = { version = "3.2.0", markers = "platform_system == 'Linux' and platform_machine == 'x86_64'", optional = true }
+nvidia-cublas-cu12 = { version = "12.6.4.1", markers = "platform_system == 'Linux' and platform_machine == 'x86_64'", optional = true }
+nvidia-cuda-cupti-cu12 = { version = "12.6.80", markers = "platform_system == 'Linux' and platform_machine == 'x86_64'", optional = true }
+nvidia-cuda-nvrtc-cu12 = { version = "12.6.77", markers = "platform_system == 'Linux' and platform_machine == 'x86_64'", optional = true }
+nvidia-cuda-runtime-cu12 = { version = "12.6.77", markers = "platform_system == 'Linux' and platform_machine == 'x86_64'", optional = true }
+nvidia-cudnn-cu12 = { version = "9.5.1.17", markers = "platform_system == 'Linux' and platform_machine == 'x86_64'", optional = true }
+nvidia-cufft-cu12 = { version = "11.3.0.4", markers = "platform_system == 'Linux' and platform_machine == 'x86_64'", optional = true }
+nvidia-curand-cu12 = { version = "10.3.7.77", markers = "platform_system == 'Linux' and platform_machine == 'x86_64'", optional = true }
+nvidia-cusolver-cu12 = { version = "11.7.1.2", markers = "platform_system == 'Linux' and platform_machine == 'x86_64'", optional = true }
+nvidia-cusparse-cu12 = { version = "12.5.4.2", markers = "platform_system == 'Linux' and platform_machine == 'x86_64'", optional = true }
+nvidia-cusparselt-cu12 = { version = "0.6.3", markers = "platform_system == 'Linux' and platform_machine == 'x86_64'", optional = true }
+nvidia-nccl-cu12 = { version = "2.21.5", markers = "platform_system == 'Linux' and platform_machine == 'x86_64'", optional = true }
+nvidia-nvjitlink-cu12 = { version = "12.6.85", markers = "platform_system == 'Linux' and platform_machine == 'x86_64'", optional = true }
+nvidia-nvtx-cu12 = { version = "12.6.77", markers = "platform_system == 'Linux' and platform_machine == 'x86_64'", optional = true }
+xformers = { version = "0.0.29.post3", source = "pytorch-cu126", optional = true }
+bitsandbytes = { version = "^0.45.0", optional = true }
+xfuser = { version = "^0.4.4", optional = true }
 ftfy = "6.2.3"
-huggingface-hub = "0.24.6"
+huggingface-hub = "^0.34.0"
 loguru = "0.7.2"
 imwatermark = "0.0.2"
 kornia = "0.7.3"
-mmengine = "0.10.4"
 omegaconf = "2.3.0"
 opencv-python = "4.10.0.84"
 packaging = "24.1"
-pandas = "2.2.2"
 pillow = "10.4.0"
-pudb = "2024.1.2"
-pytorch-lightning = "2.4.0"
 pyyaml = "6.0.2"
 rotary-embedding-torch = "0.6.5"
 requests = "2.32.3"
-safetensors = "0.4.4"
+safetensors = "^0.8.0"
 timm = "1.0.8"
-torchvision = "0.17.2"
 tqdm = "4.66.5"
-transformers = "4.46.2"
-xformers = "0.0.25.post1"
+transformers = "^4.48.0"
 imageio = "2.35.1"
 imageio-ffmpeg = "0.5.1"
-pyramid = "1.5"
-wandb = "0.17.8"
 scipy = "1.14.1"
-beartype = "0.18.5"
-moviepy = "1.0.3"
+moviepy = "^2.2.1"
 open-clip-torch = "2.12.0"
-numpy = "==1.*"
-diffusers = "^0.32.2"
+numpy = ">=1.26,<2.3"
+diffusers = "^0.38.0"
 torchsde = "0.2.6"
 colorama = "0.4.6"
 torch-optimi = "^0.2.1"
-accelerate = "^0.33.0"
-torchao = "0.8.0"
-toml = "0.10.2"
-hpsv2 = {git = "https://github.com/tgxs002/HPSv2.git"}
+accelerate = "^1.14.0"
+torchao = "^0.15.0"
 backports-tarfile = "^1.2.0"
-swissarmytransformer = {git = "https://github.com/JingyeChen/SwissArmyTransformer"}
+pydantic = "^2.0"
 pydantic-settings = "^2.8.0"
-xfuser = "^0.4.1"
 dashscope = "^1.23.0"
-tensorboard = "^2.19.0"
+# Wan vendor only — videotuna/models/wan/wan/configs/
 easydict = "^1.13"
+torchcodec = { version = "~0.2.1", optional = true }
+optimum-quanto = { version = ">=0.2.6", optional = true }
+# Trackio 0.21+ requires huggingface-hub>=1.10; transformers pins hub<1.0.
+trackio = { version = "~0.20.0", optional = true }
+
+[tool.poetry.extras]
+cuda = [
+    "triton",
+    "nvidia-cublas-cu12",
+    "nvidia-cuda-cupti-cu12",
+    "nvidia-cuda-nvrtc-cu12",
+    "nvidia-cuda-runtime-cu12",
+    "nvidia-cudnn-cu12",
+    "nvidia-cufft-cu12",
+    "nvidia-curand-cu12",
+    "nvidia-cusolver-cu12",
+    "nvidia-cusparse-cu12",
+    "nvidia-cusparselt-cu12",
+    "nvidia-nccl-cu12",
+    "nvidia-nvjitlink-cu12",
+    "nvidia-nvtx-cu12",
+    "xformers",
+    "bitsandbytes",
+    "xfuser",
+]
+rocm = []
+cpu = []
+cuda124 = []
+cuda126 = ["cuda"]
+video-fast = ["torchcodec"]
+quanto = ["optimum-quanto"]
+trackio = ["trackio"]
+
+[tool.poetry.group.training]
+optional = true
+
+[tool.poetry.group.training.dependencies]
+deepspeed = "0.19.2"
+pytorch-lightning = "2.4.0"
+tensorboard = "^2.19.0"
+pandas = "2.2.2"
 scikit-learn = "^1.6.1"
 
+[tool.poetry.group.dev]
+optional = true
+
 [tool.poetry.group.dev.dependencies]
-black = "^24.0.0"
-isort = "^5.12.0"
 mypy = "^1.11.2"
-pytest = "7.2.0"
+pytest = "^9.1"
 pre-commit = "^4.1.0"
 coverage = "^7.6.1"
 ruff = "^0.6.8"
+pudb = "2024.1.2"
+types-colorama = "*"
+types-tqdm = "*"
+types-psutil = "*"
+
+[tool.uv]
+package = true
+
+[dependency-groups]
+training = [
+    "deepspeed==0.19.2",
+    "pytorch-lightning==2.4.0",
+    "tensorboard>=2.19.0",
+    "pandas==2.2.2",
+    "scikit-learn>=1.6.1",
+]
+dev = [
+    "mypy>=1.11.2",
+    "pytest>=9.1,<10",
+    "pre-commit>=4.1.0",
+    "coverage>=7.6.1",
+    "ruff>=0.6.8",
+    "pudb==2024.1.2",
+    "types-colorama",
+    "types-tqdm",
+    "types-psutil",
+]
 
 [[tool.poetry.source]]
-name = "modelscope"
-url = "https://modelscope.oss-cn-beijing.aliyuncs.com/releases/repo.html"
-priority = "supplemental"
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+priority = "explicit"
+
+[[tool.poetry.source]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+priority = "explicit"
+
+[[tool.poetry.source]]
+name = "pytorch-rocm642"
+url = "https://download.pytorch.org/whl/rocm6.2.4"
+priority = "explicit"
+
+[[tool.poetry.source]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+priority = "explicit"
 
 [tool.poetry.scripts]
 install-deepspeed = 'scripts:install_deepspeed'
 install-flash-attn = 'scripts:install_flash_attn'
+install-rocm = 'scripts:install_rocm'
+install-cpu-torch = 'scripts:install_cpu_torch'
+install-flash-attn-rocm = 'scripts:install_flash_attn_rocm'
 coverage-report = 'scripts:coverage_report'
+coverage-gate = 'scripts:coverage_gate'
 format = 'scripts:code_format'
 format-check = 'scripts:code_format_check'
 lint = 'scripts:lint'
+benchmark-attn-backends = 'scripts:benchmark_attn_backends'
+verify-cuda-extras = 'scripts.verify_cuda_extras:main'
+verify-cpu-torch = 'scripts.verify_cpu_torch:main'
 test = 'scripts:test'
 type-check = 'scripts:type_check'
-inference-stepvideo-t2v-544x992 = 'scripts:inference_stepvideo_t2v_544x992'
-inference-wanvideo-i2v-720p = 'scripts:inference_wanvideo_i2v_720p'
-inference-wanvideo-t2v-720p = 'scripts:inference_wanvideo_t2v_720p'
-inference-hunyuan-i2v-720p = 'scripts:inference_hunyuan_i2v_720p'
-inference-cogvideo-i2v-diffusers = 'scripts:inference_cogvideo_i2v_diffusers'
-inference-cogvideo-i2v-lora = 'scripts:inference_cogvideo_i2v_lora'
-inference-cogvideo-lora = 'scripts:inference_cogvideo_lora'
-inference-cogvideo-t2v-diffusers = 'scripts:inference_cogvideo_t2v_diffusers'
-inference-cogvideox-15-5b-i2v = 'scripts:inference_cogvideox1_5_5b_i2v'
-inference-cogvideox-15-5b-t2v = 'scripts:inference_cogvideox1_5_5b_t2v'
-inference-dc-i2v-576x1024 = 'scripts:inference_dc_i2v_576x1024'
-inference-flux-schnell = 'scripts:inference_flux_schnell'
-inference-flux-dev = 'scripts:inference_flux_dev'
-inference-flux-lora = 'scripts:inference_flux_lora'
-inference-hunyuan-t2v = 'scripts:inference_hunyuan_t2v'
-inference-mochi = 'scripts:inference_mochi'
-inference-opensora-v10-16x256x256 = 'scripts:inference_opensora_v10_16x256x256'
-inference-v2v-ms = 'scripts:inference_v2v_ms'
-inference-vc1-i2v-320x512 = 'scripts:inference_vc1_i2v_320x512'
-inference-vc1-t2v-576x1024 = 'scripts:inference_vc1_t2v_576x1024'
-inference-vc2-t2v-320x512 = 'scripts:inference_vc2_t2v_320x512'
-inference-vc2-t2v-320x512-lora = 'scripts:inference_vc2_t2v_320x512_lora'
-train-cogvideox-i2v-lora = 'scripts:train_cogvideox_i2v_lora'
-train-cogvideox-i2v-fullft = 'scripts:train_cogvideox_i2v_fullft'
-train-cogvideox-t2v-lora = 'scripts:train_cogvideox_t2v_lora'
-train-cogvideox-t2v-fullft = 'scripts:train_cogvideox_t2v_fullft'
-train-dynamicrafter = 'scripts:train_dynamicrafter'
+inference-flux-lora = 'videotuna.cli.inference_app:inference_flux_lora_entry'
+"inference-wan2.2-t2v-720p" = 'videotuna.cli.inference_app:inference_wan2_2_t2v_720p_entry'
 train-flux-lora = 'scripts:train_flux_lora'
-train-opensorav10 = 'scripts:train_opensorav10'
-train-videocrafter-lora = 'scripts:train_videocrafter_lora'
-train-videocrafter-v2 = 'scripts:train_videocrafter_v2'
-train-hunyuan-t2v-lora = 'scripts:train_hunyuan_t2v_lora'
-train-wan2-1-i2v-lora = 'scripts:train_wan2_1_i2v_lora'
-train-wan2-1-i2v-fullft = 'scripts:train_wan2_1_i2v_fullft'
 train-wan2-1-t2v-lora = 'scripts:train_wan2_1_t2v_lora'
-train-wan2-1-t2v-fullft = 'scripts:train_wan2_1_t2v_fullft'
+train-domain-t2i = 'scripts:train_domain_t2i'
+train-domain-t2v = 'scripts:train_domain_t2v'
+train-wan2-1-i2v-lora = 'scripts:train_wan2_1_i2v_lora'
+train-domain-i2v = 'scripts:train_domain_i2v'
+inference-domain-t2i = 'videotuna.cli.inference_app:inference_domain_t2i_entry'
+validate-domain-t2v = 'videotuna.cli.inference_app:validate_domain_t2v_entry'
+validate-domain-i2v = 'videotuna.cli.inference_app:validate_domain_i2v_entry'
+"inference-wan2.2-i2v-720p" = 'videotuna.cli.inference_app:inference_wan2_2_i2v_720p_entry'
 
-[tool.black]
-line-length = 88
-target-version = ['py310']
-include = '\.pyi?$'
-
-[tool.isort]
-profile = "black"
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "gpu: tests that require an NVIDIA/ROCm GPU (skipped when torch.cuda.is_available() is False)",
+    "rocm: tests that require an AMD ROCm GPU",
+    "cpu_smoke: slow CPU integration tests (optional nightly)",
+]
 
 [[tool.mypy.overrides]]
-module = [
-]
+module = []
 ignore_missing_imports = true
 
+[tool.mypy]
+mypy_path = "typings"
+
 [tool.ruff]
-select = ["E", "F", "C90"]
-ignore = []
+line-length = 88
+target-version = "py311"
+exclude = ["tools/data_process"]
+
+[tool.ruff.lint]
+select = ["E", "F", "C90", "I"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 19
+
+[tool.ruff.lint.per-file-ignores]
+"videotuna/models/wan/wan/**" = ["E501", "E722", "F403", "F405"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["videotuna"]
+
+[tool.coverage.run]
+source = ["videotuna"]
+relative_files = true
+
+[tool.coverage.report]
+precision = 1
+show_missing = true
+skip_empty = true
+
+[tool.pyrefly]
+search-path = ["typings"]
+project-includes = ["videotuna/**", "scripts/**", "tests/**"]
+project-excludes = []

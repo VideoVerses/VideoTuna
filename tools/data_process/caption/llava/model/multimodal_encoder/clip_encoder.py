@@ -25,7 +25,7 @@ class CLIPVisionTower(nn.Module):
         elif getattr(args, "unfreeze_mm_vision_tower", False):
             # TODO: better detector is needed.
             rank0_print(
-                f"The checkpoint seems to contain `vision_tower` weights: `unfreeze_mm_vision_tower`: True."
+                "The checkpoint seems to contain `vision_tower` weights: `unfreeze_mm_vision_tower`: True."
             )
             self.load_model()
         elif (
@@ -33,7 +33,7 @@ class CLIPVisionTower(nn.Module):
             and "mm_vision_tower" in args.mm_tunable_parts
         ):
             rank0_print(
-                f"The checkpoint seems to contain `vision_tower` weights: `mm_tunable_parts` contains `mm_vision_tower`."
+                "The checkpoint seems to contain `vision_tower` weights: `mm_tunable_parts` contains `mm_vision_tower`."
             )
             self.load_model()
         else:
@@ -160,7 +160,6 @@ class CLIPVisionTower(nn.Module):
 
 class CLIPVisionTowerS2(CLIPVisionTower):
     def __init__(self, vision_tower, args, delay_load=False):
-
         self.s2_scales = getattr(args, "s2_scales", "336,672,1008")
         self.s2_scales = list(map(int, self.s2_scales.split(",")))
         self.s2_scales.sort()

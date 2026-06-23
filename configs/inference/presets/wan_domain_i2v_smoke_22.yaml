@@ -1,0 +1,30 @@
+# Domain Wan 2.2 I2V LoRA validation smoke (720p, few steps, offload)
+# Usage:
+#   poetry run validate-domain-i2v \
+#     --trained_ckpt results/train/train_wan_domain_i2v_lora_<ts>/checkpoints/only_trained_model/denoiser-000-000000025.ckpt \
+#     --prompt_dir inputs/i2v/domain_smoke
+flow:
+  target: videotuna.flow.diffusers_video.DiffusersVideoFlow
+  params:
+    model_family: wan
+    mode: i2v
+    pipeline_only: true
+    model_variant: "2.2"
+    pretrained_model_name_or_path: Wan-AI/Wan2.2-I2V-A14B-Diffusers
+inference:
+  mode: i2v
+  ckpt_path: Wan-AI/Wan2.2-I2V-A14B-Diffusers
+  savedir: results/i2v/wan-domain-lora-smoke-22
+  prompt_dir: inputs/i2v/domain_smoke
+  frames: 81
+  height: 720
+  width: 1280
+  num_inference_steps: 4
+  unconditional_guidance_scale: 5.0
+  seed: 42
+  savefps: 16
+  memory_preset: balanced
+  enable_model_cpu_offload: true
+  enable_vae_tiling: true
+  dtype: bf16
+  min_vram_gb: 24

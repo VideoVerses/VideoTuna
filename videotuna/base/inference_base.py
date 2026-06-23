@@ -1,15 +1,12 @@
-import torch
 import os
-from einops import rearrange
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
-from loguru import logger
-import json
-from omegaconf import DictConfig, OmegaConf
+from typing import List, Optional, Union
 
 import torch
 import torchvision
-import torchvision.transforms as transforms
+from einops import rearrange
+from loguru import logger
+from omegaconf import DictConfig
 
 from videotuna.utils.args_utils import VideoMode
 
@@ -25,7 +22,9 @@ class InferenceBase:
         pass
 
     @staticmethod
-    def process_savename(savename: List[str], n_per_prompt: int = 1, mode: str = 'default') -> List[str]:
+    def process_savename(
+        savename: List[str], n_per_prompt: int = 1, mode: str = "default"
+    ) -> List[str]:
         """
         Processes the save name to include the save path.
 
@@ -35,21 +34,21 @@ class InferenceBase:
         :return: The processed save name.
         """
         if n_per_prompt == 1:
-            if mode == 'default':
+            if mode == "default":
                 newnames = [f"prompt-{idx+1:04d}" for idx in range(len(savename))]
-            elif mode == 'prompt':
+            elif mode == "prompt":
                 newnames = []
                 for idx, name in enumerate(savename):
                     name = name[:100]  # limit the length of the name
                     newname = f"{name}"
                     newnames.append(newname)
         elif n_per_prompt > 1:
-            if mode == 'default':
+            if mode == "default":
                 newnames = []
                 for idx in range(len(savename)):
                     for i in range(n_per_prompt):
                         newnames.append(f"prompt-{idx+1:04d}-{i:02d}")
-            elif mode == 'prompt':
+            elif mode == "prompt":
                 newnames = []
                 for idx, name in enumerate(savename):
                     for i in range(n_per_prompt):
@@ -59,13 +58,9 @@ class InferenceBase:
             raise ValueError("Invalid number of samples per prompt.")
 
         return newnames
-    
+
     @staticmethod
-    def save_video(
-            vid_tensor: torch.Tensor,
-            savepath: str,
-            fps: int = 10
-        ) -> None:
+    def save_video(vid_tensor: torch.Tensor, savepath: str, fps: int = 10) -> None:
         """
         Save a video tensor to the specified path.
 
@@ -77,21 +72,21 @@ class InferenceBase:
         assert vid_tensor.dim() == 4, "Invalid video tensor shape."
         video = vid_tensor.detach().cpu()
         video = torch.clamp(video.float(), -1.0, 1.0)
-        video = rearrange(video, 'c t h w -> t c h w')
+        video = rearrange(video, "c t h w -> t c h w")
         video = (video + 1.0) / 2.0
         video = (video * 255).to(torch.uint8).permute(0, 2, 3, 1)
-        
+
         torchvision.io.write_video(
             savepath, video, fps=fps, video_codec="h264", options={"crf": "10"}
         )
 
     def save_videos(
-            self,
-            batch_tensors: torch.Tensor, 
-            savedir: str, 
-            filenames: List[str], 
-            fps: int = 10
-        ) -> None:
+        self,
+        batch_tensors: torch.Tensor,
+        savedir: str,
+        filenames: List[str],
+        fps: int = 10,
+    ) -> None:
         """
         Save a batch of video tensors to the specified directory.
 
@@ -104,7 +99,9 @@ class InferenceBase:
         bs = batch_tensors.shape[0]
         n_samples = batch_tensors.shape[1]
         assert batch_tensors.dim() == 6, "Invalid batch shape."
-        assert n_samples * bs == len(filenames), "Number of filenames must match the batch size."
+        assert n_samples * bs == len(
+            filenames
+        ), "Number of filenames must match the batch size."
 
         c = 0
         for idx, vid_tensor in enumerate(batch_tensors):
@@ -113,31 +110,36 @@ class InferenceBase:
                 savepath = os.path.join(savedir, f"{filenames[c]}.mp4")
                 self.save_video(single_vid_tensor, savepath, fps=fps)
                 c += 1
-    
-    def save_metrics(self,
-                     gpu: List[float],
-                    time: List[float],
-                    config: DictConfig,
-                    savedir: str):
-        metrics = {
-            "gpu" : gpu,
-            "time": time,
-            "config" : OmegaConf.to_container(config, resolve=True)
-        }
-        with open(f"{savedir}/metric.json", "w") as f:
-            json.dump(metrics, f, indent=4)
 
-    
+    def save_metrics(
+        self,
+        gpu: List[float],
+        time: List[float],
+        config: DictConfig,
+        savedir: str,
+        frames: int = 1,
+    ):
+        from videotuna.utils.common_utils import save_metrics as write_metrics
+
+        write_metrics(
+            savedir=savedir,
+            config=config,
+            gpu=gpu,
+            time=time,
+            frames=frames,
+        )
+
     def save_videos_vbench(
-            self, 
-            batch_tensors: torch.Tensor, 
-            savedir: str, 
-            prompts: List[str], 
-            format_file: dict, 
-            fps: int = 10
-        ) -> None:
+        self,
+        batch_tensors: torch.Tensor,
+        savedir: str,
+        prompts: List[str],
+        format_file: dict,
+        fps: int = 10,
+    ) -> None:
         """
-        Save a batch of video tensors to the specified directory with filenames based on prompts.
+        Save a batch of video tensors to the specified directory with filenames
+        based on prompts.
 
         :param batch_tensors: A tensor containing the batch of video data.
         :param savedir: The directory where the videos will be saved.
@@ -158,7 +160,9 @@ class InferenceBase:
             for n in range(n_samples):
                 filename = f"{prompt}-{n}.mp4"
                 format_file[filename] = prompt
-                self.save_video(batch_tensors[idx, n], os.path.join(sub_savedir, filename), fps=fps)
+                self.save_video(
+                    batch_tensors[idx, n], os.path.join(sub_savedir, filename), fps=fps
+                )
 
     @staticmethod
     def load_prompts_from_txt(prompt_file: str) -> List[str]:
@@ -178,14 +182,14 @@ class InferenceBase:
         prompt_list = []
         if prompts is None:
             return prompt_list
-        
-        if os.path.isfile(prompts) and prompts.endswith('.txt'):
+
+        if os.path.isfile(prompts) and prompts.endswith(".txt"):
             prompt_list = InferenceBase.load_prompts_from_txt(prompts)
         else:
             logger.info("Process the input path as a prompt")
             prompt_list = [prompts]
         return prompt_list
-    
+
     @staticmethod
     def get_target_filelist(data_dir: str, ext: str):
         """
@@ -208,21 +212,14 @@ class InferenceBase:
         return file_list
 
     @staticmethod
-    def load_prompts_from_txt(prompt_file: str):
-        """Load and return a list of prompts from a text file, stripping whitespace."""
-        with open(prompt_file, "r") as f:
-            lines = f.readlines()
-        prompt_list = [line.strip() for line in lines if line.strip() != ""]
-        return prompt_list
-
-    @staticmethod
     def load_prompts_images(prompt_dir: str):
-        #1. load prompts
+        # 1. load prompts
         prompt_files = InferenceBase.get_target_filelist(prompt_dir, ext="txt")
         if len(prompt_files) > 1:
             # only use the first one (sorted by name) if multiple exist
             logger.warning(
-                f"Warning: multiple prompt files exist. The one {os.path.split(prompt_files[0])[1]} is used."
+                "Warning: multiple prompt files exist. The one "
+                f"{os.path.split(prompt_files[0])[1]} is used."
             )
             prompt_file = prompt_files[0]
         elif len(prompt_files) == 1:
@@ -233,19 +230,21 @@ class InferenceBase:
 
         prompt_list = InferenceBase.load_prompts_from_txt(prompt_file)
 
-        #2. load images
-        image_path_list = sorted(InferenceBase.get_target_filelist(prompt_dir, ext="png,jpg,webp,jpeg"))
+        # 2. load images
+        image_path_list = sorted(
+            InferenceBase.get_target_filelist(prompt_dir, ext="png,jpg,webp,jpeg")
+        )
         return prompt_list, image_path_list
-    
-    
 
-    def load_inference_inputs(self, prompts: Optional[Union[str, Path]], mode: str = 't2v'):
+    def load_inference_inputs(
+        self, prompts: Optional[Union[str, Path]], mode: str = "t2v"
+    ):
         """
         Loads the prompts and conditions for the conditional stage model.
 
         :param prompts: List of prompts to be loaded.
         :param mode: The mode in which the prompts are loaded. `t2v` or `i2v`.
-        :return: `t2v` -> prompts; 
+        :return: `t2v` -> prompts;
                  `i2v` -> prompts + images.
         """
         assert prompts is not None, "Please provide a valid prompts or prompts path."
@@ -257,8 +256,6 @@ class InferenceBase:
         else:
             raise NotImplementedError("Invalid mode.")
 
-
-    
     # TODO: Add more methods as needed
     # - sample
     # - save results

@@ -1,11 +1,10 @@
 import json
 import logging
 import os
-import pathlib
 import re
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Optional, Tuple, Union
 
 import torch
 
@@ -19,7 +18,6 @@ from .model import (
     CLIP,
     CustomCLIP,
     convert_to_custom_text_state_dict,
-    convert_weights_to_lp,
     get_cast_dtype,
 )
 from .openai import load_openai_model
@@ -38,7 +36,7 @@ from .utils import (
     resize_visual_pos_embed,
 )
 
-_MODEL_CONFIG_PATHS = [Path(__file__).parent / f"model_configs/"]
+_MODEL_CONFIG_PATHS = [Path(__file__).parent / "model_configs/"]
 _MODEL_CONFIGS = {}  # directory (model_name: config) of model architecture configs
 
 

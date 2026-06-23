@@ -1,0 +1,18 @@
+flow:
+  target: videotuna.flow.diffusers_video.DiffusersVideoFlow
+  params:
+    model_family: flux
+    mode: t2i
+    pipeline_only: true
+    model_variant: 1-dev
+    pretrained_model_name_or_path: black-forest-labs/FLUX.1-dev
+inference:
+  mode: t2i
+  ckpt_path: black-forest-labs/FLUX.1-dev
+  savedir: results/t2i/flux1-dev
+  prompt_file: inputs/t2v/prompts.txt
+  height: 768
+  width: 1360
+  num_inference_steps: 28
+  unconditional_guidance_scale: 3.5
+  seed: 42

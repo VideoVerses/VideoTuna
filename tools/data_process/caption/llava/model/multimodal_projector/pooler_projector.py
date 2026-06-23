@@ -1,8 +1,4 @@
-import math
-
-import torch
 import torch.nn as nn
-from transformers.models.clip.modeling_clip import CLIPVisionModel
 
 
 class PoolerProjector(nn.Module):

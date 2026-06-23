@@ -1,6 +1,6 @@
 import inspect
 from argparse import ArgumentParser
-from typing import Any, Callable, Dict, List, Tuple, Type, TypeVar, Union, cast
+from typing import Any, Callable, Dict, List, Tuple, Type, Union
 
 import pytorch_lightning as pl
 
@@ -87,10 +87,12 @@ def _precision_allowed_type(x: Union[int, str]) -> Union[int, str]:
 
 
 def str_to_bool_or_str(val: str) -> Union[str, bool]:
-    """Possibly convert a string representation of truth to bool. Returns the input otherwise. Based on the python
-    implementation distutils.utils.strtobool.
+    """Possibly convert a string representation of truth to bool.
+    Returns the input otherwise. Based on the python implementation
+    distutils.utils.strtobool.
 
-    True values are 'y', 'yes', 't', 'true', 'on', and '1'; false values are 'n', 'no', 'f', 'false', 'off', and '0'.
+    True values are 'y', 'yes', 't', 'true', 'on', and '1'; false values are 'n', 'no',
+        'f', 'false', 'off', and '0'.
     """
     lower = val.lower()
     if lower in ("y", "yes", "t", "true", "on", "1"):
@@ -119,7 +121,8 @@ def str_to_bool(val: str) -> bool:
 
 
 def str_to_bool_or_int(val: str) -> Union[bool, int, str]:
-    """Convert a string representation to truth of bool if possible, or otherwise try to convert it to an int.
+    """Convert a string representation to truth of bool if possible,
+    or otherwise try to convert it to an int.
     >>> str_to_bool_or_int("FALSE")
     False
     >>> str_to_bool_or_int("1")
@@ -149,7 +152,7 @@ def add_trainer_args_to_parser(cls, parent_parser, use_argument_group=True):
         raise RuntimeError("Please only pass an `ArgumentParser` instance.")
     if use_argument_group:
         group_name = _get_abbrev_qualified_cls_name(cls)
-        parser: _ADD_ARGPARSE_RETURN = parent_parser.add_argument_group(group_name)
+        parser = parent_parser.add_argument_group(group_name)
     else:
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
 
@@ -212,7 +215,7 @@ def add_trainer_args_to_parser(cls, parent_parser, use_argument_group=True):
                 required=(arg_default == inspect._empty),
                 **arg_kwargs,
             )
-        except:
+        except Exception:
             # TODO: check the argument appending to the parser
             pass
 

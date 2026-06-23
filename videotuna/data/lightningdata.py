@@ -1,19 +1,14 @@
-import argparse
-import glob
-import os
-import sys
-from functools import partial
 from abc import abstractmethod
+from functools import partial
 
 import numpy as np
 import pytorch_lightning as pl
 import torch
 from torch.utils.data import DataLoader, Dataset, IterableDataset
 
-os.chdir(sys.path[0])
-sys.path.append("..")
-
 from videotuna.utils.common_utils import instantiate_from_config
+from videotuna.utils.video_io import init_video_worker
+
 
 class Txt2ImgIterableBaseDataset(IterableDataset):
     """
@@ -35,9 +30,11 @@ class Txt2ImgIterableBaseDataset(IterableDataset):
     @abstractmethod
     def __iter__(self):
         pass
-     
+
+
 def worker_init_fn(_):
     worker_info = torch.utils.data.get_worker_info()
+    init_video_worker()
 
     dataset = worker_info.dataset
     worker_id = worker_info.id
@@ -67,6 +64,12 @@ class WrappedDataset(Dataset):
         return self.data[idx]
 
 
+def _default_pin_memory(pin_memory):
+    if pin_memory is not None:
+        return pin_memory
+    return torch.cuda.is_available()
+
+
 class DataModuleFromConfig(pl.LightningDataModule):
     def __init__(
         self,
@@ -83,11 +86,22 @@ class DataModuleFromConfig(pl.LightningDataModule):
         img_loader=None,
         train_img=None,
         test_max_n_samples=None,
+        pin_memory=None,
+        persistent_workers=None,
+        prefetch_factor=2,
+        drop_last=False,
     ):
         super().__init__()
         self.batch_size = batch_size
         self.dataset_configs = dict()
-        self.num_workers = num_workers if num_workers is not None else batch_size * 2
+        self.num_workers = 4 if num_workers is None else num_workers
+        self.pin_memory = _default_pin_memory(pin_memory)
+        if persistent_workers is None:
+            self.persistent_workers = self.num_workers > 0
+        else:
+            self.persistent_workers = persistent_workers and self.num_workers > 0
+        self.prefetch_factor = prefetch_factor if self.num_workers > 0 else None
+        self.drop_last = drop_last
         self.use_worker_init_fn = use_worker_init_fn
         if train is not None:
             self.dataset_configs["train"] = train
@@ -141,60 +155,55 @@ class DataModuleFromConfig(pl.LightningDataModule):
             for k in self.datasets:
                 self.datasets[k] = WrappedDataset(self.datasets[k])
 
+    def _resolve_worker_init_fn(self, dataset):
+        if isinstance(dataset, Txt2ImgIterableBaseDataset) or self.use_worker_init_fn:
+            return worker_init_fn
+        if self.num_workers > 0:
+            return worker_init_fn
+        return None
+
+    def _build_dataloader(self, dataset, shuffle=False):
+        loader_kwargs = dict(
+            dataset=dataset,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+            shuffle=shuffle,
+            worker_init_fn=self._resolve_worker_init_fn(dataset),
+            collate_fn=self.collate_fn,
+            pin_memory=self.pin_memory,
+            drop_last=self.drop_last,
+        )
+        if self.num_workers > 0:
+            loader_kwargs["persistent_workers"] = self.persistent_workers
+            if self.prefetch_factor is not None:
+                loader_kwargs["prefetch_factor"] = self.prefetch_factor
+        return DataLoader(**loader_kwargs)
+
     def _train_dataloader(self):
         is_iterable_dataset = isinstance(
             self.datasets["train"], Txt2ImgIterableBaseDataset
         )
-        if is_iterable_dataset or self.use_worker_init_fn:
-            init_fn = worker_init_fn
-        else:
-            init_fn = None
-        loader = DataLoader(
+        loader = self._build_dataloader(
             self.datasets["train"],
-            batch_size=self.batch_size,
-            num_workers=self.num_workers,
             shuffle=False if is_iterable_dataset else True,
-            worker_init_fn=init_fn,
-            collate_fn=self.collate_fn,
         )
         if self.img_loader is not None:
             return {"loader_video": loader, "loader_img": self.img_loader}
-        else:
-            return loader
+        return loader
 
     def _val_dataloader(self, shuffle=False):
-        if (
-            isinstance(self.datasets["validation"], Txt2ImgIterableBaseDataset)
-            or self.use_worker_init_fn
-        ):
-            init_fn = worker_init_fn
-        else:
-            init_fn = None
-        return DataLoader(
-            self.datasets["validation"],
-            batch_size=self.batch_size,
-            num_workers=self.num_workers,
-            worker_init_fn=init_fn,
-            shuffle=shuffle,
-            collate_fn=self.collate_fn,
-        )
+        return self._build_dataloader(self.datasets["validation"], shuffle=shuffle)
 
     def _test_dataloader(self, shuffle=False):
         try:
             is_iterable_dataset = isinstance(
                 self.datasets["train"], Txt2ImgIterableBaseDataset
             )
-        except:
+        except Exception:
             is_iterable_dataset = isinstance(
                 self.datasets["test"], Txt2ImgIterableBaseDataset
             )
 
-        if is_iterable_dataset or self.use_worker_init_fn:
-            init_fn = worker_init_fn
-        else:
-            init_fn = None
-
-        # do not shuffle dataloader for iterable dataset
         shuffle = shuffle and (not is_iterable_dataset)
         if self.test_max_n_samples is not None:
             dataset = torch.utils.data.Subset(
@@ -202,27 +211,7 @@ class DataModuleFromConfig(pl.LightningDataModule):
             )
         else:
             dataset = self.datasets["test"]
-        return DataLoader(
-            dataset,
-            batch_size=self.batch_size,
-            num_workers=self.num_workers,
-            worker_init_fn=init_fn,
-            shuffle=shuffle,
-            collate_fn=self.collate_fn,
-        )
+        return self._build_dataloader(dataset, shuffle=shuffle)
 
     def _predict_dataloader(self, shuffle=False):
-        if (
-            isinstance(self.datasets["predict"], Txt2ImgIterableBaseDataset)
-            or self.use_worker_init_fn
-        ):
-            init_fn = worker_init_fn
-        else:
-            init_fn = None
-        return DataLoader(
-            self.datasets["predict"],
-            batch_size=self.batch_size,
-            num_workers=self.num_workers,
-            worker_init_fn=init_fn,
-            collate_fn=self.collate_fn,
-        )
+        return self._build_dataloader(self.datasets["predict"], shuffle=shuffle)

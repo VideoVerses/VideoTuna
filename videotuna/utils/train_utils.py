@@ -1,22 +1,13 @@
-import argparse
-import glob
-import logging
-import multiprocessing as mproc
 import os
-import sys
 from collections import OrderedDict
 
-from omegaconf import OmegaConf
-from packaging import version
-
-mainlogger = logging.getLogger("mainlogger")
-
-from collections import OrderedDict
-
-import pytorch_lightning as pl
 import torch
+from omegaconf import OmegaConf
 
 from videotuna.utils.load_weights import load_from_pretrainedSD_checkpoint
+from videotuna.utils.logging_config import bound_logger, configure_logging
+
+mainlogger = bound_logger(phase="t2v", flow="wanvideo")
 
 
 def init_workspace(name, logdir, model_config, lightning_config, rank=0):
@@ -25,7 +16,8 @@ def init_workspace(name, logdir, model_config, lightning_config, rank=0):
     cfgdir = os.path.join(workdir, "configs")
     loginfo = os.path.join(workdir, "loginfo")
 
-    # Create logdirs and save configs (all ranks will do to avoid missing directory error if rank:0 is slower)
+    # Create logdirs and save configs (all ranks will do to avoid missing directory
+    # error if rank:0 is slower)
     os.makedirs(workdir, exist_ok=True)
     os.makedirs(ckptdir, exist_ok=True)
     os.makedirs(cfgdir, exist_ok=True)
@@ -78,6 +70,10 @@ def get_trainer_callbacks(lightning_config, logdir, ckptdir):
             "params": {"logging_interval": "step", "log_momentum": False},
         },
         "cuda_callback": {"target": "videotuna.utils.callbacks.CUDACallback"},
+        "training_metrics": {
+            "target": "videotuna.utils.callbacks.TrainingMetricsCallback",
+            "params": {},
+        },
     }
 
     if "callbacks" in lightning_config:
@@ -143,7 +139,7 @@ def load_checkpoints(model, model_cfg):
         )
         print(f"Loading model from {pretrained_ckpt}")
         ## only load weight for the backbone model (e.g. latent diffusion model)
-        state_dict = torch.load(pretrained_ckpt, map_location=f"cpu")
+        state_dict = torch.load(pretrained_ckpt, map_location="cpu")
         if "state_dict" in list(state_dict.keys()):
             state_dict = state_dict["state_dict"]
         else:
@@ -181,7 +177,7 @@ def load_checkpoints(model, model_cfg):
                 for key in pl_sd["module"].keys():
                     new_pl_sd[key[16:]] = pl_sd["module"][key]
                 model.load_state_dict(new_pl_sd)
-        except:
+        except Exception:
             if "state_dict" in pl_sd.keys():
                 model.load_state_dict(pl_sd["state_dict"], strict=False)
             else:
@@ -190,13 +186,15 @@ def load_checkpoints(model, model_cfg):
         """
         try:
             model = model.load_from_checkpoint(pretrained_ckpt, **model_cfg.params)
-        except:
-            mainlogger.info("[Warning] checkpoint NOT complete matched. To adapt by skipping ...")
+        except Exception:
+            mainlogger.info("[Warning] checkpoint NOT complete matched. To adapt by
+                skipping ...")
             state_dict = torch.load(pretrained_ckpt, map_location=f"cpu")
             if "state_dict" in list(state_dict.keys()):
                 state_dict = state_dict["state_dict"]
             model_state_dict = model.state_dict()
-            ## for layer with channel changed (e.g. GEN 1's conditon-concatenating setting)
+            # # for layer with channel changed (e.g. GEN 1's conditon-concatenating
+            # setting)
             for n, p in model_state_dict.items():
                 if p.shape != state_dict[n].shape:
                     mainlogger.info(f"Skipped parameter [{n}] from pretrained! ")
@@ -249,7 +247,7 @@ def get_autoresume_path(logdir):
             gs = tmp["global_step"]
             mainlogger.info(f"[INFO] Resume from epoch {e}, global step {gs}!")
             del tmp
-        except:
+        except Exception:
             try:
                 mainlogger.info("Load last.ckpt failed!")
                 ckpts = sorted(
@@ -274,28 +272,14 @@ def get_autoresume_path(logdir):
     else:
         resume_checkpt_path = None
         mainlogger.info(
-            f"[INFO] no checkpoint found in current workspace: {os.path.join(logdir, 'checkpoints')}"
+            f"[INFO] no checkpoint found in current workspace: {os.path.join(logdir,
+                'checkpoints')}"
         )
 
     return resume_checkpt_path
 
 
 def set_logger(logfile, name="mainlogger"):
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
-
-    # Set the logger to prevent log propagation to the parent logger and print twice.
-    logger.propagate = False
-
-    fh = logging.FileHandler(logfile, mode="w")
-    fh.setLevel(logging.INFO)
-
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
-
-    fh.setFormatter(logging.Formatter("%(asctime)s-%(levelname)s: %(message)s"))
-    ch.setFormatter(logging.Formatter("%(message)s"))
-
-    logger.addHandler(fh)
-    logger.addHandler(ch)
-    return logger
+    """Configure loguru and return a bound training logger (legacy API)."""
+    configure_logging(log_file=logfile)
+    return bound_logger(phase="t2v", flow="wanvideo")

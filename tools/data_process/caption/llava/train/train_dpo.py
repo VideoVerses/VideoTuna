@@ -16,7 +16,6 @@
 
 import ast
 import copy
-import json
 import logging
 import math
 import os
@@ -34,7 +33,7 @@ import torch
 import transformers
 import yaml
 from data_processing.utils import load_json, load_jsonl
-from decord import VideoReader, cpu
+from videotuna.utils.video_io import AvVideoReader as VideoReader
 from llava import conversation as conversation_lib
 from llava.constants import (
     DEFAULT_IM_END_TOKEN,
@@ -335,9 +334,7 @@ def safe_save_model_for_hf_trainer(trainer: transformers.Trainer, output_dir: st
                     os.path.join(mm_projector_folder, f"{current_folder}.bin"),
                 )
             else:
-                torch.save(
-                    weight_to_save, os.path.join(output_dir, f"mm_projector.bin")
-                )
+                torch.save(weight_to_save, os.path.join(output_dir, "mm_projector.bin"))
         return
 
     if trainer.deepspeed:
@@ -1397,7 +1394,7 @@ class DPODataset(Dataset):
                 )
             else:  # using videoreader
                 if "shareVideoGPTV" not in video_file and "liangke" not in video_file:
-                    vr = VideoReader(video_file, ctx=cpu(0))
+                    vr = VideoReader(video_file)
                     total_frame_num = len(vr)
                     avg_fps = round(vr.get_avg_fps() / self.data_args.video_fps)
                     frame_idx = [i for i in range(0, total_frame_num, avg_fps)]
@@ -1589,7 +1586,6 @@ class DPODataCollator(DPODataCollatorWithPadding):
         return batch
 
     def __call__(self, features: List[Dict[str, Any]]) -> Dict[str, Any]:
-
         tokenized_batch = []
         Xs, keys = [], []
         for feature in features:
@@ -1852,7 +1848,7 @@ def train(attn_implementation=None):
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     if training_args.verbose_logging:
-        rank0_print(f"Inspecting experiment hyperparameters:\n")
+        rank0_print("Inspecting experiment hyperparameters:\n")
         rank0_print(f"model_args = {vars(model_args)}\n\n")
         rank0_print(f"data_args = {vars(data_args)}\n\n")
         rank0_print(f"training_args = {vars(training_args)}\n\n")

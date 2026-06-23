@@ -1,9 +1,0 @@
-vae_path: "./ckpts/hunyuan-video-i2v-720p/vae"
-video_url_files: "/path/to/meta_file.list"
-output_base_dir: "/path/to/output/directory"
-sample_n_frames: 129
-target_size: 
-  - 480
-  - 480
-enable_multi_aspect_ratio: True
-use_stride: True

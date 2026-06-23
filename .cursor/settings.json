@@ -1,0 +1,7 @@
+{
+  "plugins": {
+    "context7-plugin": {
+      "enabled": true
+    }
+  }
+}

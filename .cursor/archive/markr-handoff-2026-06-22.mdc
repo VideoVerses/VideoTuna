@@ -1,0 +1,140 @@
+---
+description: Archived Markr session handoff (stale — do not apply)
+alwaysApply: false
+---
+
+<!-- Archived 2026-06-22. Superseded by AGENTS.md. Regenerate via Markr when starting a new handoff. -->
+
+# Handoff from Cursor (archived)
+> 10 messages | ~344 tokens | Projects/VideoTuna | branch `main`
+>
+> Conditional Residual Handoff — transmits what the repo can't tell you (decisions, dead-ends, constraints, uncommitted diff), not the code itself.
+
+## ⚡ Paste this first
+
+Continue in Cursor Chat. Use the project files as source of truth and keep changes scoped.
+
+```text
+I'm resuming a previous Cursor session on Projects/VideoTuna. You have the repository — read it for anything not stated here. This handoff carries only what the code itself cannot tell you.
+
+TASK
+Pin SimpleTuner upstream SHA on next sync
+Migrate third_party/flux/ → videotuna/vendor/simpletuner/ via submodule
+Remove cogvideo_sat after SAT deprecation
+First-party Flux LoRA trainer to drop the 71-file snapshot
+Original task: @/home/menes/.cursor/projects/home-menes-Projects-VideoTuna/terminals/10.txt:9-239
+
+STATE
+- Branch `main` · 40 uncommitted file(s)
+UNCOMMITTED (in-flight — not on HEAD, you can't see this by reading committed code)
+- M README.md
+- D configs/005_cogvideox1.5/cogvideox1.5_5b.yaml
+- M docs/MODEL_VERSIONS.md
+- M docs/checkpoints.md
+- M poetry.lock
+- M pyproject.toml
+- M scripts/__init__.py
+- D scripts/inference_cogVideo_sat_refactor.py
+- M tests/conftest.py
+- M tests/test_import_smoke.py
+- M uv.lock
+- D videotuna/models/cogvideo_sat/arguments.py
+- D videotuna/models/cogvideo_sat/data_video.py
+- D videotuna/models/cogvideo_sat/diffusion_video.py
+- D videotuna/models/cogvideo_sat/dit_video_concat.py
+- D videotuna/models/cogvideo_sat/sgm/__init__.py
+- D videotuna/models/cogvideo_sat/sgm/lr_scheduler.py
+- D videotuna/models/cogvideo_sat/sgm/models/__init__.py
+- D videotuna/models/cogvideo_sat/sgm/models/autoencoder.py
+- D videotuna/models/cogvideo_sat/sgm/modules/__init__.py
+NEXT
+- Run the relevant build, lint, or test command before calling the handoff complete.
+- Preserve existing user changes and avoid reverting unrelated work.
+VERIFY
+- No verification command was captured — run the project build/lint/test before finishing.
+
+SYNTHESIS — before you change anything, restate in one line: (a) the task, and (b) the one constraint you must not break. Then proceed.
+```
+
+---
+
+## 🧠 Decision log
+
+_No explicit decisions were captured in the transcript._
+
+## 🛑 Dead-ends — do not redo
+
+_None captured._
+
+## 📌 Constraints
+
+_None explicitly stated._
+
+## 🔀 In-flight (uncommitted) state
+
+Branch: `main`
+
+Uncommitted changes:
+- `M README.md`
+- `D configs/005_cogvideox1.5/cogvideox1.5_5b.yaml`
+- `M docs/MODEL_VERSIONS.md`
+- `M docs/checkpoints.md`
+- `M poetry.lock`
+- `M pyproject.toml`
+- `M scripts/__init__.py`
+- `D scripts/inference_cogVideo_sat_refactor.py`
+- `M tests/conftest.py`
+- `M tests/test_import_smoke.py`
+- `M uv.lock`
+- `D videotuna/models/cogvideo_sat/arguments.py`
+- `D videotuna/models/cogvideo_sat/data_video.py`
+- `D videotuna/models/cogvideo_sat/diffusion_video.py`
+- `D videotuna/models/cogvideo_sat/dit_video_concat.py`
+- `D videotuna/models/cogvideo_sat/sgm/__init__.py`
+- `D videotuna/models/cogvideo_sat/sgm/lr_scheduler.py`
+- `D videotuna/models/cogvideo_sat/sgm/models/__init__.py`
+- `D videotuna/models/cogvideo_sat/sgm/models/autoencoder.py`
+- `D videotuna/models/cogvideo_sat/sgm/modules/__init__.py`
+- `D videotuna/models/cogvideo_sat/sgm/modules/attention.py`
+- `D videotuna/models/cogvideo_sat/sgm/modules/autoencoding/__init__.py`
+- `D videotuna/models/cogvideo_sat/sgm/modules/autoencoding/losses/__init__.py`
+- `D videotuna/models/cogvideo_sat/sgm/modules/autoencoding/losses/discriminator_loss.py`
+- `D videotuna/models/cogvideo_sat/sgm/modules/autoencoding/losses/lpips.py`
+- `D videotuna/models/cogvideo_sat/sgm/modules/autoencoding/losses/video_loss.py`
+- `D videotuna/models/cogvideo_sat/sgm/modules/autoencoding/lpips/__init__.py`
+- `D videotuna/models/cogvideo_sat/sgm/modules/autoencoding/lpips/loss/.gitignore`
+- `D videotuna/models/cogvideo_sat/sgm/modules/autoencoding/lpips/loss/LICENSE`
+- `D videotuna/models/cogvideo_sat/sgm/modules/autoencoding/lpips/loss/__init__.py`
+- `D videotuna/models/cogvideo_sat/sgm/modules/autoencoding/lpips/loss/lpips.py`
+- `D videotuna/models/cogvideo_sat/sgm/modules/autoencoding/lpips/model/LICENSE`
+- `D videotuna/models/cogvideo_sat/sgm/modules/autoencoding/lpips/model/__init__.py`
+- `D videotuna/models/cogvideo_sat/sgm/modules/autoencoding/lpips/model/model.py`
+- `D videotuna/models/cogvideo_sat/sgm/modules/autoencoding/lpips/util.py`
+- `D videotuna/models/cogvideo_sat/sgm/modules/autoencoding/lpips/vqperceptual.py`
+- `D videotuna/models/cogvideo_sat/sgm/modules/autoencoding/magvit2_pytorch.py`
+- `D videotuna/models/cogvideo_sat/sgm/modules/autoencoding/regularizers/__init__.py`
+- `D videotuna/models/cogvideo_sat/sgm/modules/autoencoding/regularizers/base.py`
+- `D videotuna/models/cogvideo_sat/sgm/modules/autoencoding/regularizers/finite_scalar_quantization.py`
+
+## 🎯 Task
+
+**Continue:** Pin SimpleTuner upstream SHA on next sync
+Migrate third_party/flux/ → videotuna/vendor/simpletuner/ via submodule
+Remove cogvideo_sat after SAT deprecation
+First-party Flux LoRA trainer to drop the 71-file snapshot
+
+**Original request:** @/home/menes/.cursor/projects/home-menes-Projects-VideoTuna/terminals/10.txt:9-239
+
+## 💬 Recent exchange (tail)
+
+**You**: Provide me with 3 comprehensive prompts, to run in plan model to setup amdu rocm support, imrpove nvidia support and use cpu. Also, be thorough on how to improve integration with the current system.
+
+**You**: This is too slow poetry run pytest tests/test_diffusers_video_flow.py
+
+**You**: @videotuna/third_party Is there a better way than doing this in our repo ? Provide me with a prompt to re-organize and improve the dependencies, management, etc
+
+**You**: Consume this article https://bitmovin.com/blog/ai-video-research/ , suggest me 10 improvements you would do on this codebase based on the information.
+
+**You**: Provide me with 3 comprehensive prompts, to run in plan mode to setup amdu rocm support, imrpove nvidia support and use cpu. Also, be thorough on how to improve integration with the current system.
+
+**You**: Pin SimpleTuner upstream SHA on next sync Migrate third_party/flux/ → videotuna/vendor/simpletuner/ via submodule Remove cogvideo_sat after SAT deprecation First-party Flux LoRA trainer to drop the 71-file snapshot

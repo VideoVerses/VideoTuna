@@ -1,4 +1,4 @@
-from typing import Optional, Sequence, Tuple
+from typing import Optional, Tuple
 
 import torch
 import torch.nn as nn
@@ -17,7 +17,6 @@ from .constants import OPENAI_DATASET_MEAN, OPENAI_DATASET_STD
 
 
 class ResizeMaxSize(nn.Module):
-
     def __init__(
         self, max_size, interpolation=InterpolationMode.BICUBIC, fn="max", fill=0
     ):

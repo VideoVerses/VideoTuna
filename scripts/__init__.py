@@ -3,70 +3,417 @@ Poetry commands
 """
 
 import os
+import shutil
 import subprocess
 import sys
 from datetime import datetime
 
 current_time = datetime.now().strftime("%Y%m%d%H%M%S")
 
+FLUX_T2I_CONFIG = "configs/domain/flux_t2i.json"
+FLUX_T2I_DATA_CONFIG = "configs/domain/flux_t2i_data.json"
+FLUX_T2I_CLOUD_SMOKE = "configs/domain/flux_t2i_cloud_smoke.json"
+WAN_T2V_LORA_CONFIG = "configs/domain/wan_t2v_lora.yaml"
+WAN_T2V_LORA_CLOUD_SMOKE = "configs/domain/wan_t2v_lora_cloud_smoke.yaml"
+WAN_I2V_LORA_CONFIG = "configs/domain/wan_i2v_lora.yaml"
+
+# Single source of truth for CPU CI smoke tests (see .github/workflows/cpu.yml).
+CI_SMOKE_TESTS = [
+    "tests/test_import_smoke.py",
+    "tests/test_domain_finetune_configs.py",
+    "tests/test_flux_lora_train_smoke.py",
+    "tests/test_wan_lora_bridge.py",
+    "tests/test_wan_i2v_lora_bridge.py",
+    "tests/test_wan_domain_lora_smoke_22_config.py",
+    "tests/test_wan_domain_i2v_smoke_22_config.py",
+    "tests/test_wan_i2v_dataset.py",
+    "tests/test_wan_training_step.py",
+    "tests/test_poetry_scripts.py",
+    "tests/test_diffusers_quantization.py",
+]
+
+# Line-coverage floor for videotuna/training/ + videotuna/utils/
+# (CI smoke baseline ~36%).
+COVERAGE_GATE_FAIL_UNDER = 33
+
+
+def _require_cuda_backend(installer_name: str) -> None:
+    """Abort when the active PyTorch build is ROCm (CUDA-only installer)."""
+    try:
+        from videotuna.utils.device_utils import detect_compute_backend
+
+        if detect_compute_backend() == "rocm":
+            print(
+                f"{installer_name} is not supported on AMD ROCm.\n"
+                "Use VIDEOTUNA_ATTN_BACKEND=sdpa for attention on ROCm.\n"
+                "See docs/install-rocm.md.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+    except ImportError:
+        pass
+
+
 def install_deepspeed():
     """
-    Install the flash attention package
-    """
-    command_install_cuda_toolkit = [
-        "conda", "install", "cuda-toolkit=12.1", "-c", "conda-forge", "-c", "nvidia", "-y"
-    ] + sys.argv[1:]
-    command_uninstall_deepspeed = [
-        "pip", "uninstall", "deepspeed", "-y"
-    ]
-    command_install_deepspeed = [
-        "pip", "install", "deepspeed==0.16.5"
-    ]
-    result_cuda_toolkit = subprocess.run(command_install_cuda_toolkit, check=False)
-    if result_cuda_toolkit.returncode != 0:
-        exit(result_cuda_toolkit.returncode)
+    Install DeepSpeed with CUDA 12.6 toolkit support
+    (rebuilds against the active torch).
 
-    
-    result_uninstall_deepspeed = subprocess.run(command_uninstall_deepspeed, check=False)
-    if result_uninstall_deepspeed.returncode != 0:
-        exit(result_uninstall_deepspeed.returncode)
+    When conda is unavailable, skips the CUDA toolkit step and installs via pip.
+    If deepspeed>=0.19.2 is already importable, exits successfully without rebuilding.
+    """
+    _require_cuda_backend("install-deepspeed")
+    try:
+        import deepspeed
+        from packaging.version import Version
+
+        if Version(deepspeed.__version__) >= Version("0.19.2"):
+            print(
+                f"deepspeed {deepspeed.__version__} already installed "
+                "(>= 0.19.2); skipping rebuild."
+            )
+            return
+    except ImportError:
+        pass
+
+    if shutil.which("conda"):
+        command_install_cuda_toolkit = [
+            "conda",
+            "install",
+            "cuda-toolkit=12.6",
+            "-c",
+            "conda-forge",
+            "-c",
+            "nvidia",
+            "-y",
+        ] + sys.argv[1:]
+        result_cuda_toolkit = subprocess.run(command_install_cuda_toolkit, check=False)
+        if result_cuda_toolkit.returncode != 0:
+            print(
+                "conda cuda-toolkit install failed; continuing with pip-only "
+                "deepspeed install.",
+                file=sys.stderr,
+            )
+    else:
+        print(
+            "conda not found; skipping cuda-toolkit install. "
+            "If the pip build fails, install CUDA/nvcc or use conda.",
+            file=sys.stderr,
+        )
+
+    pip = [sys.executable, "-m", "pip"]
+    subprocess.run([*pip, "uninstall", "deepspeed", "-y"], check=False)
 
     env = os.environ.copy()
     env["DS_BUILD_CPU_ADAM"] = "1"
     env["BUILD_UTILS"] = "1"
-    result_deepspeed = subprocess.run(command_install_deepspeed, check=False, env=env)
+    result_deepspeed = subprocess.run(
+        [*pip, "install", "deepspeed==0.19.2"],
+        check=False,
+        env=env,
+    )
     exit(result_deepspeed.returncode)
+
+
+def _python_wheel_tag() -> str:
+    major, minor = sys.version_info[:2]
+    return f"cp{major}{minor}"
+
+
+def _torch_cuda_wheel_tag() -> str:
+    """Map torch.version.cuda to flash-attn wheel tag (e.g. cu126)."""
+    try:
+        import torch
+        import torch.version
+
+        cuda = getattr(torch.version, "cuda", None)
+        if cuda is None:
+            return "cu12"
+        parts = str(cuda).split(".")
+        if len(parts) >= 2:
+            return f"cu{parts[0]}{parts[1]}"
+    except ImportError:
+        pass
+    return "cu126"
+
+
+def _torch_minor_for_flash() -> str:
+    import torch
+
+    return ".".join(torch.__version__.split(".")[:2])
+
+
+def _flash_attn_wheel_url() -> str:
+    wheel_tag = _python_wheel_tag()
+    cuda_tag = _torch_cuda_wheel_tag()
+    torch_minor = _torch_minor_for_flash()
+    return (
+        "https://github.com/Dao-AILab/flash-attention/releases/download/"
+        f"v2.7.4.post1/flash_attn-2.7.4.post1+{cuda_tag}torch{torch_minor}cxx11abiTRUE-"
+        f"{wheel_tag}-{wheel_tag}-linux_x86_64.whl"
+    )
+
 
 def install_flash_attn():
     """
-    Install the flash attention package
-    """
-    command_install_cuda_nvcc = [
-        "conda", "install", "-c", "nvidia", "cuda-nvcc=12.1", "-y"
-    ] + sys.argv[1:]
-    command_install_flash_attn = [
-        "pip", "install", "flash-attn==2.7.3", "--no-build-isolation"
-    ]
-    result_nvcc = subprocess.run(command_install_cuda_nvcc, check=False)
-    if result_nvcc.returncode != 0:
-        exit(result_nvcc.returncode)
+    Install flash-attn for PyTorch 2.6 + CUDA 12.6 (cxx11 ABI wheels).
 
-    result_flash = subprocess.run(command_install_flash_attn, check=False)
+    Tries a prebuilt wheel first (no compiler or conda required). Falls back to a
+    source build only when the wheel is unavailable.
+    """
+    _require_cuda_backend("install-flash-attn")
+    try:
+        import torch
+        import torch.version
+
+        if getattr(torch.version, "hip", None) is not None:
+            print(
+                "install-flash-attn requires an NVIDIA CUDA PyTorch build. "
+                "Detected ROCm/HIP. See docs/install-rocm.md.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        if getattr(torch.version, "cuda", None) is None:
+            print(
+                "install-flash-attn requires a CUDA PyTorch build. "
+                "Run: poetry run install-cpu-torch is not compatible.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+    except ImportError:
+        pass
+
+    subprocess.run([sys.executable, "-m", "pip", "install", "ninja"], check=False)
+
+    flash_attn_wheel = _flash_attn_wheel_url()
+    result_wheel = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            flash_attn_wheel,
+            "--no-build-isolation",
+        ],
+        check=False,
+    )
+    if result_wheel.returncode == 0:
+        exit(0)
+
+    if shutil.which("conda"):
+        result_nvcc = subprocess.run(
+            [
+                "conda",
+                "install",
+                "-c",
+                "nvidia",
+                "cuda-nvcc=12.6",
+                "-y",
+            ]
+            + sys.argv[1:],
+            check=False,
+        )
+        if result_nvcc.returncode != 0:
+            exit(result_nvcc.returncode)
+    elif shutil.which("nvcc") is None:
+        print(
+            "Prebuilt flash-attn wheel install failed and nvcc was not found.\n"
+            "Install the CUDA toolkit (nvcc), or use conda:\n"
+            "  conda install -c nvidia cuda-nvcc=12.6",
+            file=sys.stderr,
+        )
+        exit(result_wheel.returncode)
+
+    result_flash = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            "flash-attn==2.7.4.post1",
+            "--no-build-isolation",
+        ],
+        check=False,
+    )
     exit(result_flash.returncode)
+
+
+_ROCM_TORCH_INDEX = "https://download.pytorch.org/whl/rocm6.2.4"
+_CPU_TORCH_INDEX = "https://download.pytorch.org/whl/cpu"
+# Re-pin after pip torch installs (ROCm/CPU indexes may upgrade these transitively).
+_POETRY_PINNED_DEPS = ("pillow==10.4.0", "numpy>=1.26,<2.3")
+_CUDA_ONLY_PACKAGES = (
+    "xformers",
+    "bitsandbytes",
+    "xfuser",
+    "triton",
+    "nvidia-cublas-cu12",
+    "nvidia-cuda-cupti-cu12",
+    "nvidia-cuda-nvrtc-cu12",
+    "nvidia-cuda-runtime-cu12",
+    "nvidia-cudnn-cu12",
+    "nvidia-cufft-cu12",
+    "nvidia-curand-cu12",
+    "nvidia-cusolver-cu12",
+    "nvidia-cusparse-cu12",
+    "nvidia-cusparselt-cu12",
+    "nvidia-nccl-cu12",
+    "nvidia-nvjitlink-cu12",
+    "nvidia-nvtx-cu12",
+)
+# Keep triton on CPU installs — torchao/diffusers import torch._inductor which needs it.
+_CPU_UNINSTALL_PACKAGES = tuple(p for p in _CUDA_ONLY_PACKAGES if p != "triton")
+
+
+def _reconcile_poetry_pinned_deps(pip: list[str]) -> None:
+    """Restore numpy/pillow versions required by videotuna and scipy."""
+    subprocess.run([*pip, "install", *_POETRY_PINNED_DEPS], check=False)
+
+
+def install_rocm():
+    """
+    Install PyTorch 2.6 + torchvision 0.21 for ROCm 6.2.4 and remove CUDA-only wheels.
+
+    Uninstalls existing torch/torchvision first so pip does not keep a mismatched
+    CUDA torchvision wheel (e.g. 0.21.0+cu126) alongside ROCm torch.
+
+    Run after: poetry install -E rocm
+    Re-run after any plain `poetry install` on AMD machines (lockfile pins CUDA torch).
+    """
+    pip = [sys.executable, "-m", "pip"]
+    for pkg in (*_CUDA_ONLY_PACKAGES, "torch", "torchvision"):
+        subprocess.run([*pip, "uninstall", pkg, "-y"], check=False)
+    result = subprocess.run(
+        [
+            *pip,
+            "install",
+            "torch==2.6.0",
+            "torchvision==0.21.0",
+            "--index-url",
+            _ROCM_TORCH_INDEX,
+            "--force-reinstall",
+            "--no-deps",
+            "--no-cache-dir",
+        ],
+        check=False,
+    )
+    if result.returncode != 0:
+        exit(result.returncode)
+    subprocess.run(
+        [
+            *pip,
+            "install",
+            "pytorch-triton-rocm==3.2.0",
+            "--index-url",
+            _ROCM_TORCH_INDEX,
+            "--no-deps",
+            "--no-cache-dir",
+        ],
+        check=False,
+    )
+    _reconcile_poetry_pinned_deps(pip)
+
+    import torch
+    import torch.version
+    import torchvision
+
+    torch_build = torch.__version__
+    tv_build = torchvision.__version__
+    hip = getattr(torch.version, "hip", None)
+    if hip is None:
+        print(
+            "WARNING: torch installed but torch.version.hip is None. "
+            "Expected a ROCm wheel from the rocm6.2.4 index.",
+            file=sys.stderr,
+        )
+    if "+cu" in tv_build:
+        print(
+            f"ERROR: torch/torchvision build mismatch: torch={torch_build}, "
+            f"torchvision={tv_build}. Re-run: poetry run install-rocm",
+            file=sys.stderr,
+        )
+        exit(1)
+
+    print(f"torch {torch_build}, torchvision {tv_build}, HIP {hip}")
+    try:
+        from videotuna.utils.device_utils import describe_compute_environment
+
+        print(describe_compute_environment())
+    except ImportError:
+        print(f"torch.cuda.is_available()={torch.cuda.is_available()}, " f"hip={hip}")
+    exit(0)
+
+
+def install_cpu_torch():
+    """Install CPU-only PyTorch 2.6 wheels (no CUDA/ROCm)."""
+    pip = [sys.executable, "-m", "pip"]
+    for pkg in (*_CPU_UNINSTALL_PACKAGES, "torch", "torchvision"):
+        subprocess.run([*pip, "uninstall", pkg, "-y"], check=False)
+    result = subprocess.run(
+        [
+            *pip,
+            "install",
+            "torch==2.6.0",
+            "torchvision==0.21.0",
+            "--index-url",
+            _CPU_TORCH_INDEX,
+            "--force-reinstall",
+            "--no-deps",
+            "--no-cache-dir",
+        ],
+        check=False,
+    )
+    if result.returncode != 0:
+        exit(result.returncode)
+    subprocess.run(
+        [*pip, "install", "triton==3.2.0", "--no-cache-dir"],
+        check=False,
+    )
+    _reconcile_poetry_pinned_deps(pip)
+    exit(result.returncode)
+
+
+def install_flash_attn_rocm():
+    """
+    flash-attn is not officially supported on ROCm in VideoTuna.
+
+    Use VIDEOTUNA_ATTN_BACKEND=sdpa instead. See docs/install-rocm.md.
+    """
+    print(
+        "flash-attn is not supported on AMD ROCm in VideoTuna.\n"
+        "Use: export VIDEOTUNA_ATTN_BACKEND=sdpa\n"
+        "For experimental upstream builds, see "
+        "https://github.com/Dao-AILab/flash-attention",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+
+_FORMAT_TARGETS = ["."]
+_LINT_TARGETS = ["videotuna", "tests", "scripts", "tools"]
 
 
 def code_format(check=False):
     """
     Run the code formatting
     """
-    commands = [["isort", "."], ["black", "."]]
+    cmds = (
+        [
+            ["ruff", "format", "--check", *_FORMAT_TARGETS],
+            ["ruff", "check", "--select", "I", *_FORMAT_TARGETS],
+        ]
+        if check
+        else [
+            ["ruff", "check", "--fix", *_LINT_TARGETS],
+            ["ruff", "check", "--select", "I", "--fix", *_FORMAT_TARGETS],
+            ["ruff", "format", *_FORMAT_TARGETS],
+        ]
+    )
     return_code = 0
 
-    for command in commands:
-        if check:
-            command.append("--check")
+    for command in cmds:
         process = subprocess.run(command, check=False)
-        if process.returncode > 0:
+        if process.returncode != 0:
             return_code = process.returncode
             break
 
@@ -85,8 +432,7 @@ def lint():
     Run the linter
     """
     result = subprocess.run(
-        ["ruff", "check", "videotuna", "tests"] + sys.argv[1:], 
-        check=False
+        ["ruff", "check", *_LINT_TARGETS] + sys.argv[1:], check=False
     )
     exit(result.returncode)
 
@@ -96,7 +442,14 @@ def test():  # pragma: no cover
     Run all unittests
     """
     os.environ["ENV"] = "test"
-    result = subprocess.run(["pytest", "."] + sys.argv[1:], check=False)
+    args = sys.argv[1:]
+    has_targets = any(
+        not a.startswith("-")
+        and (a.endswith(".py") or "::" in a or a.startswith("tests"))
+        for a in args
+    )
+    cmd = ["pytest"] + (args if has_targets else ["tests"] + args)
+    result = subprocess.run(cmd, check=False)
     exit(result.returncode)
 
 
@@ -106,13 +459,35 @@ def coverage_report():
     """
     os.environ["ENV"] = "test"
     result = subprocess.run(
-        ["coverage", "run", "-m", "pytest", "--junitxml", "report.xml"], 
-        check=False
+        ["coverage", "run", "-m", "pytest", "--junitxml", "report.xml"], check=False
     )
     if result.returncode > 0:
         exit(result.returncode)
     result = subprocess.run(["coverage", "report", "-m"], check=False)
     exit(result.returncode)
+
+
+def coverage_gate():
+    """
+    Run CI smoke tests with coverage and enforce a modest floor on core modules.
+    """
+    os.environ["ENV"] = "test"
+    run = subprocess.run(
+        ["coverage", "run", "-m", "pytest", "-q", *CI_SMOKE_TESTS],
+        check=False,
+    )
+    if run.returncode != 0:
+        exit(run.returncode)
+    report = subprocess.run(
+        [
+            "coverage",
+            "report",
+            "--include=videotuna/training/*,videotuna/utils/*",
+            f"--fail-under={COVERAGE_GATE_FAIL_UNDER}",
+        ],
+        check=False,
+    )
+    exit(report.returncode)
 
 
 def type_check():
@@ -123,831 +498,141 @@ def type_check():
     exit(result.returncode)
 
 
-def inference_cogvideo_i2v_diffusers():
-    result = subprocess.run(
-        ["python", "scripts/inference_cogVideo_diffusers.py", 
-         "--generate_type", "i2v", 
-         "--model_input", "inputs/i2v/576x1024", 
-         "--model_path", "checkpoints/cogvideo/CogVideoX-5b-I2V", 
-         "--output_path", "results/i2v/cogvideox5b", 
-         "--num_inference_steps", "50", 
-         "--guidance_scale", "3.5", 
-         "--num_videos_per_prompt", "1", 
-         "--dtype", "float16"
-        ] + sys.argv[1:], 
-        check=False
-    )
-    exit(result.returncode)
-
-
-def inference_cogvideo_i2v_lora():
-    config = "configs/004_cogvideox/cogvideo5b-i2v.yaml"
-    ckpt = "results/train/cogvideox_i2v_5b/{YOUR_CKPT_PATH}.ckpt"
-    prompt_dir = "{YOUR_PROMPT_DIR}"
-    savedir = f"results/inference/i2v/cogvideox-i2v-lora-{current_time}"
-
-    result = subprocess.run(
-        ["python3", "scripts/inference_cogvideo.py", 
-         "--config", config, 
-         "--ckpt_path", ckpt, 
-         "--prompt_dir", prompt_dir, 
-         "--savedir", savedir, 
-         "--bs", "1", 
-         "--height", "480", 
-         "--width", "720", 
-         "--fps", "16", 
-         "--seed", "6666", 
-         "--mode", "i2v", 
-         "--denoiser_precision", "bf16"
-        ] + sys.argv[1:], 
-        check=False
-    )
-    exit(result.returncode)
-
-
-def inference_cogvideo_lora():
-    config = "configs/004_cogvideox/cogvideo5b.yaml"
-    prompt_file = "inputs/t2v/prompts.txt"
-    savedir = f"results/t2v/{current_time}-cogvideo"
-    ckpt = "{YOUR_CKPT_PATH}"
-    result = subprocess.run(
-        ["python3", "scripts/inference_cogvideo.py", 
-         "--ckpt_path", ckpt, 
-         "--config", config, 
-         "--prompt_file", prompt_file, 
-         "--savedir", savedir, 
-         "--bs", "1", 
-         "--height", "480", 
-         "--width", "720", 
-         "--fps", "16", 
-         "--seed", "6666", 
-         "--denoiser_precision", "bf16"
-        ] + sys.argv[1:], 
-        check=False
-    )
-    exit(result.returncode)
-
-
-def inference_cogvideo_t2v_diffusers():
-    result = subprocess.run(
-        ["python", "scripts/inference_cogVideo_diffusers.py", 
-         "--model_input", "inputs/t2v/prompts.txt", 
-         "--model_path", "checkpoints/cogvideo/CogVideoX-2b", 
-         "--output_path", "results/t2v/cogvideox5b", 
-         "--num_inference_steps", "50", 
-         "--guidance_scale", "3.5", 
-         "--num_videos_per_prompt", "1", 
-         "--dtype", "float16"
-        ] + sys.argv[1:], 
-        check=False
-    )
-    exit(result.returncode)
-
-
-def inference_cogvideox1_5_5b_i2v():
-    load_transformer = "checkpoints/cogvideo/CogVideoX1.5-5B-SAT/transformer_i2v"
-    input_file = "inputs/i2v/576x1024/test_prompts.txt"
-    output_dir = "results/i2v/cogvideox1.5"
-    base = "configs/005_cogvideox1.5/cogvideox1.5_5b.yaml"
-    image_folder = "inputs/i2v/576x1024/"
-
-    result = subprocess.run(
-        ["python", "scripts/inference_cogVideo_sat_refactor.py", 
-         "--load_transformer", load_transformer, 
-         "--input_file", input_file, 
-         "--output_dir", output_dir, 
-         "--base", base, 
-         "--mode_type", "i2v", 
-         "--sampling_num_frames", "22", 
-         "--image_folder", image_folder
-        ] + sys.argv[1:], 
-        check=False
-    )
-    exit(result.returncode)
-
-
-def inference_cogvideox1_5_5b_t2v():
-    load_transformer = "checkpoints/cogvideo/CogVideoX1.5-5B-SAT/transformer_t2v"
-    input_file = "inputs/t2v/prompts.txt"
-    output_dir = "results/t2v/"
-    base = "configs/005_cogvideox1.5/cogvideox1.5_5b.yaml"
-
-    result = subprocess.run(
-        ["python", "scripts/inference_cogVideo_sat_refactor.py", 
-         "--load_transformer", load_transformer, 
-         "--input_file", input_file, 
-         "--output_dir", output_dir, 
-         "--base", base, 
-         "--mode_type", "t2v", 
-         "--sampling_num_frames", "22"
-        ] + sys.argv[1:], 
-        check=False
-    )
-    exit(result.returncode)
-
-
-def inference_dc_i2v_576x1024():
-    ckpt = "checkpoints/dynamicrafter/i2v_576x1024/model.ckpt"
-    config = "configs/002_dynamicrafter/dc_i2v_1024.yaml"
-    prompt_dir = "inputs/i2v/576x1024"
-    savedir = "results/dc-i2v-576x1024"
-
-    result = subprocess.run(
-        ["python3", "scripts/inference.py", 
-         "--mode", "i2v", 
-         "--ckpt_path", ckpt, 
-         "--config", config, 
-         "--prompt_dir", prompt_dir, 
-         "--savedir", savedir, 
-         "--bs", "1", 
-         "--height", "576", 
-         "--width", "1024", 
-         "--fps", "10", 
-         "--seed", "123"
-        ] + sys.argv[1:], 
-        check=False
-    )
-    exit(result.returncode)
-
-
-def inference_flux_schnell():
-    prompt = "inputs/t2v/prompts.txt"
-    width = 1360
-    height = 768
-
-    command_schnell = [
-        "python", "scripts/inference_flux.py", 
-        "--model_type", "schnell", 
-        "--prompt", prompt, 
-        "--out_path", "results/flux-schnell/", 
-        "--width", str(width), 
-        "--height", str(height), 
-        "--num_inference_steps", "4", 
-        "--guidance_scale", "0."
-    ] + sys.argv[1:]
-
-    result_schnell = subprocess.run(command_schnell, check=False)
-    exit(result_schnell.returncode)
-
-
-def inference_flux_dev():
-    prompt = "inputs/t2v/prompts.txt"
-    width = 1360
-    height = 768
-
-    command_dev = [
-        "python", "scripts/inference_flux.py", 
-        "--model_type", "dev", 
-        "--prompt", prompt, 
-        "--out_path", "results/t2i/flux-dev/", 
-        "--width", str(width), 
-        "--height", str(height), 
-        "--num_inference_steps", "50", 
-        "--guidance_scale", "0."
-    ] + sys.argv[1:]
-
-    result_dev = subprocess.run(command_dev, check=False)
-    exit(result_dev.returncode)
-
-
 def inference_flux_lora():
-    os.environ["lora_ckpt"] = "{YOUR_CORA_CKPT_PATH}"
-    result = subprocess.run(
-        ["python", "scripts/inference_flux_lora.py", 
-         "--model_type", "dev", 
-         "--prompt", "inputs/t2v/prompts.txt", 
-         "--out_path", "results/t2i/flux-lora/", 
-         "--lora_path", os.environ["lora_ckpt"], 
-         "--width", "1360", 
-         "--height", "768", 
-         "--num_inference_steps", "50", 
-         "--guidance_scale", "3.5"
-        ] + sys.argv[1:], 
-        check=False
-    )
-    exit(result.returncode)
+    from videotuna.cli.inference_app import inference_flux_lora_entry
+
+    inference_flux_lora_entry()
 
 
-def inference_hunyuan_t2v():
-    result = subprocess.run(
-        ["python", "scripts/inference_cogvideo.py", 
-         "--ckpt_path", "checkpoints/hunyuanvideo/HunyuanVideo", 
-         "--config", "configs/007_hunyuanvideo/hunyuanvideo_t2v_diffuser.yaml", 
-         "--prompt_file", "inputs/t2v/hunyuanvideo/tyler_swift_video/labels.txt", 
-         "--savedir", f"results/t2v/hunyuanvideo-{current_time}", 
-         "--bs", "1", 
-         "--height", "256", 
-         "--width", "256", 
-         "--fps", "16", 
-         "--seed", "6666"
-        ] + sys.argv[1:], 
-        check=False
-    )
-    exit(result.returncode)
+def inference_wan2_2_t2v_720p():
+    from videotuna.cli.inference_app import inference_wan2_2_t2v_720p_entry
 
-
-def inference_mochi():
-    ckpt = "checkpoints/mochi-1-preview"
-    prompt_file = "inputs/t2v/prompts.txt"
-    savedir = "results/t2v/mochi2"
-    height = 480
-    width = 848
-    result = subprocess.run(
-        ["python3", "scripts/inference_mochi.py", 
-         "--ckpt_path", ckpt, 
-         "--prompt_file", prompt_file, 
-         "--savedir", savedir, 
-         "--bs", "1", 
-         "--height", str(height), 
-         "--width", str(width), 
-         "--fps", "28", 
-         "--seed", "124"
-        ] + sys.argv[1:], 
-        check=False
-    )
-    exit(result.returncode)
-
-
-def inference_opensora_v10_16x256x256():
-    ckpt = "checkpoints/open-sora/t2v_v10/OpenSora-v1-HQ-16x256x256.pth"
-    config = "configs/003_opensora/opensorav10_256x256.yaml"
-    prompt_file = "inputs/t2v/prompts.txt"
-    res_dir = f"results/t2v/{current_time}-opensorav10-HQ-16x256x256"
-    result = subprocess.run(
-        ["python3", "scripts/inference.py", 
-         "--seed", "123", 
-         "--mode", "t2v", 
-         "--ckpt_path", ckpt, 
-         "--config", config, 
-         "--savedir", res_dir, 
-         "--n_samples", "3", 
-         "--bs", "2", 
-         "--height", "256", 
-         "--width", "256", 
-         "--unconditional_guidance_scale", "7.0", 
-         "--ddim_steps", "50", 
-         "--ddim_eta", "1.0", 
-         "--prompt_file", prompt_file, 
-         "--fps", "8", 
-         "--frames", "16"
-        ] + sys.argv[1:], 
-        check=False
-    )
-    exit(result.returncode)
-
-
-def inference_v2v_ms():
-    from .inference_v2v_ms import Settings, inference_v2v_ms
-
-    settings = Settings(
-        input_dir="inputs/v2v/001",
-        output_dir=f"results/v2v/{current_time}-v2v-modelscope-001",
-    )
-    inference_v2v_ms(settings=settings)
-
-
-def inference_vc1_i2v_320x512():
-    ckpt = "checkpoints/videocrafter/i2v_v1_512/model.ckpt"
-    config = "configs/000_videocrafter/vc1_i2v_512.yaml"
-    prompt_dir = "inputs/i2v/576x1024"
-    savedir = "results/i2v/vc1-i2v-320x512"
-    result = subprocess.run(
-        ["python3", "scripts/inference.py", 
-         "--mode", "i2v", 
-         "--ckpt_path", ckpt, 
-         "--config", config, 
-         "--prompt_dir", prompt_dir, 
-         "--savedir", savedir, 
-         "--bs", "1", 
-         "--height", "320", 
-         "--width", "512", 
-         "--fps", "8", 
-         "--seed", "123"
-        ] + sys.argv[1:], 
-        check=False
-    )
-    exit(result.returncode)
-
-def inference_stepvideo_t2v_544x992():
-    ckpt = "checkpoints/stepvideo/stepvideo-t2v/"
-    config = "configs/009_stepvideo/stepvideo_t2v.yaml"
-    prompt_file = "inputs/t2v/prompts.txt"
-    savedir = "results/t2v/stepvideo"
-    result = subprocess.run(
-        ["python3", "scripts/inference_new.py", 
-         "--ckpt_path", ckpt, 
-         "--config", config, 
-         "--prompt_file", prompt_file, 
-         "--savedir", savedir, 
-         "--height", "544", 
-         "--width", "992", 
-         "--frames", "51", 
-         "--seed", "44", 
-         "--num_inference_steps", "50"
-        ] + sys.argv[1:], 
-        check=False
-    )
-    exit(result.returncode)
-
-
-def inference_wanvideo_i2v_720p():
-    ckpt = "checkpoints/wan/Wan2.1-I2V-14B-720P/"
-    config = "configs/008_wanvideo/wan2_1_i2v_14B_720P.yaml"
-    prompt_dir = "inputs/i2v/576x1024"
-    savedir = "results/i2v/wanvideo/720P"
-    result = subprocess.run(
-        ["python3", "scripts/inference_new.py", 
-         "--ckpt_path", ckpt, 
-         "--config", config, 
-         "--prompt_dir", prompt_dir, 
-         "--savedir", savedir, 
-         "--height", "720", 
-         "--width", "1280", 
-         "--frames", "81", 
-         "--seed", "44", 
-         "--num_inference_steps", "40", 
-         "--time_shift", "5.0", 
-         "--enable_model_cpu_offload"
-        ] + sys.argv[1:], 
-        check=False
-    )
-    exit(result.returncode)
-
-
-def inference_wanvideo_t2v_720p():
-    ckpt = "checkpoints/wan/Wan2.1-T2V-14B/"
-    config = "configs/008_wanvideo/wan2_1_t2v_14B.yaml"
-    prompt_file = "inputs/t2v/prompts.txt"
-    savedir = "results/t2v/wanvideo/720P"
-    result = subprocess.run(
-        ["python3", "scripts/inference_new.py", 
-         "--ckpt_path", ckpt, 
-         "--config", config, 
-         "--prompt_file", prompt_file, 
-         "--savedir", savedir, 
-         "--height", "720", 
-         "--width", "1280", 
-         "--frames", "81", 
-         "--seed", "44", 
-         "--time_shift", "5.0", 
-         "--num_inference_steps", "50", 
-         "--enable_model_cpu_offload"
-        ] + sys.argv[1:], 
-        check=False
-    )
-    exit(result.returncode)
-
-def inference_hunyuan_i2v_720p():
-    ckpt = "checkpoints/hunyuanvideo/HunyuanVideo-I2V"
-    dit_weight = "checkpoints/hunyuanvideo/HunyuanVideo-I2V/hunyuan-video-i2v-720p/transformers/mp_rank_00_model_states.pt"
-    config = "configs/007_hunyuanvideo/hunyuanvideo_i2v.yaml"
-    prompt_dir = "inputs/i2v/576x1024"
-    savedir = "results/i2v/hunyuan"
-    
-    result = subprocess.run(
-        ["python3", "scripts/inference_new.py", 
-         "--ckpt_path", ckpt, 
-         "--dit_weight", dit_weight, 
-         "--config", config, 
-         "--prompt_dir", prompt_dir, 
-         "--savedir", savedir, 
-         "--height", "720", 
-         "--width", "1280", 
-         "--i2v_resolution", "720p", 
-         "--frames", "129", 
-         "--seed", "44", 
-         "--num_inference_steps", "50"
-        ] + sys.argv[1:], 
-        check=False
-    )
-    exit(result.returncode)
-
-
-def inference_vc1_t2v_576x1024():
-    ckpt = "checkpoints/videocrafter/t2v_v1_1024/model.ckpt"
-    config = "configs/000_videocrafter/vc1_t2v_1024.yaml"
-    prompt_file = "inputs/t2v/prompts.txt"
-    res_dir = "results/t2v/videocrafter1-576x1024"
-    result = subprocess.run(
-        ["python3", "scripts/inference.py", 
-         "--ckpt_path", ckpt, 
-         "--config", config, 
-         "--prompt_file", prompt_file, 
-         "--savedir", res_dir, 
-         "--bs", "1", 
-         "--height", "576", 
-         "--width", "1024", 
-         "--fps", "28", 
-         "--seed", "123"
-        ] + sys.argv[1:], 
-        check=False
-    )
-    exit(result.returncode)
-
-
-def inference_vc2_t2v_320x512():
-    # Dependencies
-    ckpt = "checkpoints/videocrafter/t2v_v2_512_split"
-    config = "configs/001_videocrafter2/vc2_t2v_320x512.yaml"
-    prompt_file = "inputs/t2v/prompts.txt"
-    result = subprocess.run(
-        ["python3", "scripts/inference_new.py", 
-         "--ckpt_path", ckpt, 
-         "--config", config, 
-         "--prompt_file", prompt_file, 
-         "--savefps", "30"
-        ] + sys.argv[1:], 
-        check=False
-    )
-    exit(result.returncode)
-
-def inference_vc2_t2v_320x512_lora():
-    # Dependencies
-    ckpt = "checkpoints/videocrafter/t2v_v2_512/model.ckpt"
-    config = "configs/001_videocrafter2/vc2_t2v_lora.yaml"
-    lorackpt = "YOUR_LORA_CKPT"
-    prompt_file = "inputs/t2v/prompts.txt"
-    res_dir = "results/train/003_vc2_lora_ft"
-    result = subprocess.run(
-        ["python3", "scripts/inference.py", 
-         "--seed", "123", 
-         "--mode", "t2v", 
-         "--ckpt_path", ckpt, 
-         "--lorackpt", lorackpt, 
-         "--config", config, 
-         "--savedir", res_dir, 
-         "--n_samples", "1", 
-         "--bs", "1", 
-         "--height", "320", 
-         "--width", "512", 
-         "--unconditional_guidance_scale", "12.0", 
-         "--ddim_steps", "50", 
-         "--ddim_eta", "1.0", 
-         "--prompt_file", prompt_file, 
-         "--fps", "28"
-        ] + sys.argv[1:], 
-        check=False
-    )
-    exit(result.returncode)
-
-
-def train_cogvideox_i2v_lora():
-    # Set environment variables
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
-    # Dependencies
-    config = "configs/004_cogvideox/cogvideo5b-i2v.yaml"  # Experiment config
-
-    # Experiment settings
-    resroot = "results/train"  # Experiment saving directory
-    expname = "cogvideox_i2v_5b"  # Experiment name
-    datapath="data/apply_lipstick/metadata.csv"
-
-    result = subprocess.run(
-        ["python", "scripts/train.py", 
-         "-t", 
-         "--base", config, 
-         "--logdir", resroot, 
-         "--name", f"{current_time}_{expname}", 
-         "--devices", "0,", 
-         "lightning.trainer.num_nodes=1", 
-         f"data.params.train.params.csv_path={datapath}", 
-         f"data.params.validation.params.csv_path={datapath}", 
-         "--auto_resume"
-        ] + sys.argv[1:], 
-        check=False
-    )
-    exit(result.returncode)
-
-
-def train_cogvideox_i2v_fullft():
-    # Set environment variables
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
-    # Dependencies
-    config = "configs/004_cogvideox/cogvideo5b-i2v-fullft.yaml"  # Experiment config
-
-    # Experiment settings
-    resroot = "results/train"  # Experiment saving directory
-    expname = "cogvideox_i2v_5b_fullft"  # Experiment name
-    datapath="data/apply_lipstick/metadata.csv"
-
-    result = subprocess.run(
-        ["python", "scripts/train.py", 
-         "-t", 
-         "--base", config, 
-         "--logdir", resroot, 
-         "--name", f"{current_time}_{expname}", 
-         "--devices", "0,1,2,3", 
-         "lightning.trainer.num_nodes=1", 
-         f"data.params.train.params.csv_path={datapath}", 
-         f"data.params.validation.params.csv_path={datapath}", 
-         "--auto_resume"
-        ] + sys.argv[1:], 
-        check=False
-    )
-    exit(result.returncode)
-
-
-def train_cogvideox_t2v_lora():
-    # Set environment variables
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
-    # Dependencies
-    config = "configs/004_cogvideox/cogvideo5b.yaml"  # Experiment config
-    datapath = "data/apply_lipstick/metadata.csv"
-
-    # Experiment settings
-    resroot = "results/train"  # Experiment saving directory
-    expname = "cogvideox_t2v_5b"  # Experiment name
-    result = subprocess.run(
-        ["python", "scripts/train.py", 
-         "-t", 
-         "--base", config, 
-         "--logdir", resroot, 
-         "--name", f"{current_time}_{expname}", 
-         "--devices", "0,", 
-         "lightning.trainer.num_nodes=1", 
-         f"data.params.train.params.csv_path={datapath}", 
-         f"data.params.validation.params.csv_path={datapath}", 
-         "--auto_resume"
-        ] + sys.argv[1:], 
-        check=False
-    )
-    exit(result.returncode)
-
-
-def train_cogvideox_t2v_fullft():
-    # Set environment variables
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
-    # Dependencies
-    config = "configs/004_cogvideox/cogvideo5b-t2v-fullft.yaml"  # Experiment config
-    datapath = "data/apply_lipstick/metadata.csv"
-
-    # Experiment settings
-    resroot = "results/train"  # Experiment saving directory
-    expname = "cogvideox_t2v_5b_fullft"  # Experiment name
-    result = subprocess.run(
-        ["python", "scripts/train.py", 
-         "-t", 
-         "--base", config, 
-         "--logdir", resroot, 
-         "--name", f"{current_time}_{expname}", 
-         "--devices", "0,1,2,3", 
-         "lightning.trainer.num_nodes=1", 
-         f"data.params.train.params.csv_path={datapath}", 
-         f"data.params.validation.params.csv_path={datapath}", 
-         "--auto_resume"
-        ] + sys.argv[1:], 
-        check=False
-    )
-    exit(result.returncode)
-
-def train_dynamicrafter():
-    # Dependencies
-    sdckpt = "checkpoints/stablediffusion/v2-1_512-ema/model.ckpt"
-    dcckpt = "checkpoints/dynamicrafter/i2v_576x1024/model_converted.ckpt"
-
-    # Experiment settings
-    expname = "002_dynamicrafterft_1024"  # Experiment name
-    config = "configs/002_dynamicrafter/dc_i2v_1024.yaml"  # Experiment config
-    resroot = "results/train"  # Experiment saving directory
-    result = subprocess.run(
-        ["python", "scripts/train.py", 
-         "-t", 
-         "--name", f"{current_time}_{expname}", 
-         "--base", config, 
-         "--logdir", resroot, 
-         "--sdckpt", sdckpt, 
-         "--ckpt", dcckpt, 
-         "--devices", "0,", 
-         "lightning.trainer.num_nodes=1", 
-         "--auto_resume"
-        ] + sys.argv[1:], 
-        check=False
-    )
-    exit(result.returncode)
+    inference_wan2_2_t2v_720p_entry()
 
 
 def train_flux_lora():
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
-    os.environ["CONFIG_PATH"] = "configs/006_flux/config"
-    os.environ["DATACONFIG_PATH"] = "configs/006_flux/multidatabackend"
-    os.environ["CONFIG_BACKEND"] = "json"
+    config_path = FLUX_T2I_CONFIG
+    data_config_path = FLUX_T2I_DATA_CONFIG
     result = subprocess.run(
-        ["accelerate", "launch", 
-         "--mixed_precision=bf16", 
-         "--num_processes=1", 
-         "--num_machines=1", 
-         "scripts/train_flux_lora.py", 
-         "--config_path", f"{os.environ['CONFIG_PATH']}.{os.environ['CONFIG_BACKEND']}", 
-         "--data_config_path", f"{os.environ['DATACONFIG_PATH']}.{os.environ['CONFIG_BACKEND']}"
-        ] + sys.argv[1:], 
-        check=False
-    )
-    exit(result.returncode)
-
-
-def train_opensorav10():
-    # Experiment settings
-    expname = "opensora"  # Experiment name
-    config = "configs/003_opensora/opensorav10_256x256.yaml"  # Experiment config
-    logdir = "results/train"  # Experiment saving directory
-    result = subprocess.run(
-        ["python", "scripts/train.py", 
-         "-t", 
-         "--devices", "0,", 
-         "lightning.trainer.num_nodes=1", 
-         "--base", config, 
-         "--name", f"{current_time}_{expname}", 
-         "--logdir", logdir, 
-         "--auto_resume"
-        ] + sys.argv[1:], 
-        check=False
-    )
-    exit(result.returncode)
-
-
-def train_videocrafter_lora():
-    # Set environment variables
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
-    # Dependencies
-    vc2_ckpt = "checkpoints/videocrafter/t2v_v2_512/model.ckpt"
-
-    # Experiment settings
-    expname = "videocrafter2_t2v_lora"  # Experiment name
-    config = "configs/001_videocrafter2/vc2_t2v_lora.yaml"  # Experiment config
-    resroot = "results/train"  # Experiment saving directory
-
-    # Generate current time
-    result = subprocess.run(
-        ["python", "scripts/train.py", 
-         "-t", 
-         "--name", f"{current_time}_{expname}", 
-         "--base", config, 
-         "--logdir", resroot, 
-         "--ckpt", vc2_ckpt, 
-         "--devices", "0,", 
-         "lightning.trainer.num_nodes=1", 
-         "--auto_resume"
-        ] + sys.argv[1:], 
-        check=False
-    )
-    exit(result.returncode)
-
-
-def train_videocrafter_v2():
-    # Set environment variables
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
-    # Dependencies
-    vc2_ckpt = "checkpoints/videocrafter/t2v_v2_512_split"  # pretrained checkpoint of videocrafter2
-    config = "configs/001_videocrafter2/vc2_t2v_320x512.yaml"  # experiment config: model+data+training
-
-    # Experiment saving directory and parameters
-    resroot = "results/train"  # root directory for saving multiple experiments
-    expname = "videocrafter2_320x512"  # experiment name
-    result = subprocess.run(
-        ["python", "scripts/train_new.py", 
-         "-t", 
-         "--ckpt", vc2_ckpt, 
-         "--base", config, 
-         "--logdir", resroot, 
-         "--name", f"{current_time}_{expname}", 
-         "--devices", "0,", 
-         "--auto_resume"
-        ] + sys.argv[1:], 
-        check=False
-    )
-    exit(result.returncode)
-
-
-def train_hunyuan_t2v_lora():
-    # Set environment variables
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
-    # Dependencies
-    config = "configs/007_hunyuanvideo/hunyuanvideo_t2v_diffuser_lora.yaml"  # Experiment config
-
-    # Experiment settings
-    resroot = "results/train"  # Experiment saving directory
-    expname = "hunyuanvideo_t2v_lora"  # Experiment name
-    result = subprocess.run(
-        ["python", "scripts/train.py", 
-         "-t", 
-         "--base", config, 
-         "--logdir", resroot, 
-         "--name", f"{current_time}_{expname}", 
-         "--devices", "0,1", 
-         "lightning.trainer.num_nodes=1", 
-         "--auto_resume"
-        ] + sys.argv[1:], 
-        check=False
-    )
-    exit(result.returncode)
-
-
-
-def train_wan2_1_t2v_fullft():
-    # Set environment variables
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
-    # Dependencies
-    ckpt = "checkpoints/wan/Wan2.1-T2V-14B" 
-    config = "configs/008_wanvideo/wan2_1_t2v_14B_fullft.yaml" 
-
-    # Experiment saving directory and parameters
-    resroot = "results/train"  # root directory for saving multiple experiments
-    expname = "train_wanvideo_t2v_fullft"  # experiment name
-    result = subprocess.run(
-        ["python", "scripts/train_new.py", 
-         "-t", 
-         "--ckpt", ckpt, 
-         "--base", config, 
-         "--logdir", resroot, 
-         "--name", f"{expname}_{current_time}", 
-         "--devices", "0,", 
-         "--auto_resume"
-        ] + sys.argv[1:], 
-        check=False
+        [
+            "accelerate",
+            "launch",
+            "--mixed_precision=bf16",
+            "--num_processes=1",
+            "--num_machines=1",
+            "scripts/train_flux_lora.py",
+            "--config_path",
+            config_path,
+            "--data_config_path",
+            data_config_path,
+        ]
+        + sys.argv[1:],
+        check=False,
     )
     exit(result.returncode)
 
 
 def train_wan2_1_t2v_lora():
-    # Set environment variables
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
-    # Dependencies
-    ckpt = "checkpoints/wan/Wan2.1-T2V-14B" 
-    config = "configs/008_wanvideo/wan2_1_t2v_14B_lora.yaml" 
-
-    # Experiment saving directory and parameters
-    resroot = "results/train"  # root directory for saving multiple experiments
-    expname = "train_wanvideo_t2v_lora"  # experiment name
+    ckpt = "checkpoints/wan/Wan2.1-T2V-14B"
+    config = WAN_T2V_LORA_CONFIG
+    resroot = "results/train"
+    expname = "train_wan_domain_t2v_lora"
     result = subprocess.run(
-        ["python", "scripts/train_new.py", 
-         "-t", 
-         "--ckpt", ckpt, 
-         "--base", config, 
-         "--logdir", resroot, 
-         "--name", f"{expname}_{current_time}", 
-         "--devices", "0,", 
-         "--auto_resume"
-        ] + sys.argv[1:], 
-        check=False
+        [
+            sys.executable,
+            "scripts/train_new.py",
+            "-t",
+            "--ckpt",
+            ckpt,
+            "--base",
+            config,
+            "--logdir",
+            resroot,
+            "--name",
+            f"{expname}_{current_time}",
+            "--devices",
+            "0,",
+            "--auto_resume",
+        ]
+        + sys.argv[1:],
+        check=False,
     )
     exit(result.returncode)
 
 
-def train_wan2_1_i2v_fullft():
-    # Set environment variables
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+def train_domain_t2i():
+    """Canonical alias for Flux T2I domain LoRA training."""
+    train_flux_lora()
 
-    # Dependencies
-    ckpt = "checkpoints/wan/Wan2.1-I2V-14B-480P" 
-    config = "configs/008_wanvideo/wan2_1_i2v_14B_480P_fullft.yaml" 
 
-    # Experiment saving directory and parameters
-    resroot = "results/train"  # root directory for saving multiple experiments
-    expname = "train_wanvideo_i2v_fullft"  # experiment name
-    result = subprocess.run(
-        ["python", "scripts/train_new.py", 
-         "-t", 
-         "--ckpt", ckpt, 
-         "--base", config, 
-         "--logdir", resroot, 
-         "--name", f"{expname}_{current_time}", 
-         "--devices", "0,", 
-         "--auto_resume"
-        ] + sys.argv[1:], 
-        check=False
-    )
-    exit(result.returncode)
+def train_domain_t2v():
+    """Canonical alias for Wan 2.1 T2V domain LoRA training."""
+    train_wan2_1_t2v_lora()
+
 
 def train_wan2_1_i2v_lora():
-    # Set environment variables
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
-    # Dependencies
-    ckpt = "checkpoints/wan/Wan2.1-I2V-14B-480P" 
-    config = "configs/008_wanvideo/wan2_1_i2v_14B_480P_lora.yaml" 
-
-    # Experiment saving directory and parameters
-    resroot = "results/train"  # root directory for saving multiple experiments
-    expname = "train_wanvideo_i2v_lora"  # experiment name
+    ckpt = "checkpoints/wan/Wan2.1-I2V-14B-480P"
+    config = WAN_I2V_LORA_CONFIG
+    resroot = "results/train"
+    expname = "train_wan_domain_i2v_lora"
     result = subprocess.run(
-        ["python", "scripts/train_new.py", 
-         "-t", 
-         "--ckpt", ckpt, 
-         "--base", config, 
-         "--logdir", resroot, 
-         "--name", f"{expname}_{current_time}", 
-         "--devices", "0,", 
-         "--auto_resume"
-        ] + sys.argv[1:], 
-        check=False
+        [
+            sys.executable,
+            "scripts/train_new.py",
+            "-t",
+            "--ckpt",
+            ckpt,
+            "--base",
+            config,
+            "--logdir",
+            resroot,
+            "--name",
+            f"{expname}_{current_time}",
+            "--devices",
+            "0,",
+            "--auto_resume",
+        ]
+        + sys.argv[1:],
+        check=False,
     )
     exit(result.returncode)
+
+
+def train_domain_i2v():
+    """Canonical alias for Wan 2.1 I2V domain LoRA training."""
+    train_wan2_1_i2v_lora()
+
+
+def inference_domain_t2i():
+    """Canonical alias for Flux domain LoRA smoke inference."""
+    inference_flux_lora()
+
+
+def validate_domain_t2v():
+    """Canonical Wan 2.2 domain LoRA validation after training."""
+    from videotuna.cli.inference_app import validate_domain_t2v_entry
+
+    validate_domain_t2v_entry()
+
+
+def validate_domain_i2v():
+    """Canonical Wan 2.2 domain I2V LoRA validation after training."""
+    from videotuna.cli.inference_app import validate_domain_i2v_entry
+
+    validate_domain_i2v_entry()
+
+
+def inference_wan2_2_i2v_720p():
+    from videotuna.cli.inference_app import inference_wan2_2_i2v_720p_entry
+
+    inference_wan2_2_i2v_720p_entry()
+
+
+def benchmark_attn_backends():
+    """Benchmark eager vs sdpa vs flash on Wan Diffusers inference."""
+    from scripts.benchmark_attn_backends import main
+
+    raise SystemExit(main())

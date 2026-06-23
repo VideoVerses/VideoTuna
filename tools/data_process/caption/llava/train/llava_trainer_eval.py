@@ -20,18 +20,18 @@ class LLaVAEvalTrainer(LLaVATrainer):
         if evaluate_args.gen_kwargs != "":
             cmd += f" --gen_kwargs {evaluate_args.gen_kwargs}"
         if evaluate_args.log_samples:
-            cmd += f" --log_samples"
+            cmd += " --log_samples"
         else:
             assert False, "Please log samples so that the result can be parsed"
         results = subprocess.run([cmd], shell=True, capture_output=True, text=True)
         try:
             result_file_index_start = results.stdout.index("Saved samples to ")
-            result_file_index_end = results.stdout.index(f".json")
+            result_file_index_end = results.stdout.index(".json")
             result_file_index_start += len("Saved samples to ")
             file = results.stdout[result_file_index_start:result_file_index_end]
         except:
             result_file_index_start = results.stderr.index("Saved samples to ")
-            result_file_index_end = results.stderr.index(f".json")
+            result_file_index_end = results.stderr.index(".json")
             result_file_index_start += len("Saved samples to ")
             file = results.stderr[result_file_index_start:result_file_index_end]
         file = file.split("/")[:-1]

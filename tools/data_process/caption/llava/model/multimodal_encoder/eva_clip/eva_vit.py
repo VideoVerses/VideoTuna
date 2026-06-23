@@ -370,7 +370,6 @@ class Attention(nn.Module):
             k = k.reshape(B, N, self.num_heads, -1).permute(0, 2, 1, 3)
             v = v.reshape(B, N, self.num_heads, -1).permute(0, 2, 1, 3)
         else:
-
             qkv_bias = None
             if self.q_bias is not None:
                 qkv_bias = torch.cat(
@@ -448,7 +447,6 @@ class Attention(nn.Module):
 
 
 class Block(nn.Module):
-
     def __init__(
         self,
         dim,
@@ -583,7 +581,6 @@ class PatchEmbed(nn.Module):
 
 
 class RelativePositionBias(nn.Module):
-
     def __init__(self, window_size, num_heads):
         super().__init__()
         self.window_size = window_size
@@ -816,7 +813,6 @@ class EVAVisionTransformer(nn.Module):
         )
 
     def forward_features(self, x, return_all_features=False):
-
         x = self.patch_embed(x)
         batch_size, seq_len, _ = x.size()
 
@@ -943,12 +939,8 @@ class CLIPVisionCfg:
     patch_size: int = 16
     image_size: Union[Tuple[int, int], int] = 224
     ls_init_value: Optional[float] = None  # layer scale initial value
-    patch_dropout: float = (
-        0.0  # what fraction of patches to dropout during training (0 would mean disabled and no patches dropped) - 0.5 to 0.75 recommended in the paper for optimal results
-    )
-    global_average_pool: bool = (
-        False  # whether to global average pool the last embedding layer, instead of using CLS token (https://arxiv.org/abs/2205.01580)
-    )
+    patch_dropout: float = 0.0  # what fraction of patches to dropout during training (0 would mean disabled and no patches dropped) - 0.5 to 0.75 recommended in the paper for optimal results
+    global_average_pool: bool = False  # whether to global average pool the last embedding layer, instead of using CLS token (https://arxiv.org/abs/2205.01580)
     drop_path_rate: Optional[float] = None  # drop path rate
     timm_model_name: str = (
         None  # a valid model name overrides layers, width, patch_size

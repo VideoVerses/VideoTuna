@@ -1,0 +1,26 @@
+# CPU smoke preset for Wan 2.2 Diffusers (dev/CI only — not for production)
+# Usage:
+#   poetry run inference-wan2.2-t2v-720p \
+#     --config configs/inference/presets/wan2_2_cpu_smoke.yaml --cpu-smoke
+flow:
+  target: videotuna.flow.diffusers_video.DiffusersVideoFlow
+  params:
+    model_family: wan
+    mode: t2v
+    pipeline_only: true
+    model_variant: "2.2"
+    pretrained_model_name_or_path: Wan-AI/Wan2.2-T2V-A14B-Diffusers
+inference:
+  mode: t2v
+  device: cpu
+  ckpt_path: Wan-AI/Wan2.2-T2V-A14B-Diffusers
+  savedir: results/t2v/wan2.2-t2v-a14b-cpu-smoke
+  prompt_file: inputs/t2v/prompts.txt
+  frames: 2
+  height: 256
+  width: 448
+  num_inference_steps: 4
+  unconditional_guidance_scale: 5.0
+  seed: 42
+  savefps: 8
+  dtype: fp32

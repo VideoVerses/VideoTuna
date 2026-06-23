@@ -1,19 +1,17 @@
-import glob
+import copy
 import os
-import sys
 from collections import OrderedDict
 
 import cv2
 import numpy as np
-import torch, copy
+import torch
 import torchvision
 import torchvision.transforms as transforms
-from decord import VideoReader, cpu
 from einops import rearrange, repeat
 from PIL import Image
 
-from videotuna.utils.load_weights import load_safetensors, init_weights_on_device
-
+from videotuna.utils.load_weights import init_weights_on_device, load_safetensors
+from videotuna.utils.video_io import AvVideoReader as VideoReader
 
 
 def get_target_filelist(data_dir, ext):
@@ -37,6 +35,7 @@ def get_target_filelist(data_dir, ext):
     file_list.sort()
     return file_list
 
+
 # inplemented in InferenceBase
 def load_prompts_from_txt(prompt_file: str):
     """Load and return a list of prompts from a text file, stripping whitespace."""
@@ -44,6 +43,7 @@ def load_prompts_from_txt(prompt_file: str):
         lines = f.readlines()
     prompt_list = [line.strip() for line in lines if line.strip() != ""]
     return prompt_list
+
 
 # inplemented in GenerationFlow
 def load_model_checkpoint(model, ckpt):
@@ -55,14 +55,14 @@ def load_model_checkpoint(model, ckpt):
             for key in state_dict["module"].keys():
                 new_pl_sd[key[16:]] = state_dict["module"][key]
             model.load_state_dict(new_pl_sd, strict=full_strict)
-        except:
+        except Exception:
             if "state_dict" in list(state_dict.keys()):
                 state_dict = state_dict["state_dict"]
             try:
                 model.model.diffusion_model.load_state_dict(
                     state_dict, strict=full_strict
                 )
-            except:
+            except Exception:
                 model.load_state_dict(state_dict, strict=False)
         return model
 
@@ -84,7 +84,8 @@ def load_inputs_i2v(input_dir, video_size=(256, 256), video_frames=16):
     if len(prompt_files) > 1:
         # only use the first one (sorted by name) if multiple exist
         print(
-            f"Warning: multiple prompt files exist. The one {os.path.split(prompt_files[0])[1]} is used."
+            "Warning: multiple prompt files exist. The one "
+            f"{os.path.split(prompt_files[0])[1]} is used."
         )
         prompt_file = prompt_files[0]
     elif len(prompt_files) == 1:
@@ -134,7 +135,8 @@ def load_inputs_v2v(input_dir, video_size=None, video_frames=None):
     if len(prompt_files) > 1:
         # only use the first one (sorted by name) if multiple exist
         print(
-            f"Warning: multiple prompt files exist. The one {os.path.split(prompt_files[0])[1]} is used."
+            "Warning: multiple prompt files exist. The one "
+            f"{os.path.split(prompt_files[0])[1]} is used."
         )
         prompt_file = prompt_files[0]
     elif len(prompt_files) == 1:
@@ -143,7 +145,7 @@ def load_inputs_v2v(input_dir, video_size=None, video_frames=None):
         print(prompt_files)
         raise ValueError(f"Error: found NO prompt file in {input_dir}")
     prompt_list = load_prompts_from_txt(prompt_file)
-    n_samples = len(prompt_list)
+    len(prompt_list)
 
     ## load videos
     video_filepaths = get_target_filelist(input_dir, ext="mp4")
@@ -156,11 +158,9 @@ def load_inputs_v2v(input_dir, video_size=None, video_frames=None):
 
 def open_video_to_tensor(filepath, video_width=None, video_height=None):
     if video_width is None and video_height is None:
-        vidreader = VideoReader(
-            filepath, ctx=cpu(0), width=video_width, height=video_height
-        )
+        vidreader = VideoReader(filepath, width=video_width, height=video_height)
     else:
-        vidreader = VideoReader(filepath, ctx=cpu(0))
+        vidreader = VideoReader(filepath)
     frame_indices = list(range(len(vidreader)))
     frames = vidreader.get_batch(frame_indices)
     frame_tensor = torch.tensor(frames.asnumpy()).permute(3, 0, 1, 2).float()
@@ -174,16 +174,15 @@ def load_video_batch(
     """
     Notice about some special cases:
     1. video_frames=-1 means to take all the frames (with fs=1)
-    2. when the total video frames is less than required, padding strategy will be used (repreated last frame)
+    2. when the total video frames is less than required, padding strategy
+       will be used (repreated last frame)
     """
     fps_list = []
     batch_tensor = []
     assert frame_stride > 0, "valid frame stride should be a positive interge!"
     for filepath in filepath_list:
         padding_num = 0
-        vidreader = VideoReader(
-            filepath, ctx=cpu(0), width=video_size[1], height=video_size[0]
-        )
+        vidreader = VideoReader(filepath, width=video_size[1], height=video_size[0])
         fps = vidreader.get_avg_fps()
         total_frames = len(vidreader)
         max_valid_frames = (total_frames - 1) // frame_stride + 1
@@ -206,7 +205,8 @@ def load_video_batch(
                 [frame_tensor, *([frame_tensor[:, -1:, :, :]] * padding_num)], dim=1
             )
             print(
-                f"{os.path.split(filepath)[1]} is not long enough: {padding_num} frames padded."
+                f"{os.path.split(filepath)[1]} is not long enough: "
+                f"{padding_num} frames padded."
             )
         batch_tensor.append(frame_tensor)
         sample_fps = int(fps / frame_stride)
@@ -221,9 +221,7 @@ def load_image_batch(filepath_list, image_size=(256, 256)):
         _, filename = os.path.split(filepath)
         _, ext = os.path.splitext(filename)
         if ext == ".mp4":
-            vidreader = VideoReader(
-                filepath, ctx=cpu(0), width=image_size[1], height=image_size[0]
-            )
+            vidreader = VideoReader(filepath, width=image_size[1], height=image_size[0])
             frame = vidreader.get_batch([0])
             img_tensor = (
                 torch.tensor(frame.asnumpy()).squeeze(0).permute(2, 0, 1).float()
@@ -380,7 +378,6 @@ def sample_batch_i2v(
 
     batch_samples = []
     for _ in range(n_samples_prompt):
-
         if z0 is not None:
             cond_z0 = z0.clone()
             kwargs.update({"clean_cond": True})
@@ -454,6 +451,7 @@ def save_videos_vbench(batch_tensors, savedir, prompts, format_file, fps=10):
                 savepath, video, fps=fps, video_codec="h264", options={"crf": "10"}
             )
 
+
 def cast_to(weight, dtype, device):
     r = torch.empty_like(weight, dtype=dtype, device=device)
     r.copy_(weight)
@@ -461,7 +459,16 @@ def cast_to(weight, dtype, device):
 
 
 class AutoWrappedModule(torch.nn.Module):
-    def __init__(self, module: torch.nn.Module, offload_dtype, offload_device, onload_dtype, onload_device, computation_dtype, computation_device):
+    def __init__(
+        self,
+        module: torch.nn.Module,
+        offload_dtype,
+        offload_device,
+        onload_dtype,
+        onload_device,
+        computation_dtype,
+        computation_device,
+    ):
         super().__init__()
         self.module = module.to(dtype=offload_dtype, device=offload_device)
         self.offload_dtype = offload_dtype
@@ -473,29 +480,54 @@ class AutoWrappedModule(torch.nn.Module):
         self.state = 0
 
     def offload(self):
-        if self.state == 1 and (self.offload_dtype != self.onload_dtype or self.offload_device != self.onload_device):
+        if self.state == 1 and (
+            self.offload_dtype != self.onload_dtype
+            or self.offload_device != self.onload_device
+        ):
             self.module.to(dtype=self.offload_dtype, device=self.offload_device)
             self.state = 0
 
     def onload(self):
-        if self.state == 0 and (self.offload_dtype != self.onload_dtype or self.offload_device != self.onload_device):
+        if self.state == 0 and (
+            self.offload_dtype != self.onload_dtype
+            or self.offload_device != self.onload_device
+        ):
             self.module.to(dtype=self.onload_dtype, device=self.onload_device)
             self.state = 1
 
     @torch.inference_mode
     def forward(self, *args, **kwargs):
-        if self.onload_dtype == self.computation_dtype and self.onload_device == self.computation_device:
+        if (
+            self.onload_dtype == self.computation_dtype
+            and self.onload_device == self.computation_device
+        ):
             module = self.module
         else:
-            module = copy.deepcopy(self.module).to(dtype=self.computation_dtype, device=self.computation_device)
+            module = copy.deepcopy(self.module).to(
+                dtype=self.computation_dtype, device=self.computation_device
+            )
         return module(*args, **kwargs)
-    
+
 
 class AutoWrappedLinear(torch.nn.Linear):
-
-    def __init__(self, module: torch.nn.Linear, offload_dtype, offload_device, onload_dtype, onload_device, computation_dtype, computation_device):
+    def __init__(
+        self,
+        module: torch.nn.Linear,
+        offload_dtype,
+        offload_device,
+        onload_dtype,
+        onload_device,
+        computation_dtype,
+        computation_device,
+    ):
         with init_weights_on_device(device=torch.device("meta")):
-            super().__init__(in_features=module.in_features, out_features=module.out_features, bias=module.bias is not None, dtype=offload_dtype, device=offload_device)
+            super().__init__(
+                in_features=module.in_features,
+                out_features=module.out_features,
+                bias=module.bias is not None,
+                dtype=offload_dtype,
+                device=offload_device,
+            )
         self.weight = module.weight
         self.bias = module.bias
         self.offload_dtype = offload_dtype
@@ -507,31 +539,56 @@ class AutoWrappedLinear(torch.nn.Linear):
         self.state = 0
 
     def offload(self):
-        if self.state == 1 and (self.offload_dtype != self.onload_dtype or self.offload_device != self.onload_device):
+        if self.state == 1 and (
+            self.offload_dtype != self.onload_dtype
+            or self.offload_device != self.onload_device
+        ):
             self.to(dtype=self.offload_dtype, device=self.offload_device)
             self.state = 0
 
     def onload(self):
-        if self.state == 0 and (self.offload_dtype != self.onload_dtype or self.offload_device != self.onload_device):
+        if self.state == 0 and (
+            self.offload_dtype != self.onload_dtype
+            or self.offload_device != self.onload_device
+        ):
             self.to(dtype=self.onload_dtype, device=self.onload_device)
             self.state = 1
 
     @torch.inference_mode
     def forward(self, x, *args, **kwargs):
-        if self.onload_dtype == self.computation_dtype and self.onload_device == self.computation_device:
+        if (
+            self.onload_dtype == self.computation_dtype
+            and self.onload_device == self.computation_device
+        ):
             weight, bias = self.weight, self.bias
         else:
-            weight = cast_to(self.weight, self.computation_dtype, self.computation_device)
-            bias = None if self.bias is None else cast_to(self.bias, self.computation_dtype, self.computation_device)
+            weight = cast_to(
+                self.weight, self.computation_dtype, self.computation_device
+            )
+            bias = (
+                None
+                if self.bias is None
+                else cast_to(self.bias, self.computation_dtype, self.computation_device)
+            )
         return torch.nn.functional.linear(x, weight, bias)
 
 
-def enable_vram_management_recursively(model: torch.nn.Module, module_map: dict, module_config: dict, max_num_param=None, overflow_module_config: dict = None, total_num_param=0):
+def enable_vram_management_recursively(
+    model: torch.nn.Module,
+    module_map: dict,
+    module_config: dict,
+    max_num_param=None,
+    overflow_module_config: dict = None,
+    total_num_param=0,
+):
     for name, module in model.named_children():
         for source_module, target_module in module_map.items():
             if isinstance(module, source_module):
                 num_param = sum(p.numel() for p in module.parameters())
-                if max_num_param is not None and total_num_param + num_param > max_num_param:
+                if (
+                    max_num_param is not None
+                    and total_num_param + num_param > max_num_param
+                ):
                     module_config_ = overflow_module_config
                 else:
                     module_config_ = module_config
@@ -540,10 +597,30 @@ def enable_vram_management_recursively(model: torch.nn.Module, module_map: dict,
                 total_num_param += num_param
                 break
         else:
-            total_num_param = enable_vram_management_recursively(module, module_map, module_config, max_num_param, overflow_module_config, total_num_param)
+            total_num_param = enable_vram_management_recursively(
+                module,
+                module_map,
+                module_config,
+                max_num_param,
+                overflow_module_config,
+                total_num_param,
+            )
     return total_num_param
 
 
-def enable_vram_management(model: torch.nn.Module, module_map: dict, module_config: dict, max_num_param=None, overflow_module_config: dict = None):
-    enable_vram_management_recursively(model, module_map, module_config, max_num_param, overflow_module_config, total_num_param=0)
+def enable_vram_management(
+    model: torch.nn.Module,
+    module_map: dict,
+    module_config: dict,
+    max_num_param=None,
+    overflow_module_config: dict = None,
+):
+    enable_vram_management_recursively(
+        model,
+        module_map,
+        module_config,
+        max_num_param,
+        overflow_module_config,
+        total_num_param=0,
+    )
     model.vram_management_enabled = True

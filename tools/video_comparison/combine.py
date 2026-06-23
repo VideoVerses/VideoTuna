@@ -3,7 +3,7 @@ import glob
 import os
 
 import numpy as np
-from moviepy.editor import VideoFileClip, clips_array
+from moviepy import VideoFileClip, clips_array
 from PIL import Image, ImageDraw, ImageFont
 
 parser = argparse.ArgumentParser(description="Check the input directory")
@@ -37,7 +37,6 @@ def add_text_to_frame(frame, text="hi", position=(0, 0)):
 
 
 for video_index in range(num_of_videos):
-
     video_paths = []
     for method in methods:
         video_path = sorted(os.listdir(method))[video_index]
@@ -46,15 +45,15 @@ for video_index in range(num_of_videos):
     clips = [VideoFileClip(video_path) for video_path in video_paths]
     max_fps = max([clip.fps for clip in clips])
     max_duration = max([clip.duration for clip in clips])
-    clips = [clip.set_end(max_duration).set_fps(max_fps) for clip in clips]
+    clips = [clip.with_end(max_duration).with_fps(max_fps) for clip in clips]
 
-    clips = [clip.resize(height=args.unified_height) for clip in clips]
+    clips = [clip.resized(height=args.unified_height) for clip in clips]
 
     clips_with_name = []
     for index, clip in enumerate(clips):
         method = methods[index].split("/")[-1]
         print(f"tackling {index} {method}")
-        clip = clip.fl_image(
+        clip = clip.image_transform(
             lambda frame, method=method: add_text_to_frame(
                 frame, text=method, position=(0, 0)
             )

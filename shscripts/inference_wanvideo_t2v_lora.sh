@@ -1,5 +1,5 @@
 ckpt='checkpoints/wan/Wan2.1-T2V-14B/'
-config='configs/008_wanvideo/wan2_1_t2v_14B_lora.yaml'
+config='configs/inference/presets/wan_domain_lora_smoke.yaml'
 prompt_file="inputs/t2v/prompts.txt"
 savedir="results/t2v/wanvideo/480P"
 

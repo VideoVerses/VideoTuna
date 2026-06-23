@@ -6,9 +6,10 @@ python3 -m llava.model.consolidate --videotuna ~/model_weights/llava-7b --dst ~/
 import argparse
 
 import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
 from llava.model import *
 from llava.model.utils import auto_upgrade
-from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
 def consolidate_ckpt(src_path, dst_path):

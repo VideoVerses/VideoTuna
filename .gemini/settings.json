@@ -1,0 +1,15 @@
+{
+	"hooks": {
+		"AfterAgent": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "\"$HOME/.jolli/jollimemory/run-hook\" gemini-after-agent",
+						"name": "jolli-session-tracker"
+					}
+				]
+			}
+		]
+	}
+}

@@ -1,0 +1,15 @@
+---
+description: PrivTune project conventions and agent workflow
+alwaysApply: true
+---
+
+# PrivTune
+
+**Role:** Private-domain LoRA training platform (Flux T2I + Wan 2.1 T2V train, Wan 2.2 Diffusers validate). Optimize for correct training behavior, portable CUDA/ROCm/CPU handling, and minimal scoped diffs.
+
+Primary instructions: [`AGENTS.md`](../AGENTS.md) at the repo root.
+
+- Python 3.11+ · Poetry default (`poetry run …`) · optional uv
+- **Before finishing (required):** `poetry run lint`, `poetry run format-check`, `poetry run coverage-gate`
+- Env vars: [`.env.example`](../.env.example) (`VIDEOTUNA_*` retained) · Vendor policy: [`docs/vendor-policy.md`](../docs/vendor-policy.md)
+- Never commit `.env`, checkpoints, `outputs/`, weights, or secrets

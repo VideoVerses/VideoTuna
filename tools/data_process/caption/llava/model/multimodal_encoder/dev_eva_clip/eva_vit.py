@@ -6,16 +6,12 @@
 # https://github.com/facebookresearch/dino
 # --------------------------------------------------------'
 # not tested yet
-import math
 import time
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torch.utils.checkpoint as checkpoint
 import torchvision
 from llava.utils import rank0_print
-from timm.models.layers import drop_path, to_2tuple, trunc_normal_
 from transformers import CLIPImageProcessor
 
 from .eva_clip import create_model_and_transforms, get_model_config
@@ -43,7 +39,7 @@ class EvaViTWrapper(nn.Module):
         elif getattr(args, "unfreeze_mm_vision_tower", False):
             # TODO: better detector is needed.
             rank0_print(
-                f"The checkpoint seems to contain `vision_tower` weights: `unfreeze_mm_vision_tower`: True."
+                "The checkpoint seems to contain `vision_tower` weights: `unfreeze_mm_vision_tower`: True."
             )
             self.load_model()
         elif (
@@ -51,7 +47,7 @@ class EvaViTWrapper(nn.Module):
             and "mm_vision_tower" in args.mm_tunable_parts
         ):
             rank0_print(
-                f"The checkpoint seems to contain `vision_tower` weights: `mm_tunable_parts` contains `mm_vision_tower`."
+                "The checkpoint seems to contain `vision_tower` weights: `mm_tunable_parts` contains `mm_vision_tower`."
             )
             self.load_model()
 

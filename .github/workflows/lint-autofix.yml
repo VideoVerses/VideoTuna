@@ -1,0 +1,43 @@
+name: Lint autofix
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: lint-autofix-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  autofix:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
+
+      # Install ruff only (no Poetry / torch). Pin matches poetry.lock (0.6.9).
+      # Mirrors scripts/__init__.py code_format() targets and command order.
+      - name: Install ruff
+        uses: astral-sh/ruff-action@v4.0.0
+        with:
+          args: "--version"
+          version: "0.6.9"
+
+      - name: Apply lint and format fixes
+        run: |
+          ruff check --fix videotuna tests scripts tools
+          ruff check --select I --fix .
+          ruff format .
+
+      - uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: "style: apply ruff lint and format fixes"
+          commit_author: "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"

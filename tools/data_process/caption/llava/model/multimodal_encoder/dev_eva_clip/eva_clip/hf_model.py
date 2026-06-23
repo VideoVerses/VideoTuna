@@ -1,4 +1,4 @@
-""" huggingface model adapter
+"""huggingface model adapter
 
 Wraps HuggingFace transformers (https://github.com/huggingface/transformers) models for use as a text tower in CLIP model.
 """
@@ -8,7 +8,6 @@ import re
 import torch
 import torch.nn as nn
 from torch import TensorType
-from torch.nn import functional as F
 
 try:
     import transformers
@@ -24,7 +23,7 @@ try:
         BaseModelOutputWithPooling,
         BaseModelOutputWithPoolingAndCrossAttentions,
     )
-except ImportError as e:
+except ImportError:
     transformers = None
 
     class BaseModelOutput:
@@ -82,7 +81,6 @@ class ClsPooler(nn.Module):
         self.use_pooler_output = use_pooler_output
 
     def forward(self, x: BaseModelOutput, attention_mask: TensorType):
-
         if (
             self.use_pooler_output
             and isinstance(

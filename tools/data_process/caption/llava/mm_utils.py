@@ -5,9 +5,10 @@ import re
 from io import BytesIO
 
 import torch
-from llava.constants import IMAGE_TOKEN_INDEX
 from PIL import Image
 from transformers import StoppingCriteria
+
+from llava.constants import IMAGE_TOKEN_INDEX
 
 
 def resize_and_center_crop(image, shortest_edge_length):
@@ -159,8 +160,9 @@ def select_best_resolution(original_size, possible_resolutions):
     for width, height in possible_resolutions:
         # Calculate the downscaled size to keep the aspect ratio
         scale = min(width / original_width, height / original_height)
-        downscaled_width, downscaled_height = int(original_width * scale), int(
-            original_height * scale
+        downscaled_width, downscaled_height = (
+            int(original_width * scale),
+            int(original_height * scale),
         )
 
         # Calculate effective and wasted resolutions
@@ -297,7 +299,7 @@ def process_anyres_image(image, processor, grid_pinpoints):
     if isinstance(grid_pinpoints, str) and "x" in grid_pinpoints:
         try:
             patch_size = processor.size[0]
-        except Exception as e:
+        except Exception:
             patch_size = processor.size["shortest_edge"]
         assert patch_size in [
             224,

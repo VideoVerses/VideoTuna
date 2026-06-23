@@ -1,8 +1,0 @@
-imageio>=2.34.1
-pyiqa==0.1.10
-scikit-learn
-scikit-image
-lvis
-boto3
-easydict
-fairscale

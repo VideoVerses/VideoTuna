@@ -655,7 +655,7 @@ class SigLipVisionTower(nn.Module):
         elif getattr(vision_tower_cfg, "unfreeze_mm_vision_tower", False):
             # TODO: better detector is needed.
             rank0_print(
-                f"The checkpoint seems to contain `vision_tower` weights: `unfreeze_mm_vision_tower`: True."
+                "The checkpoint seems to contain `vision_tower` weights: `unfreeze_mm_vision_tower`: True."
             )
             self.load_model()
         elif (
@@ -663,7 +663,7 @@ class SigLipVisionTower(nn.Module):
             and "mm_vision_tower" in vision_tower_cfg.mm_tunable_parts
         ):
             rank0_print(
-                f"The checkpoint seems to contain `vision_tower` weights: `mm_tunable_parts` contains `mm_vision_tower`."
+                "The checkpoint seems to contain `vision_tower` weights: `mm_tunable_parts` contains `mm_vision_tower`."
             )
             self.load_model()
         else:

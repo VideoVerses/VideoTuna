@@ -4,17 +4,15 @@ import os
 from collections import OrderedDict
 from typing import Callable, Optional, Sequence
 
-import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
 
 try:
-    from timm.models.layers import trunc_normal_
+    pass
 except:
-    from timm.layers import trunc_normal_
+    pass
 
-from .rope import VisionRotaryEmbedding, VisionRotaryEmbeddingFast
 from .utils import to_2tuple
 
 if os.getenv("ENV_TYPE") == "deepspeed":

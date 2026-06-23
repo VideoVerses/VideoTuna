@@ -16,6 +16,8 @@ import torch
 import uvicorn
 from fastapi import BackgroundTasks, FastAPI, Request
 from fastapi.responses import StreamingResponse
+from transformers import TextIteratorStreamer
+
 from llava.constants import (
     DEFAULT_IM_END_TOKEN,
     DEFAULT_IM_START_TOKEN,
@@ -31,7 +33,6 @@ from llava.mm_utils import (
 )
 from llava.model.builder import load_pretrained_model
 from llava.utils import build_logger, pretty_print_semaphore, server_error_msg
-from transformers import TextIteratorStreamer
 
 GB = 1 << 30
 
@@ -43,7 +44,6 @@ model_semaphore = None
 
 
 def heart_beat_worker(controller):
-
     while True:
         time.sleep(WORKER_HEART_BEAT_INTERVAL)
         controller.send_heart_beat()
@@ -226,13 +226,16 @@ class ModelWorker:
         )
 
         if max_new_tokens < 1:
-            yield json.dumps(
-                {
-                    "text": ori_prompt
-                    + "Exceeds max token length. Please start a new conversation, thanks.",
-                    "error_code": 0,
-                }
-            ).encode() + b"\0"
+            yield (
+                json.dumps(
+                    {
+                        "text": ori_prompt
+                        + "Exceeds max token length. Please start a new conversation, thanks.",
+                        "error_code": 0,
+                    }
+                ).encode()
+                + b"\0"
+            )
             return
 
         thread = Thread(

@@ -13,7 +13,7 @@ try:
 except:
     from timm.layers import drop_path, to_2tuple, trunc_normal_
 
-from .rope import VisionRotaryEmbedding, VisionRotaryEmbeddingFast
+from .rope import VisionRotaryEmbeddingFast
 from .transformer import PatchDropout
 
 if os.getenv("ENV_TYPE") == "deepspeed":
@@ -214,7 +214,6 @@ class Attention(nn.Module):
             k = k.reshape(B, N, self.num_heads, -1).permute(0, 2, 1, 3)
             v = v.reshape(B, N, self.num_heads, -1).permute(0, 2, 1, 3)
         else:
-
             qkv_bias = None
             if self.q_bias is not None:
                 qkv_bias = torch.cat(
@@ -292,7 +291,6 @@ class Attention(nn.Module):
 
 
 class Block(nn.Module):
-
     def __init__(
         self,
         dim,
@@ -427,7 +425,6 @@ class PatchEmbed(nn.Module):
 
 
 class RelativePositionBias(nn.Module):
-
     def __init__(self, window_size, num_heads):
         super().__init__()
         self.window_size = window_size
@@ -662,7 +659,6 @@ class EVAVisionTransformer(nn.Module):
         )
 
     def forward_features(self, x, return_all_features=False):
-
         x = self.patch_embed(x)
         batch_size, seq_len, _ = x.size()
 

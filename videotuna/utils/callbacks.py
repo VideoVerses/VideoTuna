@@ -1,29 +1,23 @@
-import datetime
-import logging
 import os
 import time
-
-import numpy as np
-from einops import rearrange
-from omegaconf import OmegaConf
-from PIL import Image
+from typing import Any, Optional, Union
 from weakref import proxy
-from collections import OrderedDict
-from typing_extensions import override
-from typing import Any, Literal, Optional, Union
-from loguru import logger
-
-mainlogger = logging.getLogger("mainlogger")
 
 import pytorch_lightning as pl
 import torch
 import torchvision
-from torch import Tensor
 from pytorch_lightning.callbacks import Callback
 from pytorch_lightning.utilities import rank_zero_info, rank_zero_only
 from pytorch_lightning.utilities.types import STEP_OUTPUT
+from torch import Tensor
+from typing_extensions import override
+
+from videotuna.utils.device_utils import empty_accelerator_cache, gpu_is_available
+from videotuna.utils.logging_config import bound_logger
 
 from .save_video import log_local, prepare_to_log
+
+mainlogger = bound_logger(phase="t2v", flow="wanvideo")
 
 
 class LoraModelCheckpoint(pl.callbacks.ModelCheckpoint):
@@ -55,17 +49,31 @@ class LoraModelCheckpoint(pl.callbacks.ModelCheckpoint):
 
 
 class VideoTunaModelCheckpoint(pl.callbacks.ModelCheckpoint):
-    def __init__(self, 
-                 save_flow: bool = True,
-                 save_only_selected_model: bool = True,
-                 selected_model: Optional[Union[str, list]] = None,
-                 *args, **kwargs):
-        assert save_flow or save_only_selected_model, "At least one of `save_flow` and `save_only_trained_model` should be True."
+    def __init__(
+        self,
+        save_flow: bool = True,
+        save_only_selected_model: bool = True,
+        selected_model: Optional[Union[str, list]] = None,
+        *args,
+        **kwargs,
+    ):
+        assert (
+            save_flow or save_only_selected_model
+        ), "At least one of `save_flow` and `save_only_trained_model` should be True."
         super().__init__(*args, **kwargs)
         self.save_flow = save_flow
         self.save_only_selected_model = save_only_selected_model
-        self.selected_model = selected_model
-    
+        if save_only_selected_model and not selected_model:
+            raise ValueError(
+                "selected_model must be set when save_only_selected_model is True"
+            )
+        if isinstance(selected_model, str):
+            self.selected_model: list[str] = [selected_model]
+        elif selected_model is None:
+            self.selected_model = []
+        else:
+            self.selected_model = list(selected_model)
+
     @override
     def on_train_batch_end(
         self,
@@ -75,19 +83,25 @@ class VideoTunaModelCheckpoint(pl.callbacks.ModelCheckpoint):
         batch: Any,
         batch_idx: int,
     ) -> None:
-        """Save checkpoint on train batch end if we meet the criteria for `every_n_train_steps`"""
+        """Save checkpoint on train batch end when `every_n_train_steps` met."""
         if self._should_skip_saving_checkpoint(trainer):
             return
-        skip_batch = self._every_n_train_steps < 1 or (trainer.global_step % self._every_n_train_steps != 0)
+        skip_batch = self._every_n_train_steps < 1 or (
+            trainer.global_step % self._every_n_train_steps != 0
+        )
 
         train_time_interval = self._train_time_interval
         skip_time = True
         now = time.monotonic()
         if train_time_interval:
             prev_time_check = self._last_time_checked
-            skip_time = prev_time_check is None or (now - prev_time_check) < train_time_interval.total_seconds()
+            skip_time = (
+                prev_time_check is None
+                or (now - prev_time_check) < train_time_interval.total_seconds()
+            )
             # in case we have time differences across ranks
-            # broadcast the decision on whether to checkpoint from rank 0 to avoid possible hangs
+            # broadcast the decision on whether to checkpoint from rank 0 to avoid
+            # possible hangs
             skip_time = trainer.strategy.broadcast(skip_time)
 
         if skip_batch and skip_time:
@@ -96,14 +110,18 @@ class VideoTunaModelCheckpoint(pl.callbacks.ModelCheckpoint):
             self._last_time_checked = now
 
         monitor_candidates = self._monitor_candidates(trainer)
-        self._save_last_checkpoint(trainer, monitor_candidates, pl_module)  # only save the last checkpoint
-    
+        self._save_last_checkpoint(trainer, monitor_candidates)
+
     @override
-    def on_train_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
+    def on_train_epoch_end(
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
+    ) -> None:
         pass
 
     @override
-    def on_validation_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
+    def on_validation_end(
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
+    ) -> None:
         pass
 
     @override
@@ -111,26 +129,38 @@ class VideoTunaModelCheckpoint(pl.callbacks.ModelCheckpoint):
         self,
         trainer: "pl.Trainer",
         monitor_candidates: dict[str, Tensor],
-        pl_module: "pl.LightningModule",
     ) -> None:
         if not self.save_last:
             return
 
-        # filepath = self.format_checkpoint_name(monitor_candidates, self.CHECKPOINT_NAME_LAST)
+        pl_module = trainer.lightning_module
+        if pl_module is None:
+            return
+
+        # filepath = self.format_checkpoint_name(monitor_candidates,
+        # self.CHECKPOINT_NAME_LAST)
         filepath = self._format_ckpt_path(monitor_candidates, prefix="flow")
 
         if self._enable_version_counter:
             version_cnt = self.STARTING_VERSION
-            while self.file_exists(filepath, trainer) and filepath != self.last_model_path:
-                filepath = self.format_checkpoint_name(monitor_candidates, self.CHECKPOINT_NAME_LAST, ver=version_cnt)
+            while (
+                self.file_exists(filepath, trainer) and filepath != self.last_model_path
+            ):
+                filepath = self.format_checkpoint_name(
+                    monitor_candidates, self.CHECKPOINT_NAME_LAST, ver=version_cnt
+                )
                 version_cnt += 1
 
         # set the last model path before saving because it will be part of the state.
         previous, self.last_model_path = self.last_model_path, filepath
-        if self.save_last == "link" and self._last_checkpoint_saved and self.save_top_k != 0:
+        if (
+            self.save_last == "link"
+            and self._last_checkpoint_saved
+            and self.save_top_k != 0
+        ):
             self._link_checkpoint(trainer, self._last_checkpoint_saved, filepath)
         else:
-            self._save_checkpoint(trainer, filepath, pl_module)
+            self._save_checkpoint(trainer, filepath)
         if previous and self._should_remove_checkpoint(trainer, previous, filepath):
             self._remove_checkpoint(trainer, previous)
 
@@ -139,10 +169,13 @@ class VideoTunaModelCheckpoint(pl.callbacks.ModelCheckpoint):
         self,
         trainer: "pl.Trainer",
         filepath: str,
-        pl_module: "pl.LightningModule",
     ) -> None:
+        pl_module = trainer.lightning_module
+        if pl_module is None:
+            return
         if self.save_flow:
-            # save all the state including the model, optimizer, and any state that the user has added
+            # save all the state including the model, optimizer, and any state that the
+            # user has added
             self._save_flow_checkpoint(trainer, pl_module, filepath)
         if self.save_only_selected_model:
             # only save the trained parameters
@@ -155,86 +188,111 @@ class VideoTunaModelCheckpoint(pl.callbacks.ModelCheckpoint):
         if trainer.is_global_zero:
             for logger in trainer.loggers:
                 logger.after_save_checkpoint(proxy(self))
-    
+
     def _save_flow_checkpoint(
-        self,
-        trainer: "pl.Trainer",
-        pl_module: "pl.LightningModule",
-        filepath
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", filepath
     ) -> None:
         """Save the whole model."""
         # check the save path
-        original_dirpath_list = filepath.split('/')
-        new_dirpath_list = original_dirpath_list[:-1] + ['flow']
-        new_dirpath = '/'.join(new_dirpath_list)
+        original_dirpath_list = filepath.split("/")
+        new_dirpath_list = original_dirpath_list[:-1] + ["flow"]
+        new_dirpath = "/".join(new_dirpath_list)
         if not os.path.exists(new_dirpath):
             os.makedirs(new_dirpath)
 
         new_filepath = os.path.join(new_dirpath, original_dirpath_list[-1])
         trainer.save_checkpoint(new_filepath, self.save_weights_only)
-    
+
     @rank_zero_only
     def _save_training_checkpoint(
-        self,
-        trainer: "pl.Trainer",
-        pl_module: "pl.LightningModule",
-        filepath
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", filepath
     ) -> None:
         """Save only the trained model."""
         # check the save path
-        original_dirpath_list = filepath.split('/')
-        new_dirpath_list = original_dirpath_list[:-1] + ['only_trained_model']
-        new_dirpath = '/'.join(new_dirpath_list)
+        original_dirpath_list = filepath.split("/")
+        new_dirpath_list = original_dirpath_list[:-1] + ["only_trained_model"]
+        new_dirpath = "/".join(new_dirpath_list)
         if not os.path.exists(new_dirpath):
             os.makedirs(new_dirpath)
 
-        if trainer.strategy.__class__.__name__  == "DeepSpeedStrategy":
-            from deepspeed.utils.zero_to_fp32 import get_fp32_state_dict_from_zero_checkpoint
+        if trainer.strategy.__class__.__name__ == "DeepSpeedStrategy":
+            from deepspeed.utils.zero_to_fp32 import (
+                get_fp32_state_dict_from_zero_checkpoint,
+            )
+
             original_filename = original_dirpath_list[-1]
-            deepspeed_flow_path = original_dirpath_list[:-1] + ['flow', original_filename]
-            state_dict = get_fp32_state_dict_from_zero_checkpoint('/'.join(deepspeed_flow_path))
-    
+            deepspeed_flow_path = original_dirpath_list[:-1] + [
+                "flow",
+                original_filename,
+            ]
+            state_dict = get_fp32_state_dict_from_zero_checkpoint(
+                "/".join(deepspeed_flow_path)
+            )
+            if state_dict is None:
+                raise RuntimeError(
+                    "Failed to load DeepSpeed zero checkpoint from "
+                    f"{'/'.join(deepspeed_flow_path)}"
+                )
+
             for seleted in self.selected_model:
-                new_state_dict = {name.replace(f"{seleted}.", ""): param for name, param in state_dict.items() if name.startswith(seleted)}
-                save_dict = {'state_dict': new_state_dict}
-                new_filename = original_filename.replace('flow', seleted)
+                new_state_dict = {
+                    name.replace(f"{seleted}.", ""): param
+                    for name, param in state_dict.items()
+                    if name.startswith(seleted)
+                }
+                save_dict = {"state_dict": new_state_dict}
+                new_filename = original_filename.replace("flow", seleted)
                 new_filepath = os.path.join(new_dirpath, new_filename)
                 torch.save(save_dict, new_filepath)
-                logger.info(f"Deepspeed Saving model {seleted} with {len(new_state_dict)} params to {new_filepath}")
+                mainlogger.info(
+                    "Deepspeed Saving model {} with {} params to {}",
+                    seleted,
+                    len(new_state_dict),
+                    new_filepath,
+                )
         else:
             original_filename = original_dirpath_list[-1]
             for seleted in self.selected_model:
                 model = getattr(pl_module, seleted)
                 state_dict = model.state_dict()
-                save_dict = {'state_dict': state_dict}
-                new_filename = original_filename.replace('flow', seleted)
+                save_dict = {"state_dict": state_dict}
+                new_filename = original_filename.replace("flow", seleted)
                 new_filepath = os.path.join(new_dirpath, new_filename)
                 torch.save(save_dict, new_filepath)
-                logger.info(f"Saving model {seleted} with {len(state_dict)} params  to {new_filepath}")
-    
-    def _format_ckpt_path(
-        self,
-        monitor_candidates: dict[str, Tensor],
-        prefix: str = None
-    ) -> str:
-        """Format the checkpoint path with the current values of monitored quantities."""
-        epoch = monitor_candidates.get("epoch").item()
-        step = monitor_candidates.get("step").item()
+                mainlogger.info(
+                    "Saving model {} with {} params to {}",
+                    seleted,
+                    len(state_dict),
+                    new_filepath,
+                )
 
-        if 'epoch' in self.filename and 'step' in self.filename:
-            format_filename = self.filename.format(epoch=epoch, step=step)
-        elif 'epoch' in self.filename and 'step' not in self.filename:
-            format_filename = self.filename.format(epoch=epoch)
-        elif 'epoch' not in self.filename and 'step' in self.filename:
-            format_filename = self.filename.format(step=step)
+    def _format_ckpt_path(
+        self, monitor_candidates: dict[str, Tensor], prefix: str | None = None
+    ) -> str:
+        """Format checkpoint path with current values of monitored quantities."""
+        epoch_tensor = monitor_candidates.get("epoch")
+        step_tensor = monitor_candidates.get("step")
+        assert epoch_tensor is not None and step_tensor is not None
+        epoch = epoch_tensor.item()
+        step = step_tensor.item()
+
+        filename = self.filename or ""
+        if "epoch" in filename and "step" in filename:
+            format_filename = filename.format(epoch=epoch, step=step)
+        elif "epoch" in filename and "step" not in filename:
+            format_filename = filename.format(epoch=epoch)
+        elif "epoch" not in filename and "step" in filename:
+            format_filename = filename.format(step=step)
         else:
-            format_filename = self.filename
-        
+            format_filename = filename
+
         if prefix is not None:
-            format_filename = prefix + '-' + format_filename + '.ckpt'
-    
-        filepath = os.path.join(self.dirpath, format_filename)
-        
+            format_filename = prefix + "-" + format_filename + ".ckpt"
+
+        dirpath = self.dirpath
+        assert dirpath is not None
+        filepath = os.path.join(dirpath, format_filename)
+
         return filepath
 
 
@@ -278,7 +336,7 @@ class ImageLogger(Callback):
                 n = video.shape[0]
                 video = video.permute(2, 0, 1, 3, 4)  # t,n,c,h,w
                 frame_grids = [
-                    torchvision.utils.make_grid(framesheet, nrow=int(n))
+                    torchvision.utils.make_grid(framesheet, nrow=n)
                     for framesheet in video
                 ]  # [3, n*h, 1*w]
                 grid = torch.stack(
@@ -291,7 +349,8 @@ class ImageLogger(Callback):
                 )
             elif isinstance(value, torch.Tensor) and value.dim() == 4:
                 img = value
-                grid = torchvision.utils.make_grid(img, nrow=int(n))
+                n = img.shape[0]
+                grid = torchvision.utils.make_grid(img, nrow=n)
                 grid = (grid + 1.0) / 2.0  # -1,1 -> 0,1; c,h,w
                 pl_module.logger.experiment.add_image(
                     tag, grid, global_step=global_step
@@ -314,13 +373,13 @@ class ImageLogger(Callback):
 
             ## process: move to CPU and clamp
             batch_logs = prepare_to_log(batch_logs, self.max_images, self.clamp)
-            torch.cuda.empty_cache()
+            empty_accelerator_cache()
 
             filename = "ep{}_idx{}_rank{}".format(
                 pl_module.current_epoch, batch_idx, pl_module.global_rank
             )
             if self.to_local:
-                mainlogger.info("Log [%s] batch <%s> to local ..." % (split, filename))
+                mainlogger.info("Log [{}] batch <{}> to local ...", split, filename)
                 filename = "gs{}_".format(pl_module.global_step) + filename
                 log_local(
                     batch_logs,
@@ -330,7 +389,7 @@ class ImageLogger(Callback):
                 )
             else:
                 mainlogger.info(
-                    "Log [%s] batch <%s> to tensorboard ..." % (split, filename)
+                    "Log [{}] batch <{}> to tensorboard ...", split, filename
                 )
                 self.log_to_tensorboard(
                     pl_module, batch_logs, filename, split, save_fps=10
@@ -349,36 +408,127 @@ class ImageLogger(Callback):
     def on_validation_batch_end(
         self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx=None
     ):
-        ## different with validation_step() that saving the whole validation set and only keep the latest,
-        ## it records the performance of every validation (without overwritten) by only keep a subset
+        # # different with validation_step() that saving the whole validation set and
+        # only keep the latest,
+        # # it records the performance of every validation (without overwritten) by only
+        # keep a subset
         if self.batch_freq != -1 and pl_module.logdir:
             self.log_batch_imgs(pl_module, batch, batch_idx, split="val")
         if hasattr(pl_module, "calibrate_grad_norm"):
             if (
                 pl_module.calibrate_grad_norm and batch_idx % 25 == 0
             ) and batch_idx > 0:
-                self.log_gradients(trainer, pl_module, batch_idx=batch_idx)
+                if hasattr(self, "log_gradients"):
+                    self.log_gradients(trainer, pl_module, batch_idx=batch_idx)
+
+
+class TrainingMetricsCallback(Callback):
+    """Log per-epoch wall time and peak GPU memory to metrics.json in run dir."""
+
+    def __init__(self, save_dir: Optional[str] = None):
+        self.save_dir = save_dir
+        self._epoch_start: float = 0.0
+        self._epoch_peak_gb: float = 0.0
+        self.metrics: list[dict[str, float]] = []
+
+    def _gpu_index(self, trainer: "pl.Trainer") -> int:
+        device = trainer.strategy.root_device
+        return device.index if device.type == "cuda" else 0
+
+    def on_train_epoch_start(
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
+    ):
+        if torch.cuda.is_available():
+            gpu_index = self._gpu_index(trainer)
+            torch.cuda.reset_peak_memory_stats(gpu_index)
+        self._epoch_start = time.time()
+        self._epoch_peak_gb = 0.0
+
+    def on_train_batch_end(
+        self,
+        trainer: "pl.Trainer",
+        pl_module: "pl.LightningModule",
+        outputs: STEP_OUTPUT,
+        batch: Any,
+        batch_idx: int,
+    ):
+        if not torch.cuda.is_available():
+            return
+        gpu_index = self._gpu_index(trainer)
+        peak_gb = torch.cuda.max_memory_allocated(gpu_index) / (1024**3)
+        self._epoch_peak_gb = max(self._epoch_peak_gb, peak_gb)
+
+    def on_train_epoch_end(
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
+    ):
+        epoch_time_s = time.time() - self._epoch_start
+        entry = {
+            "epoch": float(trainer.current_epoch),
+            "epoch_time_s": round(epoch_time_s, 4),
+            "peak_vram_gb": round(self._epoch_peak_gb, 4),
+        }
+        self.metrics.append(entry)
+        rank_zero_info(
+            f"Epoch {trainer.current_epoch}: time={entry['epoch_time_s']}s "
+            f"peak_vram={entry['peak_vram_gb']}GB"
+        )
+        if trainer.logger is not None:
+            trainer.logger.log_metrics(
+                {
+                    "epoch_time_s": entry["epoch_time_s"],
+                    "peak_vram_gb": entry["peak_vram_gb"],
+                },
+                step=trainer.global_step,
+            )
+        save_dir = self.save_dir or getattr(pl_module, "logdir", None)
+        if save_dir and trainer.global_rank == 0:
+            import json
+
+            os.makedirs(save_dir, exist_ok=True)
+            metrics_path = os.path.join(save_dir, "metrics.json")
+            with open(metrics_path, "w") as f:
+                json.dump({"epochs": self.metrics}, f, indent=2)
 
 
 class CUDACallback(Callback):
     # see https://github.com/SeanNaren/minGPT/blob/master/mingpt/callback.py
-    def on_train_batch_start(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", batch: Any, batch_idx: int):
+    def on_train_batch_start(
+        self,
+        trainer: "pl.Trainer",
+        pl_module: "pl.LightningModule",
+        batch: Any,
+        batch_idx: int,
+    ):
+        if not gpu_is_available():
+            self.start_time = time.time()
+            return
         # Reset the memory use counter
-        # lightning update
         gpu_index = trainer.strategy.root_device.index
         torch.cuda.reset_peak_memory_stats(gpu_index)
         torch.cuda.synchronize(gpu_index)
         self.start_time = time.time()
 
-    def on_train_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", outputs: STEP_OUTPUT, batch: Any, batch_idx: int):
+    def on_train_batch_end(
+        self,
+        trainer: "pl.Trainer",
+        pl_module: "pl.LightningModule",
+        outputs: STEP_OUTPUT,
+        batch: Any,
+        batch_idx: int,
+    ):
+        epoch_time = time.time() - self.start_time
+        if not gpu_is_available():
+            rank_zero_info(f"Average Epoch time: {epoch_time:.2f} seconds")
+            return
         gpu_index = trainer.strategy.root_device.index
         torch.cuda.synchronize(gpu_index)
         max_memory = torch.cuda.max_memory_allocated(gpu_index) / 2**20
-        epoch_time = time.time() - self.start_time
 
         try:
-            max_memory = trainer.training_type_plugin.reduce(max_memory)
-            epoch_time = trainer.training_type_plugin.reduce(epoch_time)
+            training_type_plugin = getattr(trainer, "training_type_plugin", None)
+            if training_type_plugin is not None:
+                max_memory = training_type_plugin.reduce(max_memory)
+                epoch_time = training_type_plugin.reduce(epoch_time)
 
             rank_zero_info(f"Average Epoch time: {epoch_time:.2f} seconds")
             rank_zero_info(f"Average Peak memory {max_memory:.2f}MiB")

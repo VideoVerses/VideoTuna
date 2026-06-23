@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "suites": [
+    {
+      "configPath": ".agents/skills/jolli-recall/SKILL.md",
+      "tests": [
+        {
+          "id": "3266f96c-3940-4c08-a8f9-0334be69b6e4",
+          "name": "New test",
+          "prompt": "",
+          "expectedBehavior": "",
+          "mustInclude": [],
+          "mustNotInclude": []
+        }
+      ]
+    }
+  ]
+}

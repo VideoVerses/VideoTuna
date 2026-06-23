@@ -1,0 +1,25 @@
+# Smoke preset for domain Flux LoRA (few steps, 512px, offload)
+# Usage:
+#   poetry run python scripts/inference_new.py \
+#     --config configs/inference/presets/flux_domain_lora_smoke.yaml \
+#     --lorackpt results/train/flux-domain-adult/checkpoint-2000 \
+#     --prompt "sks_style, portrait, soft lighting"
+flow:
+  target: videotuna.flow.diffusers_video.DiffusersVideoFlow
+  params:
+    model_family: flux
+    mode: t2i
+    pipeline_only: true
+    model_variant: 1-dev
+    pretrained_model_name_or_path: black-forest-labs/FLUX.1-dev
+inference:
+  mode: t2i
+  ckpt_path: black-forest-labs/FLUX.1-dev
+  savedir: results/t2i/flux-domain-lora-smoke
+  prompt_file: inputs/t2v/prompts.txt
+  height: 512
+  width: 512
+  num_inference_steps: 8
+  unconditional_guidance_scale: 3.5
+  seed: 42
+  enable_model_cpu_offload: true

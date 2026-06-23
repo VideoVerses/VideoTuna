@@ -24,7 +24,7 @@ class HFVisionTower(nn.Module):
             self.image_processor = AutoImageProcessor.from_pretrained(
                 self.vision_tower_name
             )
-        except Exception as e:
+        except Exception:
             if "448" in self.vision_tower_name:
                 image_size = 448
                 # use image processor with conig

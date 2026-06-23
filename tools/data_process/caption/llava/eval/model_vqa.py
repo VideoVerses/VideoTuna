@@ -3,14 +3,12 @@ import json
 import math
 import os
 import re
-from typing import Dict, List, Optional, Sequence
+from typing import Dict
 
 import shortuuid
 import torch
 import transformers
 from llava.constants import (
-    DEFAULT_IM_END_TOKEN,
-    DEFAULT_IM_START_TOKEN,
     DEFAULT_IMAGE_TOKEN,
     IGNORE_INDEX,
     IMAGE_TOKEN_INDEX,
@@ -19,7 +17,6 @@ from llava.conversation import SeparatorStyle, conv_templates
 from llava.mm_utils import (
     KeywordsStoppingCriteria,
     get_model_name_from_path,
-    tokenizer_image_token,
 )
 from llava.model.builder import load_pretrained_model
 from llava.utils import disable_torch_init
@@ -126,7 +123,6 @@ def preprocess_qwen(
 
 
 def eval_model(args):
-
     # Model
     disable_torch_init()
     model_path = os.path.expanduser(args.model_path)
@@ -218,7 +214,6 @@ def eval_model(args):
         ans_file.flush()
 
         if len(line["conversations"]) > 2:
-
             for i in range(2, len(line["conversations"]), 2):
                 input_ids = torch.cat((input_ids, output_ids), dim=1)
 

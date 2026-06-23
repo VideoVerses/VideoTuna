@@ -1,10 +1,9 @@
-import torch
 import torch.nn as nn
 from llava.utils import rank0_print
 
 from .eva_clip_processors import EvaClipImageTrainProcessor
 from .eva_vit import EVAEncoderWrapper
-from .factory import add_model_config, get_model_config, list_models
+from .factory import get_model_config
 
 
 class EvaClipVisionTower(nn.Module):
@@ -22,7 +21,7 @@ class EvaClipVisionTower(nn.Module):
         elif getattr(args, "unfreeze_mm_vision_tower", False):
             # TODO: better detector is needed.
             rank0_print(
-                f"The checkpoint seems to contain `vision_tower` weights: `unfreeze_mm_vision_tower`: True."
+                "The checkpoint seems to contain `vision_tower` weights: `unfreeze_mm_vision_tower`: True."
             )
             self.load_model()
         elif (
@@ -30,7 +29,7 @@ class EvaClipVisionTower(nn.Module):
             and "mm_vision_tower" in args.mm_tunable_parts
         ):
             rank0_print(
-                f"The checkpoint seems to contain `vision_tower` weights: `mm_tunable_parts` contains `mm_vision_tower`."
+                "The checkpoint seems to contain `vision_tower` weights: `mm_tunable_parts` contains `mm_vision_tower`."
             )
             self.load_model()
         else:

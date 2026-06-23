@@ -1,5 +1,3 @@
-import math
-
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
@@ -29,9 +27,7 @@ def gather_features(
     world_size=1,
     use_horovod=False,
 ):
-    assert (
-        has_distributed
-    ), "torch.distributed did not import correctly, please use a PyTorch version with support."
+    assert has_distributed, "torch.distributed did not import correctly, please use a PyTorch version with support."
     if use_horovod:
         assert hvd is not None, "Please install horovod"
         if gather_with_grad:
@@ -84,7 +80,6 @@ def gather_features(
 
 
 class ClipLoss(nn.Module):
-
     def __init__(
         self,
         local_loss=False,

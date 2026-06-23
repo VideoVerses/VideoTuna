@@ -1,12 +1,8 @@
+#!/usr/bin/env bash
+# Flux LoRA fine-tuning via first-party Diffusers trainer (replaces legacy SimpleTuner train_flux.py).
 export TOKENIZERS_PARALLELISM=false
-export CONFIG_PATH="configs/006_flux/config"
-export DATACONFIG_PATH="configs/006_flux/multidatabackend"
-export CONFIG_BACKEND="json"
 
-accelerate launch \
---mixed_precision="bf16" \
---num_processes="1" \
---num_machines="1" \
-scripts/train_flux.py \
---config_path="$CONFIG_PATH.$CONFIG_BACKEND" \
---data_config_path="$DATACONFIG_PATH.$CONFIG_BACKEND" \
+poetry run train-flux-lora \
+  --config_path configs/domain/flux_t2i.json \
+  --data_config_path configs/domain/flux_t2i_data.json \
+  "$@"

@@ -19,6 +19,10 @@ Dataset/
 output/
 outputs/
 /data
+data/t2i/domain/
+data/t2v/domain/
+
+cloud/vast/.env
 
 HPSv2/
 SwissArmyTransformer/
@@ -28,3 +32,5 @@ temp
 
 
 *.outputs
+.jolli/jollimemory
+.jolli/jollimemory/debug.log

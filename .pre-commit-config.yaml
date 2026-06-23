@@ -10,24 +10,24 @@ repos:
         pass_filenames: false
         language: system
         stages: [pre-commit]
-#      - id: linting
-#        name: linting
-#        entry: poetry run lint
-#        pass_filenames: false
-#        language: system
-#        stages: [commit]
-#      - id: type-checking
-#        name: type checking
-#        entry: poetry run type-check
-#        pass_filenames: false
-#        language: system
-#        stages: [commit]
-#      - id: unit-tests
-#        name: unit tests
-#        entry: poetry run test
-#        pass_filenames: false
-#        language: system
-#        stages: [commit]
+      - id: linting
+        name: linting
+        entry: poetry run lint
+        pass_filenames: false
+        language: system
+        stages: [pre-commit]
+      #      - id: type-checking
+      #        name: type checking
+      #        entry: poetry run type-check
+      #        pass_filenames: false
+      #        language: system
+      #        stages: [commit]
+      - id: unit-tests
+        name: unit tests
+        entry: poetry run coverage-gate
+        pass_filenames: false
+        language: system
+        stages: [pre-commit]
   - repo: https://github.com/commitizen-tools/commitizen
     rev: v2.28.0
     hooks:

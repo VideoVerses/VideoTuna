@@ -3,6 +3,9 @@ from io import BytesIO
 
 import requests
 import torch
+from PIL import Image
+from transformers import TextStreamer
+
 from llava.constants import (
     DEFAULT_IM_END_TOKEN,
     DEFAULT_IM_START_TOKEN,
@@ -17,8 +20,6 @@ from llava.mm_utils import (
 )
 from llava.model.builder import load_pretrained_model
 from llava.utils import disable_torch_init
-from PIL import Image
-from transformers import TextStreamer
 
 
 def load_image(image_file):

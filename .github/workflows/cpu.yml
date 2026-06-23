@@ -1,0 +1,37 @@
+name: CPU
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Install dependencies (CPU extra + dev + training)
+        run: poetry install -E cpu --with dev --with training
+
+      - name: Install CPU PyTorch wheels
+        run: poetry run install-cpu-torch
+
+      - name: Verify CPU torch
+        run: poetry run verify-cpu-torch
+
+      - name: Lint
+        run: poetry run lint
+
+      - name: Format check
+        run: poetry run format-check
+
+      - name: Smoke tests + coverage gate
+        run: poetry run coverage-gate

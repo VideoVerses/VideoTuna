@@ -3,7 +3,7 @@ import dataclasses
 import re
 from enum import Enum, auto
 from io import BytesIO
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, List, Union
 
 from PIL import Image
 from transformers import AutoTokenizer

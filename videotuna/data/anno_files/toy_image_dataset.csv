@@ -1,0 +1,17 @@
+path,caption,fps,frames,height,width
+sample.png,"A sample image for dataset tests.",0,1,512,512
+sample2.png,"Another sample image for dataset tests.",0,1,512,512
+sample3.png,"Third sample image for dataset tests.",0,1,512,512
+sample4.png,"Fourth sample image for dataset tests.",0,1,512,512
+sample5.png,"Fifth sample image for dataset tests.",0,1,512,512
+sample6.png,"Sixth sample image for dataset tests.",0,1,512,512
+sample7.png,"Seventh sample image for dataset tests.",0,1,512,512
+sample8.png,"Eighth sample image for dataset tests.",0,1,512,512
+sample9.png,"Ninth sample image for dataset tests.",0,1,512,512
+sample10.png,"Tenth sample image for dataset tests.",0,1,512,512
+sample11.png,"Eleventh sample image for dataset tests.",0,1,512,512
+sample12.png,"Twelfth sample image for dataset tests.",0,1,512,512
+sample13.png,"Thirteenth sample image for dataset tests.",0,1,512,512
+sample14.png,"Fourteenth sample image for dataset tests.",0,1,512,512
+sample15.png,"Fifteenth sample image for dataset tests.",0,1,512,512
+sample16.png,"Sixteenth sample image for dataset tests.",0,1,512,512

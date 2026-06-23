@@ -1,48 +1,49 @@
 import copy
 import logging
+from collections import OrderedDict
+from contextlib import contextmanager
 
+import torch
 from omegaconf import OmegaConf
+from safetensors import safe_open
+
+from videotuna.utils.common_utils import instantiate_from_config
 
 mainlogger = logging.getLogger("mainlogger")
 
-from collections import OrderedDict
 
-import torch
-from safetensors import safe_open
-from torch import nn
-
-from videotuna.utils.common_utils import instantiate_from_config
-from contextlib import contextmanager
-# from lvdm.personalization.lora import net_load_lora
+def net_load_lora(*_args, **_kwargs):
+    raise NotImplementedError("lvdm LoRA loading is unavailable in PrivTune")
 
 
 @contextmanager
-def init_weights_on_device(device = torch.device("meta"), include_buffers :bool = False):
-    
+def init_weights_on_device(device=torch.device("meta"), include_buffers: bool = False):
     old_register_parameter = torch.nn.Module.register_parameter
     if include_buffers:
         old_register_buffer = torch.nn.Module.register_buffer
-    
+
     def register_empty_parameter(module, name, param):
         old_register_parameter(module, name, param)
         if param is not None:
             param_cls = type(module._parameters[name])
             kwargs = module._parameters[name].__dict__
             kwargs["requires_grad"] = param.requires_grad
-            module._parameters[name] = param_cls(module._parameters[name].to(device), **kwargs)
+            module._parameters[name] = param_cls(
+                module._parameters[name].to(device), **kwargs
+            )
 
     def register_empty_buffer(module, name, buffer, persistent=True):
         old_register_buffer(module, name, buffer, persistent=persistent)
         if buffer is not None:
             module._buffers[name] = module._buffers[name].to(device)
-            
+
     def patch_tensor_constructor(fn):
         def wrapper(*args, **kwargs):
             kwargs["device"] = device
             return fn(*args, **kwargs)
 
         return wrapper
-    
+
     if include_buffers:
         tensor_constructors_to_patch = {
             torch_function_name: getattr(torch, torch_function_name)
@@ -50,19 +51,26 @@ def init_weights_on_device(device = torch.device("meta"), include_buffers :bool 
         }
     else:
         tensor_constructors_to_patch = {}
-    
+
     try:
         torch.nn.Module.register_parameter = register_empty_parameter
         if include_buffers:
             torch.nn.Module.register_buffer = register_empty_buffer
         for torch_function_name in tensor_constructors_to_patch.keys():
-            setattr(torch, torch_function_name, patch_tensor_constructor(getattr(torch, torch_function_name)))
+            setattr(
+                torch,
+                torch_function_name,
+                patch_tensor_constructor(getattr(torch, torch_function_name)),
+            )
         yield
     finally:
         torch.nn.Module.register_parameter = old_register_parameter
         if include_buffers:
             torch.nn.Module.register_buffer = old_register_buffer
-        for torch_function_name, old_torch_function in tensor_constructors_to_patch.items():
+        for (
+            torch_function_name,
+            old_torch_function,
+        ) in tensor_constructors_to_patch.items():
             setattr(torch, torch_function_name, old_torch_function)
 
 
@@ -79,9 +87,9 @@ def load_from_pretrainedSD_checkpoint(
     model, pretained_ckpt, expand_to_3d=True, adapt_keyname=False
 ):
     mainlogger.info(
-        f"------------------- Load pretrained SD weights -------------------"
+        "------------------- Load pretrained SD weights -------------------"
     )
-    sd_state_dict = torch.load(pretained_ckpt, map_location=f"cpu")
+    sd_state_dict = torch.load(pretained_ckpt, map_location="cpu")
     if "state_dict" in list(sd_state_dict.keys()):
         sd_state_dict = sd_state_dict["state_dict"]
     model_state_dict = model.state_dict()
@@ -95,7 +103,8 @@ def load_from_pretrainedSD_checkpoint(
     mainlogger.info(f"Num of parameters of source model: {len(sd_state_dict.keys())}")
 
     if adapt_keyname:
-        ## adapting to standard 2d network: modify the key name because of the add of temporal-attention
+        # # adapting to standard 2d network: modify the key name because of the add of
+        # temporal-attention
         mapping_dict = {
             "middle_block.2": "middle_block.3",
             "output_blocks.5.2": "output_blocks.5.3",
@@ -133,8 +142,8 @@ def load_from_pretrainedSD_checkpoint(
     # load the new state dict
     try:
         model.load_state_dict(model_state_dict)
-    except:
-        state_dict = torch.load(model_state_dict, map_location=f"cpu")
+    except Exception:
+        state_dict = torch.load(model_state_dict, map_location="cpu")
         if "state_dict" in list(state_dict.keys()):
             state_dict = state_dict["state_dict"]
         model_state_dict = model.state_dict()
@@ -146,9 +155,7 @@ def load_from_pretrainedSD_checkpoint(
         model_state_dict.update(state_dict)
         model.load_state_dict(model_state_dict)
 
-    mainlogger.info(
-        f"---------------------------- Finish! ----------------------------"
-    )
+    mainlogger.info("---------------------------- Finish! ----------------------------")
     return model, empty_paras
 
 
@@ -209,13 +216,14 @@ def load_partial_weights(
     model_dict_ori = copy.deepcopy(model_dict)
 
     mainlogger.info(
-        f"-------------- Load pretrained LDM weights --------------------------"
+        "-------------- Load pretrained LDM weights --------------------------"
     )
     mainlogger.info(f"Num of parameters of target model: {len(model_dict.keys())}")
     mainlogger.info(f"Num of parameters of source model: {len(pretrained_dict.keys())}")
 
     if adapt_keyname:
-        ## adapting to menghan's standard 2d network: modify the key name because of the add of temporal-attention
+        # # adapting to menghan's standard 2d network: modify the key name because of
+        # the add of temporal-attention
         mapping_dict = {
             "middle_block.2": "middle_block.3",
             "output_blocks.5.2": "output_blocks.5.3",
@@ -259,7 +267,7 @@ def load_partial_weights(
     # load the new state dict
     try:
         model2.load_state_dict(model_dict)
-    except:
+    except Exception:
         # if parameter size mismatch, skip them
         skipped = []
         for n, p in model_dict.items():
@@ -278,7 +286,7 @@ def load_partial_weights(
         empty_paras += skipped
         mainlogger.info(f"Empty parameters: {len(empty_paras)} ")
 
-    mainlogger.info(f"-------------- Finish! --------------------------")
+    mainlogger.info("-------------- Finish! --------------------------")
     return model2, empty_paras
 
 
@@ -288,7 +296,8 @@ def load_autoencoder(model, config_path=None, ckpt_path=None, device=None):
     if ckpt_path is None:
         ckpt_path = "models/ldm/text2img-large/model.ckpt"
     # if device is None:
-    #     device = torch.device(f"cuda:{dist.get_rank()}") if torch.cuda.is_available() else torch.device("cpu")
+    #     device = torch.device(f"cuda:{dist.get_rank()}") if torch.cuda.is_available()
+    # else torch.device("cpu")
 
     pretrained_ldm = init_and_load_ldm_model(config_path, ckpt_path, device)
     autoencoder_dict = {}
@@ -336,7 +345,8 @@ def convert_lora(
     alpha=0.6,
 ):
     # load base model
-    # pipeline = StableDiffusionPipeline.from_pretrained(base_model_path, torch_dtype=torch.float32)
+    # pipeline = StableDiffusionPipeline.from_pretrained(base_model_path,
+    # torch_dtype=torch.float32)
 
     # load LoRA weight from .safetensors
     # state_dict = load_file(checkpoint_path)
@@ -359,7 +369,8 @@ def convert_lora(
 
         print(f"key={key}")
         if "text" in key and LORA_PREFIX_TEXT_ENCODER in key:
-            # layer_infos = key.split(".")[0].split(LORA_PREFIX_TEXT_ENCODER + "_")[-1].split("_")
+            # layer_infos = key.split(".")[0].split(LORA_PREFIX_TEXT_ENCODER +
+            # "_")[-1].split("_")
             layer_infos = ["cond_stage_model", "transformer"] + key.split(".")[0].split(
                 LORA_PREFIX_TEXT_ENCODER + "_"
             )[-1].split("_")
@@ -439,7 +450,7 @@ def change_sd_weight(
 ):
     model_sd = model.state_dict()
     device = model_sd[list(model_sd.keys())[0]].device
-    is_diffuser = check_diffuser_ckpt(sd_sd)
+    check_diffuser_ckpt(sd_sd)
     for k, v in sd_sd.items():
         if "cond_stage_model.model.transformer.text_model.embeddings" in k:
             continue
@@ -456,7 +467,9 @@ def change_sd_weight(
             k = k.replace("output_blocks.8.2.conv", "output_blocks.8.3.conv")
 
         if k not in model_sd:
-            import pdb; pdb.set_trace()
+            import pdb
+
+            pdb.set_trace()
 
         # merge new token
         if (
@@ -545,8 +558,10 @@ def load_model_checkpoint_t2v(
             sd_sd = load_sd_state_dict(sd_ckpt)
             token_emb = sd_sd["cond_stage_model.model.token_embedding.weight"][49408:]
         else:
-            import pdb; pdb.set_trace()
-        
+            import pdb
+
+            pdb.set_trace()
+
         if token_emb is not None:
             pl_sd["cond_stage_model.model.token_embedding.weight"] = torch.cat(
                 [pl_sd["cond_stage_model.model.token_embedding.weight"], token_emb],

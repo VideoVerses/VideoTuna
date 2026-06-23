@@ -7,7 +7,7 @@ from videotuna.utils.diffusion_utils import (
     make_ddim_timesteps,
     rescale_noise_cfg,
 )
-from videotuna.models.lvdm.modules.utils import noise_like
+from videotuna.utils.sched_utils import noise_like
 
 
 class DDIMSampler(object):
@@ -19,7 +19,7 @@ class DDIMSampler(object):
         self.counter = 0
 
     def register_buffer(self, name, attr):
-        if type(attr) == torch.Tensor:
+        if isinstance(attr, torch.Tensor):
             if attr.device != torch.device("cuda"):
                 attr = attr.to(torch.device("cuda"))
         setattr(self, name, attr)
@@ -37,7 +37,9 @@ class DDIMSampler(object):
         assert (
             alphas_cumprod.shape[0] == self.ddpm_num_timesteps
         ), "alphas have to be defined for each timestep"
-        to_torch = lambda x: x.clone().detach().to(torch.float32).to(self.model.device)
+
+        def to_torch(x):
+            return x.clone().detach().to(torch.float32).to(self.model.device)
 
         self.register_buffer("betas", to_torch(self.model.diffusion_scheduler.betas))
         self.register_buffer("alphas_cumprod", to_torch(alphas_cumprod))
@@ -127,28 +129,29 @@ class DDIMSampler(object):
         guidance_rescale=0.0,
         **kwargs,
     ):
-
         # check condition bs
         if conditioning is not None:
             if isinstance(conditioning, dict):
                 try:
                     cbs = conditioning[list(conditioning.keys())[0]].shape[0]
-                except:
+                except Exception:
                     try:
                         cbs = conditioning[list(conditioning.keys())[0]][0].shape[0]
-                    except:
+                    except Exception:
                         cbs = int(
                             conditioning[list(conditioning.keys())[0]][0]["y"].shape[0]
                         )
 
                 if cbs != batch_size:
                     print(
-                        f"Warning: Got {cbs} conditionings but batch-size is {batch_size}"
+                        f"Warning: Got {cbs} conditionings "
+                        f"but batch-size is {batch_size}"
                     )
             else:
                 if conditioning.shape[0] != batch_size:
                     print(
-                        f"Warning: Got {conditioning.shape[0]} conditionings but batch-size is {batch_size}"
+                        f"Warning: Got {conditioning.shape[0]} conditionings "
+                        f"but batch-size is {batch_size}"
                     )
 
         self.make_schedule(
@@ -373,12 +376,14 @@ class DDIMSampler(object):
         else:
             # with unconditional condition
             if isinstance(c, torch.Tensor):
-                e_t = self.model.apply_model(x, t, c, **kwargs)
+                e_t_cond = self.model.apply_model(x, t, c, **kwargs)
+                e_t = e_t_cond
                 e_t_uncond = self.model.apply_model(
                     x, t, unconditional_conditioning, **kwargs
                 )
             elif isinstance(c, dict):
-                e_t = self.model.apply_model(x, t, c, **kwargs)
+                e_t_cond = self.model.apply_model(x, t, c, **kwargs)
+                e_t = e_t_cond
                 e_t_uncond = self.model.apply_model(
                     x, t, unconditional_conditioning, **kwargs
                 )
@@ -529,7 +534,6 @@ class DDIMSampler(object):
         unconditional_conditioning=None,
         use_original_steps=False,
     ):
-
         timesteps = (
             np.arange(self.ddpm_num_timesteps)
             if use_original_steps

@@ -1,13 +1,11 @@
 import cv2
-import decord
 import numpy as np
 import torch
-import torchvision.transforms as transforms
-from decord import VideoReader, cpu
-from einops import rearrange
 from PIL import Image
 from torchvision.io import write_video
 from torchvision.utils import save_image
+
+from videotuna.utils.video_io import get_video_fps, read_video_frames
 
 IMG_EXTS = {"jpg", "bmp", "png", "jpeg", "rgb", "tif"}
 VIDEO_EXTS = {"mp4", "avi", "mov", "flv", "mkv", "webm", "wmv", "mov"}
@@ -66,18 +64,18 @@ def center_crop_arr(pil_image, image_size):
     )
 
 
-def read_video(video_path, fps=False):
-    decord.bridge.set_bridge("torch")
-    video = VideoReader(video_path, ctx=cpu(0))
-    video_len = len(video)
-    indexes = range(0, video_len)
-    vframes = video.get_batch(indexes)
-    vframes = rearrange(vframes, "t h w c -> t c h w")
+def read_video(video_path, fps=False, indices=None):
+    from videotuna.utils.video_io import get_video_frame_count
+
+    if indices is not None:
+        vframes = read_video_frames(video_path, indices)
+    else:
+        total = get_video_frame_count(video_path)
+        vframes = read_video_frames(video_path, range(total))
 
     if fps:
-        return vframes, video.get_avg_fps()
-    else:
-        return vframes
+        return vframes, get_video_fps(video_path)
+    return vframes
 
 
 def read_video_meta(video_path):

@@ -1,0 +1,69 @@
+# Smoke preset for domain Wan 2.1 I2V LoRA (480p, paired image+prompt dir)
+# Usage:
+#   poetry run python scripts/inference_new.py \
+#     --config configs/inference/presets/wan_domain_i2v_smoke.yaml \
+#     --ckpt_path checkpoints/wan/Wan2.1-I2V-14B-480P \
+#     --trained_ckpt results/train/train_wan_domain_i2v_lora_<ts>/checkpoints/only_trained_model/denoiser-000-000000025.ckpt \
+#     --prompt_dir inputs/i2v/domain_smoke
+flow:
+  target: videotuna.flow.wanvideo.WanVideoModelFlow
+  params:
+    task: "i2v-14B"
+    ckpt_path: checkpoints/wan/Wan2.1-I2V-14B-480P
+    offload_model: true
+    seed: 42
+    gradient_checkpointing: true
+    denoiser_config:
+      target: videotuna.models.wan.wan.modules.model.WanModel
+      use_from_pretrained: true
+      params:
+        pretrained_model_name_or_path: ${flow.params.ckpt_path}
+        subfolder: high_noise_model
+        model_type: i2v
+    first_stage_config:
+      target: videotuna.models.wan.wan.modules.vae.WanVAE_
+      params:
+        dim: 96
+        z_dim: 16
+        dim_mult: [1, 2, 4, 4]
+        num_res_blocks: 2
+        attn_scales: []
+        temperal_downsample: [false, true, true]
+        dropout: 0.0
+    cond_stage_config:
+      target: videotuna.models.wan.wan.modules.t5.T5Encoder
+      params:
+        dim: 4096
+        dim_attn: 4096
+        dim_ffn: 10240
+        num_heads: 64
+        num_buckets: 32
+        shared_pos: false
+        dropout: 0.1
+        vocab: 256384
+        num_layers: 24
+    lora_config:
+      target: peft.LoraConfig
+      params:
+        r: 16
+        lora_alpha: 16.0
+        init_lora_weights: True
+        target_modules: [q, k, v, o, ffn.0, ffn.2]
+inference:
+  mode: i2v
+  ckpt_path: checkpoints/wan/Wan2.1-I2V-14B-480P
+  savedir: results/i2v/wan-domain-lora-smoke
+  seed: 42
+  height: 480
+  width: 832
+  frames: 81
+  num_inference_steps: 20
+  time_shift: 3.0
+  unconditional_guidance_scale: 5.0
+  savefps: 30
+  prompt_dir: inputs/i2v/domain_smoke
+  enable_model_cpu_offload: true
+  mapping:
+    inference.ckpt_path: flow.params.ckpt_path
+    inference.seed: flow.params.seed
+    inference.enable_model_cpu_offload: flow.params.offload_model

@@ -1,18 +1,17 @@
 import argparse
 import json
-import multiprocessing as mp
 import os
 import subprocess
-from typing import Any, List, Tuple, Union
+from typing import Any, List, Union
 
 import tqdm
 from joblib import Parallel, delayed
 
 # Standard PySceneDetect imports:
-from scenedetect import SceneManager, VideoManager, open_video
+from scenedetect import SceneManager, open_video
 
 # For content-aware scene detection:
-from scenedetect.detectors import AdaptiveDetector, ContentDetector
+from scenedetect.detectors import ContentDetector
 
 # Standard PySceneDetect imports:
 from scenedetect.frame_timecode import FrameTimecode

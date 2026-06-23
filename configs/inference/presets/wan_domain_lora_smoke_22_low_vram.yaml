@@ -1,0 +1,35 @@
+# Low VRAM domain Wan 2.2 LoRA validation smoke (12–16 GB GPUs)
+# Usage:
+#   poetry run validate-domain-t2v \
+#     --config configs/inference/presets/wan_domain_lora_smoke_22_low_vram.yaml \
+#     --trained_ckpt <denoiser.ckpt>
+flow:
+  target: videotuna.flow.diffusers_video.DiffusersVideoFlow
+  params:
+    model_family: wan
+    mode: t2v
+    pipeline_only: true
+    model_variant: "2.2"
+    pretrained_model_name_or_path: Wan-AI/Wan2.2-T2V-A14B-Diffusers
+inference:
+  mode: t2v
+  ckpt_path: Wan-AI/Wan2.2-T2V-A14B-Diffusers
+  savedir: results/t2v/wan-domain-lora-smoke-22-low-vram
+  prompt_file: "sks_style, slow camera push-in, soft lighting"
+  frames: 81
+  height: 720
+  width: 1280
+  num_inference_steps: 4
+  unconditional_guidance_scale: 5.0
+  seed: 42
+  savefps: 16
+  memory_preset: low_vram
+  enable_sequential_cpu_offload: true
+  enable_vae_tiling: true
+  dtype: fp16
+  min_vram_gb: 10
+  # Optional transformer quant for base inference (LoRA+quant is attempted; use none if bridge fails):
+  #   int8_wo — see low_vram_wan2_2_720p_int8.yaml
+  #   fp8_wo  — see low_vram_wan2_2_720p_fp8.yaml (Ada/Hopper sm >= 8.9)
+  # transformer_quant: int8_wo
+  # quant_backend: torchao

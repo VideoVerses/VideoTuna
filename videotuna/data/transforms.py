@@ -18,16 +18,14 @@
 import numbers
 import random
 
-import decord
 import numpy as np
 import torch
 import torch.nn.functional as F
 import torchvision.transforms as torch_transforms
-from decord import VideoReader, cpu
-from einops import rearrange
 from PIL import Image
 from torchvision.datasets.folder import pil_loader
-from torchvision.io import write_video
+
+from videotuna.utils.video_io import get_video_frame_count, read_video_frames
 
 from .datasets_utils import IMG_EXTS, VIDEO_EXTS
 
@@ -215,18 +213,26 @@ def hflip(clip):
     return clip.flip(-1)
 
 
-def get_transforms_video(resolution=(256, 256), num_frames=16, frame_interval=1):
-    transform_video = torch_transforms.Compose(
-        [
-            TemporalRandomCrop(num_frames, frame_interval),
-            ToTensorVideo(),  # TCHW
-            RandomHorizontalFlipVideo(),
-            ResizeCenterCropVideo(resolution),
-            torch_transforms.Normalize(
-                mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True
-            ),
-        ]
-    )
+def get_transforms_video(
+    resolution=(256, 256),
+    num_frames=16,
+    frame_interval=1,
+    temporal_crop: bool = True,
+):
+    spatial_transforms = [
+        ToTensorVideo(),  # TCHW
+        RandomHorizontalFlipVideo(),
+        ResizeCenterCropVideo(resolution),
+        torch_transforms.Normalize(
+            mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True
+        ),
+    ]
+    if temporal_crop:
+        transform_video = torch_transforms.Compose(
+            [TemporalRandomCrop(num_frames, frame_interval)] + spatial_transforms
+        )
+    else:
+        transform_video = torch_transforms.Compose(spatial_transforms)
     return transform_video
 
 
@@ -271,7 +277,8 @@ class RandomCropVideo:
 
         if h < th or w < tw:
             raise ValueError(
-                f"Required crop size {(th, tw)} is larger than input image size {(h, w)}"
+                f"Required crop size {(th, tw)} is larger than "
+                f"input image size {(h, w)}"
             )
 
         if w == tw and h == th:
@@ -325,7 +332,10 @@ class CenterCropResizeVideo:
         return clip_center_crop_resize
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(size={self.size}, interpolation_mode={self.interpolation_mode}"
+        return (
+            f"{self.__class__.__name__}(size={self.size}, "
+            f"interpolation_mode={self.interpolation_mode}"
+        )
 
 
 class ResizeCenterCropVideo:
@@ -402,7 +412,10 @@ class ResizeCenterCropVideo:
         return cropped_clip
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(size={self.size}, interpolation_mode={self.interpolation_mode}"
+        return (
+            f"{self.__class__.__name__}(size={self.size}, "
+            f"interpolation_mode={self.interpolation_mode}"
+        )
 
 
 class UCFCenterCropVideo:
@@ -450,12 +463,16 @@ class UCFCenterCropVideo:
         return clip_center_crop
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(size={self.size}, interpolation_mode={self.interpolation_mode}"
+        return (
+            f"{self.__class__.__name__}(size={self.size}, "
+            f"interpolation_mode={self.interpolation_mode}"
+        )
 
 
 class KineticsRandomCropResizeVideo:
     """
-    Slide along the long edge, with the short edge as crop size. And resie to the desired size.
+    Slide along the long edge, with the short edge as crop size. And resie to
+    the desired size.
     """
 
     def __init__(
@@ -509,7 +526,10 @@ class CenterCropVideo:
         return clip_center_crop
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(size={self.size}, interpolation_mode={self.interpolation_mode}"
+        return (
+            f"{self.__class__.__name__}(size={self.size}, "
+            f"interpolation_mode={self.interpolation_mode}"
+        )
 
 
 class NormalizeVideo:
@@ -534,7 +554,10 @@ class NormalizeVideo:
         return normalize(clip, self.mean, self.std, self.inplace)
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(mean={self.mean}, std={self.std}, inplace={self.inplace})"
+        return (
+            f"{self.__class__.__name__}(mean={self.mean}, std={self.std}, "
+            f"inplace={self.inplace})"
+        )
 
 
 class ToTensorVideo:
@@ -600,18 +623,13 @@ class TemporalRandomCrop(object):
         self.sample_length = num_frames * frame_interval
 
     def __call__(self, frames):
+        from videotuna.utils.video_io import sample_frame_indices
+
         total_frames = len(frames)
-        rand_end = max(0, total_frames - self.sample_length - 1)
-        begin_index = random.randint(0, rand_end)
-        end_index = min(begin_index + self.sample_length, total_frames)
-        assert (
-            end_index - begin_index >= self.num_frames
-        ), f"The video has not enough frames. Current frames: {len(vframes)}"
-        frame_indice = np.linspace(
-            begin_index, end_index - 1, self.num_frames, dtype=int
+        frame_indice = sample_frame_indices(
+            total_frames, self.num_frames, self.frame_interval
         )
-        sample_frames = frames[frame_indice]
-        return sample_frames
+        return frames[frame_indice]
 
 
 class LoadDummyVideo:
@@ -640,13 +658,8 @@ class LoadVideo:
 
     def __call__(self, video_path):
         assert video_path.split(".")[-1] in VIDEO_EXTS
-        decord.bridge.set_bridge("torch")
-        video = VideoReader(video_path, ctx=cpu(0))
-        video_len = len(video)
-        indexes = range(0, video_len)
-        vframes = video.get_batch(indexes)
-        vframes = rearrange(vframes, "t h w c -> t c h w")
-        return vframes
+        total = get_video_frame_count(video_path)
+        return read_video_frames(video_path, range(total))
 
 
 class CheckVideo:
@@ -660,8 +673,8 @@ class CheckVideo:
 
     def __call__(self, vframes, index):
         length = vframes.shape[0]  # [F, C, H, W]
-        h = vframes.shape[2]
-        w = vframes.shape[3]
+        vframes.shape[2]
+        vframes.shape[3]
         if length < self.frame_limit:
             raise ValueError(
                 f"The video has not enough frames. Current frames: {length}"

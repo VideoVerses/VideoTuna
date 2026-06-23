@@ -1,4 +1,3 @@
-import datetime
 import os
 from datetime import timedelta
 from typing import List, Optional
@@ -7,7 +6,7 @@ import torch
 import torch.nn as nn
 from accelerate import Accelerator
 from accelerate.utils import GradientAccumulationPlugin, InitProcessGroupKwargs
-from torch.utils.data import DataLoader, Dataset, Sampler
+from torch.utils.data import DataLoader, Sampler
 from transformers import Trainer
 from transformers.trainer import (
     ALL_LAYERNORM_LAYERS,
@@ -19,16 +18,14 @@ from transformers.trainer import (
     is_sagemaker_mp_enabled,
     logger,
 )
-from transformers.trainer_pt_utils import AcceleratorConfig
 from transformers.trainer_pt_utils import (
     get_length_grouped_indices as get_length_grouped_indices_hf,
 )
 from transformers.trainer_utils import seed_worker
 from trl.trainer import DPOTrainer
-from trl.trainer.utils import DPODataCollatorWithPadding
 
 if is_accelerate_available():
-    from accelerate import Accelerator, InitProcessGroupKwargs, skip_first_batches
+    from accelerate import Accelerator, InitProcessGroupKwargs
 
 if is_datasets_available():
     import datasets
@@ -347,7 +344,6 @@ class LengthGroupedSampler(Sampler):
 
 
 class LLaVATrainer(Trainer):
-
     def create_accelerator_and_postprocess(self):
         grad_acc_kwargs = {"num_steps": self.args.gradient_accumulation_steps}
         grad_acc_kwargs["sync_with_dataloader"] = False
@@ -664,9 +660,7 @@ class LLaVATrainer(Trainer):
 
             if self.args.local_rank == 0 or self.args.local_rank == -1:
                 self.model.config.save_pretrained(output_dir)
-                torch.save(
-                    weight_to_save, os.path.join(output_dir, f"mm_projector.bin")
-                )
+                torch.save(weight_to_save, os.path.join(output_dir, "mm_projector.bin"))
         else:
             super(LLaVATrainer, self)._save_checkpoint(model, trial, metrics)
 
@@ -723,9 +717,7 @@ class LLaVADPOTrainer(DPOTrainer):
 
             if self.args.local_rank == 0 or self.args.local_rank == -1:
                 self.model.config.save_pretrained(output_dir)
-                torch.save(
-                    weight_to_save, os.path.join(output_dir, f"mm_projector.bin")
-                )
+                torch.save(weight_to_save, os.path.join(output_dir, "mm_projector.bin"))
         else:
             # super(LLaVADPOTrainer, self)._save_checkpoint(model, trial, metrics)
             # print(type(model))
